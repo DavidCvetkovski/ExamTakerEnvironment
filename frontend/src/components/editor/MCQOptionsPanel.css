@@ -1,0 +1,104 @@
+.mcq-panel {
+    margin-top: 16px;
+    padding: 16px 20px;
+    background: #1a1a2e;
+    border: 1px solid #333;
+    border-radius: 8px;
+}
+
+.mcq-panel h3 {
+    color: #e0e0e0;
+    margin: 0 0 12px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.mcq-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    background: #16213e;
+    border: 1px solid #333;
+    border-radius: 6px;
+    transition: border-color 0.2s;
+}
+
+.mcq-option.correct {
+    border-color: #4ade80;
+    background: #16213e;
+}
+
+.option-letter {
+    color: #667eea;
+    font-weight: 700;
+    font-size: 14px;
+    min-width: 20px;
+}
+
+.option-text {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #e0e0e0;
+    font-size: 14px;
+    outline: none;
+}
+
+.option-text::placeholder {
+    color: #555;
+}
+
+.correct-toggle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #888;
+    cursor: pointer;
+    font-size: 16px;
+    transition: color 0.15s;
+}
+
+.correct-toggle:has(input:checked) {
+    color: #4ade80;
+}
+
+.correct-toggle input {
+    display: none;
+}
+
+.remove-btn {
+    background: transparent;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.15s;
+}
+
+.remove-btn:hover {
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.1);
+}
+
+.add-option-btn {
+    width: 100%;
+    padding: 8px;
+    margin-top: 4px;
+    background: transparent;
+    border: 1px dashed #444;
+    color: #667eea;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+}
+
+.add-option-btn:hover {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.05);
+}

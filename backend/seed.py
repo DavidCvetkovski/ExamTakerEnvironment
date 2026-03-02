@@ -1,11 +1,13 @@
 """
-Seed script: Creates a test User, ItemBank, and LearningObject.
-Prints the LearningObject UUID for the frontend to use.
+Seed script: Creates test users (ADMIN, CONSTRUCTOR, REVIEWER), an ItemBank,
+and a LearningObject. Prints the LearningObject UUID for the frontend to use.
 """
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.models import User, ItemBank, LearningObject
+from app.models.user import UserRole
+from app.core.security import hash_password
 
 POSTGRES_USER = os.environ.get("POSTGRES_USER", "postgres")
 POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "password")
@@ -17,36 +19,58 @@ SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg://{POSTGRES_USER}:{POSTGRES_PASSW
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+SEED_USERS = [
+    {"email": "admin@vu.nl",       "password": "adminpass123",  "role": UserRole.ADMIN},
+    {"email": "prof@vu.nl",        "password": "profpass123",   "role": UserRole.CONSTRUCTOR},
+    {"email": "reviewer@vu.nl",    "password": "reviewpass123", "role": UserRole.REVIEWER},
+    {"email": "student@vu.nl",     "password": "studpass123",   "role": UserRole.STUDENT},
+]
+
+
 def seed():
     db = SessionLocal()
-    
-    # Check if seed data already exists
-    existing = db.query(User).filter(User.email == "seed_professor@vu.nl").first()
+
+    # Check if seed already exists
+    existing = db.query(User).filter(User.email == "admin@vu.nl").first()
     if existing:
         lo = db.query(LearningObject).first()
+        print(f"Seed data already exists.")
         if lo:
-            print(f"Seed data already exists. LearningObject ID: {lo.id}")
-            db.close()
-            return str(lo.id)
-    
-    user = User(email="seed_professor@vu.nl")
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    
-    bank = ItemBank(name="Seed Test Bank", created_by=user.id)
+            print(f"LearningObject ID: {lo.id}")
+        db.close()
+        return
+
+    # Create users
+    created_users = {}
+    for u in SEED_USERS:
+        user = User(
+            email=u["email"],
+            hashed_password=hash_password(u["password"]),
+            role=u["role"],
+            is_active=True,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        created_users[u["role"]] = user
+        print(f"  ✅ Created {u['role'].value}: {u['email']} / {u['password']}")
+
+    # Create ItemBank (owned by constructor)
+    bank = ItemBank(name="Seed Test Bank", created_by=created_users[UserRole.CONSTRUCTOR].id)
     db.add(bank)
     db.commit()
     db.refresh(bank)
-    
-    lo = LearningObject(bank_id=bank.id, created_by=user.id)
+
+    # Create LearningObject
+    lo = LearningObject(bank_id=bank.id, created_by=created_users[UserRole.CONSTRUCTOR].id)
     db.add(lo)
     db.commit()
     db.refresh(lo)
-    
-    print(f"✅ Seeded database. LearningObject ID: {lo.id}")
+
+    print(f"\n✅ Seed complete.")
+    print(f"   LearningObject ID: {lo.id}")
     db.close()
-    return str(lo.id)
+
 
 if __name__ == "__main__":
     seed()

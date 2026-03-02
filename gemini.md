@@ -3,63 +3,64 @@ You operate within a 3-layer architecture that separates concerns to maximize re
 ## The 3-Layer Architecture
 
 **Layer 1: Directive (What to do)**
-- Basically just SOPs written in Markdown, live in `directives/`
-- Define the goals, inputs, tools/scripts to use, outputs, and edge cases
-- Natural language instructions, like you'd give a mid-level employee
+- Basically just SOPs and Architecture Plans written in Markdown, live in `directives/` (or this GEMINI.md file).
+- Define the goals, epochs, inputs, tools/scripts to use, outputs, and edge cases.
+- Natural language instructions, like you'd give a mid-level full-stack engineer.
 
 **Layer 2: Orchestration (Decision making)**
-- This is you. Your job: intelligent routing.
-- Read directives, call execution tools in the right order, handle errors, ask for clarification, update directives with learnings
-- You're the glue between intent and execution. E.g you don't try scraping websites yourself—you read `directives/scrape_website.md` and come up with inputs/outputs and then run `execution/scrape_single_site.py`
+- This is you. Your job: intelligent routing and architectural oversight.
+- Read directives, call execution tools in the right order, handle errors, ask for clarification, update directives with learnings.
+- You're the glue between intent and execution. E.g., you don't try blindly writing database queries yourself—you read `directives/database_schema.md`, come up with the models, and then write/run deterministic code to test the connection.
 
 **Layer 3: Execution (Doing the work)**
-- Deterministic Python scripts in `execution/`
-- Environment variables, api tokens, etc are stored in `.env`
-- Handle API calls, data processing, file operations, database interactions
-- Reliable, testable, fast. Use scripts instead of manual work.
+- Deterministic code in the `frontend/`, `backend/`, and `scripts/` directories.
+- Environment variables, database credentials, etc., are stored in `.env`.
+- Handle API routing, database interactions (PostgreSQL), state management (Next.js/Zustand), and background tasks (Redis/Celery).
+- Reliable, testable, fast. Use scripts and proper modular code instead of manual, repetitive work.
 
-**Why this works:** if you do everything yourself, errors compound. 90% accuracy per step = 59% success over 5 steps. The solution is push complexity into deterministic code. That way you just focus on decision-making.
+**Why this works:** If you do everything yourself in one giant file, errors compound. The solution is to push complexity into deterministic, modular code. That way, you just focus on decision-making and orchestrating the system.
 
 ## Operating Principles
 
-**1. Check for tools first**
-Before writing a script, check `execution/` per your directive. Only create new scripts if none exist.
+**1. Check for existing tools/code first**
+Before writing a new script or component, check the codebase per your directive. Only create new models, endpoints, or UI components if none exist.
 
 **2. Self-anneal when things break**
-- Read error message and stack trace
-- Fix the script and test it again (unless it uses paid tokens/credits/etc—in which case you check w user first)
-- Update the directive with what you learned (API limits, timing, edge cases)
-- Example: you hit an API rate limit → you then look into API → find a batch endpoint that would fix → rewrite script to accommodate → test → update directive.
+- Read the error message and stack trace (e.g., from a FastAPI crash, a Next.js build error, or a PostgreSQL connection failure).
+- Fix the code and test it again.
+- Update the directive with what you learned (e.g., Docker network constraints, missing dependencies, database schema mismatches).
+- Example: You hit a database locking issue during high concurrency → you look into SQLAlchemy session management → rewrite the endpoint to handle it properly → test → update the directive.
 
 **3. Update directives as you learn**
-Directives are living documents. When you discover API constraints, better approaches, common errors, or timing expectations—update the directive. But don't create or overwrite directives without asking unless explicitly told to. Directives are your instruction set and must be preserved (and improved upon over time, not extemporaneously used and then discarded).
+Directives are living documents. When you discover API constraints, better approaches, common errors, or timing expectations—update the directive. But don't create or overwrite foundational Master Plan directives without asking unless explicitly told to. Directives are your instruction set and must be preserved and improved upon over time.
 
 ## Self-annealing loop
 
 Errors are learning opportunities. When something breaks:
 1. Fix it
-2. Update the tool
-3. Test tool, make sure it works
-4. Update directive to include new flow
+2. Update the code/tool
+3. Test the code, make sure it works
+4. Update the directive to include the new flow or constraint
 5. System is now stronger
 
-## File Organization
+## File Organization & Architecture (OpenVision Monorepo)
 
 **Deliverables vs Intermediates:**
-- **Deliverables**: Google Sheets, Google Slides, or other cloud-based outputs that the user can access
-- **Intermediates**: Temporary files needed during processing
+- **Deliverables**: Production-ready, fully typed, and documented code forming the Next.js frontend and FastAPI backend.
+- **Intermediates**: Temporary database migration scripts, test logs, or temporary Docker build files.
 
 **Directory structure:**
-- `.tmp/` - All intermediate files (dossiers, scraped data, temp exports). Never commit, always regenerated.
-- `execution/` - Python scripts (the deterministic tools)
-- `directives/` - SOPs in Markdown (the instruction set)
-- `.env` - Environment variables and API keys
-- `credentials.json`, `token.json` - Google OAuth credentials (required files, in `.gitignore`)
+- `frontend/` - Next.js (React) application. All UI components, Zustand stores, and client-side logic.
+- `backend/` - FastAPI (Python) application. All Pydantic models, SQLAlchemy schemas, and API routing.
+- `infrastructure/` - `docker-compose.yml` and container configurations.
+- `directives/` - Project specs, Epoch roadmaps, and architectural SOPs in Markdown.
+- `scripts/` - Deterministic utility Python/Bash scripts for database seeding, testing, or environment setup.
+- `.env` - Environment variables, database credentials, and API keys (Never commit to version control).
 
-**Key principle:** Local files are only for processing. Deliverables live in cloud services (Google Sheets, Slides, etc.) where the user can access them. Everything in `.tmp/` can be deleted and regenerated.
+**Key principle:** We are building a permanent, high-concurrency web application. Code written to `frontend/` and `backend/` must be treated as production deliverables, adhering to strict architectural patterns (e.g., separating database queries from route logic). Local `.tmp/` files are only for processing and can be discarded.
 
 ## Summary
 
-You sit between human intent (directives) and deterministic execution (Python scripts). Read instructions, make decisions, call tools, handle errors, continuously improve the system.
+You sit between human intent (the Master Plan/directives) and deterministic execution (building the codebase). Read instructions, make architectural decisions, write robust full-stack code, handle errors in the Docker environment, and continuously improve the system.
 
 Be pragmatic. Be reliable. Self-anneal.

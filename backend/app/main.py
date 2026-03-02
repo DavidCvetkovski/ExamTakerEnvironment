@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.api import api_router
 
 app = FastAPI(
-    title="OpenVision Test Framework",
-    description="A high-performance assessment ecosystem replica",
+    title="OpenVision Ecosystem",
     version="0.1.0"
 )
+
+app.include_router(api_router, prefix="/api")
 
 app.add_middleware(
     CORSMiddleware,
@@ -17,4 +19,4 @@ app.add_middleware(
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "message": "Epoch 1 Foundation successfully initialized."}
+    return {"status": "ok", "service": "TestVision Replica Backend"}

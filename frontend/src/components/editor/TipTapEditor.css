@@ -1,0 +1,134 @@
+.tiptap-editor-wrapper {
+  border: 1px solid #333;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1a1a2e;
+}
+
+/* Toolbar */
+.tiptap-toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  background: #16213e;
+  border-bottom: 1px solid #333;
+  flex-wrap: wrap;
+}
+
+.tiptap-toolbar button {
+  background: transparent;
+  border: 1px solid #444;
+  color: #e0e0e0;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+
+.tiptap-toolbar button:hover {
+  background: #2a2a4a;
+  border-color: #667eea;
+}
+
+.tiptap-toolbar button.is-active {
+  background: #667eea;
+  border-color: #667eea;
+  color: #fff;
+}
+
+.toolbar-divider {
+  width: 1px;
+  background: #444;
+  margin: 0 6px;
+  align-self: stretch;
+}
+
+/* Editor Content */
+.tiptap-content {
+  padding: 16px 20px;
+  min-height: 250px;
+  color: #e0e0e0;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.tiptap-content .tiptap {
+  outline: none;
+  min-height: 250px;
+}
+
+.tiptap-content .tiptap p {
+  margin: 0.4em 0;
+}
+
+.tiptap-content .tiptap h1,
+.tiptap-content .tiptap h2,
+.tiptap-content .tiptap h3 {
+  color: #fff;
+  margin: 0.8em 0 0.4em;
+}
+
+/* Code Block Styling */
+.tiptap-content .tiptap pre {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 16px;
+  margin: 12px 0;
+  overflow-x: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tiptap-content .tiptap pre code {
+  background: none;
+  color: #e6edf3;
+  padding: 0;
+}
+
+/* Lowlight / Syntax Highlighting Colors (GitHub Dark theme) */
+.tiptap-content .tiptap pre .hljs-keyword,
+.tiptap-content .tiptap pre .hljs-selector-tag {
+  color: #ff7b72;
+}
+
+.tiptap-content .tiptap pre .hljs-string,
+.tiptap-content .tiptap pre .hljs-attr {
+  color: #a5d6ff;
+}
+
+.tiptap-content .tiptap pre .hljs-number,
+.tiptap-content .tiptap pre .hljs-literal {
+  color: #79c0ff;
+}
+
+.tiptap-content .tiptap pre .hljs-function,
+.tiptap-content .tiptap pre .hljs-title {
+  color: #d2a8ff;
+}
+
+.tiptap-content .tiptap pre .hljs-comment {
+  color: #8b949e;
+  font-style: italic;
+}
+
+.tiptap-content .tiptap pre .hljs-built_in {
+  color: #ffa657;
+}
+
+.tiptap-content .tiptap pre .hljs-variable,
+.tiptap-content .tiptap pre .hljs-params {
+  color: #e6edf3;
+}
+
+/* Bullet/Ordered lists */
+.tiptap-content .tiptap ul,
+.tiptap-content .tiptap ol {
+  padding-left: 24px;
+}
+
+.tiptap-content .tiptap li {
+  margin: 4px 0;
+}

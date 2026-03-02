@@ -4,3 +4,4 @@ sqlalchemy==2.0.36
 psycopg[binary]
 redis==5.0.4
 python-dotenv==1.0.1
+alembic==1.13.1

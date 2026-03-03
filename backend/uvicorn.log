@@ -1,0 +1,18 @@
+INFO:     Started server process [16280]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:50704 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50704 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50786 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50786 - "GET /openapi.json HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50850 - "POST /api/auth/refresh HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50853 - "POST /api/auth/refresh HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:50859 - "OPTIONS /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50861 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50859 - "OPTIONS /api/auth/refresh HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50867 - "OPTIONS /api/auth/refresh HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50861 - "POST /api/auth/refresh HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50869 - "POST /api/auth/refresh HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50874 - "OPTIONS /api/auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50876 - "POST /api/auth/logout HTTP/1.1" 200 OK

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { api } from '../lib/api';
 
 interface MCQOption {
     id: string;
@@ -72,24 +73,16 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
                     ? { question_type: 'MULTIPLE_CHOICE', choices: state.options }
                     : { question_type: 'ESSAY', ...(state.options as { min_words: number; max_words: number }) };
 
-            const res = await fetch(
-                `http://localhost:8000/api/learning-objects/${state.learningObjectId}/versions`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        learning_object_id: state.learningObjectId,
-                        status: 'DRAFT',
-                        question_type: state.questionType,
-                        content: state.tiptapJson,
-                        options: optionsPayload,
-                        metadata_tags: state.metadataTags,
-                    }),
-                }
-            );
+            const res = await api.post(`/learning-objects/${state.learningObjectId}/versions`, {
+                learning_object_id: state.learningObjectId,
+                status: 'DRAFT',
+                question_type: state.questionType,
+                content: state.tiptapJson,
+                options: optionsPayload,
+                metadata_tags: state.metadataTags,
+            });
 
-            if (!res.ok) throw new Error('Save failed');
-            const data = await res.json();
+            const data = res.data;
             set({ itemId: data.id, versionNumber: data.version_number, saveStatus: 'SAVED' });
         } catch {
             set({ saveStatus: 'ERROR' });

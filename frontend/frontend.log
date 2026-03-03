@@ -1,0 +1,25 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /Users/davidcvetkovski/package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * /Users/davidcvetkovski/Documents/Uni/TH/frontend/package-lock.json
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.31:3000
+
+✓ Starting...
+✓ Ready in 729ms
+ GET / 307 in 384ms (compile: 254ms, render: 130ms)
+ GET /author 200 in 342ms (compile: 100ms, render: 242ms)
+ GET / 307 in 124ms (compile: 1572µs, render: 122ms)
+ GET /author 200 in 108ms (compile: 5ms, render: 103ms)
+ GET /login?redirect=%2Fauthor 200 in 49ms (compile: 32ms, render: 17ms)
+ GET /login?redirect=%2Fauthor 200 in 42ms (compile: 3ms, render: 39ms)
+ GET /author 200 in 29ms (compile: 9ms, render: 20ms)
+ GET /login?redirect=%2Fauthor 200 in 19ms (compile: 4ms, render: 15ms)

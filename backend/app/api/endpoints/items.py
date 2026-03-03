@@ -8,9 +8,11 @@ from pydantic import BaseModel
 from app.core.database import get_db
 from app.core.dependencies import get_current_user, require_role
 from app.models.user import User, UserRole
-from app.models.item_version import ItemVersion, ItemStatus
+from app.models.item_version import ItemVersion, ItemStatus, QuestionType
 from app.models.learning_object import LearningObject
+from app.models.item_bank import ItemBank
 from app.schemas.item_version import ItemVersionCreate, ItemVersionResponse
+from app.schemas.learning_object import LearningObjectListResponse, LearningObjectResponse
 
 router = APIRouter()
 
@@ -26,6 +28,86 @@ STATUS_TRANSITIONS: dict[tuple[ItemStatus, ItemStatus], set[UserRole]] = {
     (ItemStatus.APPROVED, ItemStatus.RETIRED):           {UserRole.ADMIN},
 }
 
+
+# ---------------------------------------------------------------------------
+# GET  /learning-objects
+# ---------------------------------------------------------------------------
+
+@router.get("/learning-objects", response_model=List[LearningObjectListResponse])
+def list_learning_objects(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return a list of all Learning Objects with their latest version metadata."""
+    # Note: Soft-deleted objects will have their latest version status as RETIRED.
+    objects = db.query(LearningObject).all()
+    results = []
+    
+    for lo in objects:
+        latest = (
+            db.query(ItemVersion)
+            .filter(ItemVersion.learning_object_id == lo.id)
+            .order_by(ItemVersion.version_number.desc())
+            .first()
+        )
+        if latest:
+            # Basic preview extraction from TipTap JSON
+            preview = "New Question"
+            if isinstance(latest.content, dict):
+                preview = str(latest.content)[:50] + "..."
+                
+            results.append(LearningObjectListResponse(
+                id=lo.id,
+                bank_id=lo.bank_id,
+                created_at=lo.created_at,
+                latest_version_number=latest.version_number,
+                latest_status=latest.status,
+                latest_question_type=latest.question_type,
+                latest_content_preview=preview
+            ))
+            
+    return results
+
+# ---------------------------------------------------------------------------
+# POST /learning-objects
+# ---------------------------------------------------------------------------
+
+@router.post("/learning-objects", response_model=dict)
+def create_learning_object(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.CONSTRUCTOR, UserRole.ADMIN)),
+):
+    """
+    Creates a new Learning Object and its initial DRAFT version.
+    Used by the library's 'Create New' button.
+    """
+    # Simply grab the first item bank, or create a default one
+    bank = db.query(ItemBank).first()
+    if not bank:
+        bank = ItemBank(name="Default Bank", created_by=current_user.id)
+        db.add(bank)
+        db.commit()
+        db.refresh(bank)
+        
+    new_lo = LearningObject(bank_id=bank.id, created_by=current_user.id)
+    db.add(new_lo)
+    db.commit()
+    db.refresh(new_lo)
+    
+    # Create the initial version
+    initial_version = ItemVersion(
+        learning_object_id=new_lo.id,
+        status=ItemStatus.DRAFT,
+        version_number=1,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        content={"type": "doc", "content": [{"type": "paragraph"}]},
+        options={"question_type": "MULTIPLE_CHOICE", "choices": [{"id": "A", "text": "", "is_correct": True, "weight": 1.0}]},
+        created_by=current_user.id
+    )
+    db.add(initial_version)
+    db.commit()
+    
+    return {"status": "created", "learning_object_id": str(new_lo.id)}
 
 # ---------------------------------------------------------------------------
 # GET  /learning-objects/{lo_id}/versions

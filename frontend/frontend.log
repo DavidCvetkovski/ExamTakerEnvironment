@@ -23,3 +23,7 @@
  GET /login?redirect=%2Fauthor 200 in 42ms (compile: 3ms, render: 39ms)
  GET /author 200 in 29ms (compile: 9ms, render: 20ms)
  GET /login?redirect=%2Fauthor 200 in 19ms (compile: 4ms, render: 15ms)
+ GET /api/auth/login 404 in 136ms (compile: 83ms, render: 52ms)
+ GET / 307 in 67ms (compile: 7ms, render: 59ms)
+ GET /author 200 in 29ms (compile: 2ms, render: 27ms)
+ GET /login?redirect=%2Fauthor 200 in 16ms (compile: 2ms, render: 14ms)

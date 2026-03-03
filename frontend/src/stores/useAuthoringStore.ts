@@ -73,7 +73,7 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
                     ? { question_type: 'MULTIPLE_CHOICE', choices: state.options }
                     : { question_type: 'ESSAY', ...(state.options as { min_words: number; max_words: number }) };
 
-            const res = await api.post(`/learning-objects/${state.learningObjectId}/versions`, {
+            const res = await api.post(`learning-objects/${state.learningObjectId}/versions`, {
                 learning_object_id: state.learningObjectId,
                 status: 'DRAFT',
                 question_type: state.questionType,

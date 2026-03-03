@@ -32,7 +32,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     login: async (email, password) => {
         try {
             set({ isLoading: true });
-            const resp = await api.post('/auth/login', { email, password });
+            const resp = await api.post('auth/login', { email, password });
             const { access_token, user } = resp.data;
             set({
                 accessToken: access_token,
@@ -49,7 +49,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     register: async (email, password, role) => {
         try {
             set({ isLoading: true });
-            const resp = await api.post('/auth/register', { email, password, role });
+            const resp = await api.post('auth/register', { email, password, role });
             const { access_token, user } = resp.data;
             set({
                 accessToken: access_token,
@@ -65,7 +65,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     logout: async () => {
         try {
-            await api.post('/auth/logout');
+            await api.post('auth/logout');
         } catch (e) {
             console.warn("Logout request failed, clearing local state anyway.", e);
         } finally {
@@ -79,7 +79,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     },
 
     refreshToken: async () => {
-        const resp = await api.post('/auth/refresh');
+        const resp = await api.post('auth/refresh');
         const { access_token, user } = resp.data;
         set({
             accessToken: access_token,
@@ -90,7 +90,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     fetchMe: async () => {
         try {
-            const resp = await api.get('/auth/me');
+            const resp = await api.get('auth/me');
             set({ user: resp.data, isAuthenticated: true });
         } catch (error) {
             // If /me fails, let the interceptor handle it or log out

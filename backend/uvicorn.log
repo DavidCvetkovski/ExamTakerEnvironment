@@ -16,3 +16,11 @@ INFO:     127.0.0.1:50861 - "POST /api/auth/refresh HTTP/1.1" 200 OK
 INFO:     127.0.0.1:50869 - "POST /api/auth/refresh HTTP/1.1" 200 OK
 INFO:     127.0.0.1:50874 - "OPTIONS /api/auth/logout HTTP/1.1" 200 OK
 INFO:     127.0.0.1:50876 - "POST /api/auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51016 - "POST /api/auth/refresh HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51021 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51021 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:51023 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51023 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51044 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51044 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51062 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized

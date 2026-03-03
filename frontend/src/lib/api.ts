@@ -3,8 +3,8 @@ import { useAuthStore } from '../stores/useAuthStore';
 
 // Base API instance
 export const api = axios.create({
-    baseURL: 'http://localhost:8000/api',
-    withCredentials: true, // Necessary to send/receive httpOnly cookies for the refresh token
+    baseURL: 'http://localhost:8000/api/',
+    withCredentials: true,
 });
 
 // Request Interceptor: Attach access token if available
@@ -29,8 +29,8 @@ api.interceptors.response.use(
         if (
             error.response?.status === 401 &&
             !originalRequest._retry &&
-            originalRequest.url !== '/auth/refresh' &&
-            originalRequest.url !== '/auth/login'
+            !originalRequest.url?.includes('auth/refresh') &&
+            !originalRequest.url?.includes('auth/login')
         ) {
             originalRequest._retry = true;
             try {

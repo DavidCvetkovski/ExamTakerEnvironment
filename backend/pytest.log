@@ -1,0 +1,95 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0 -- /Users/davidcvetkovski/Documents/Uni/TH/backend/.venv/bin/python3.14
+cachedir: .pytest_cache
+rootdir: /Users/davidcvetkovski/Documents/Uni/TH/backend
+plugins: anyio-4.12.1
+collecting ... collected 24 items
+
+test_connections.py::test_postgres PASSED                                [  4%]
+test_connections.py::test_redis PASSED                                   [  8%]
+tests/test_auth.py::test_register_new_user PASSED                        [ 12%]
+tests/test_auth.py::test_register_duplicate_user_fails PASSED            [ 16%]
+tests/test_auth.py::test_login_success_sets_cookie PASSED                [ 20%]
+tests/test_auth.py::test_login_invalid_password PASSED                   [ 25%]
+tests/test_auth.py::test_get_me_with_valid_token PASSED                  [ 29%]
+tests/test_auth.py::test_refresh_token_endpoint FAILED                   [ 33%]
+tests/test_auth.py::test_logout_clears_cookie PASSED                     [ 37%]
+tests/test_items_api.py::test_immutability_version_up_logic PASSED       [ 41%]
+tests/test_items_api.py::test_cascading_soft_delete PASSED               [ 45%]
+tests/test_rbac.py::test_unauthenticated_request_returns_401 PASSED      [ 50%]
+tests/test_rbac.py::test_authenticated_user_can_view_versions PASSED     [ 54%]
+tests/test_rbac.py::test_student_cannot_create_item PASSED               [ 58%]
+tests/test_rbac.py::test_reviewer_cannot_create_item PASSED              [ 62%]
+tests/test_rbac.py::test_constructor_can_create_draft PASSED             [ 66%]
+tests/test_rbac.py::test_full_workflow_status_transitions PASSED         [ 70%]
+tests/test_rbac.py::test_invalid_transition_returns_400 PASSED           [ 75%]
+tests/test_rbac.py::test_reviewer_rejection_with_feedback PASSED         [ 79%]
+tests/test_schemas.py::test_valid_mcq_payload PASSED                     [ 83%]
+tests/test_schemas.py::test_invalid_mcq_payload_missing_choices PASSED   [ 87%]
+tests/test_schemas.py::test_valid_essay_payload PASSED                   [ 91%]
+tests/test_schemas.py::test_invalid_essay_payload_missing_min_words PASSED [ 95%]
+tests/test_schemas.py::test_invalid_cross_schema_payload PASSED          [100%]
+
+=================================== FAILURES ===================================
+_________________________ test_refresh_token_endpoint __________________________
+
+    def test_refresh_token_endpoint():
+        # Login to get refresh cookie
+        login_resp = client.post("/api/auth/login", json={
+            "email": "testauth@vu.nl",
+            "password": "strongpassword123"
+        })
+        refresh_cookie = login_resp.cookies.get("refresh_token")
+    
+        # Use cookie to get new access token
+        refresh_resp = client.post("/api/auth/refresh", cookies={"refresh_token": refresh_cookie})
+        assert refresh_resp.status_code == 200
+        data = refresh_resp.json()
+        assert "access_token" in data
+>       assert data["access_token"] != login_resp.json()["access_token"]
+E       AssertionError: assert 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzNDU4NzVmOC0zMTQ0LTQyNzAtOGNiMi0yNDEzNGUyYjg3ZTEiLCJlbWFpbCI6InRlc3RhdXRoQHZ1Lm5sIiwicm9sZSI6IlNUVURFTlQiLCJleHAiOjE3NzI0OTgwMTksInR5cGUiOiJhY2Nlc3MifQ.aiUhG_Bx4mctMjHfN2LyQZq3b1vcqFn9hAH5uxrT5aQ' != 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIzNDU4NzVmOC0zMTQ0LTQyNzAtOGNiMi0yNDEzNGUyYjg3ZTEiLCJlbWFpbCI6InRlc3RhdXRoQHZ1Lm5sIiwicm9sZSI6IlNUVURFTlQiLCJleHAiOjE3NzI0OTgwMTksInR5cGUiOiJhY2Nlc3MifQ.aiUhG_Bx4mctMjHfN2LyQZq3b1vcqFn9hAH5uxrT5aQ'
+
+tests/test_auth.py:100: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.14/site-packages/starlette/formparsers.py:12
+  /Users/davidcvetkovski/Documents/Uni/TH/backend/.venv/lib/python3.14/site-packages/starlette/formparsers.py:12: PendingDeprecationWarning: Please use `import python_multipart` instead.
+    import multipart
+
+.venv/lib/python3.14/site-packages/fastapi/routing.py:211: 28 warnings
+  /Users/davidcvetkovski/Documents/Uni/TH/backend/.venv/lib/python3.14/site-packages/fastapi/routing.py:211: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    is_coroutine = asyncio.iscoroutinefunction(dependant.call)
+
+.venv/lib/python3.14/site-packages/starlette/_utils.py:42: 3 warnings
+tests/test_auth.py: 12 warnings
+tests/test_items_api.py: 11 warnings
+tests/test_rbac.py: 32 warnings
+  /Users/davidcvetkovski/Documents/Uni/TH/backend/.venv/lib/python3.14/site-packages/starlette/_utils.py:42: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    return asyncio.iscoroutinefunction(obj) or (
+
+.venv/lib/python3.14/site-packages/starlette/_utils.py:43
+.venv/lib/python3.14/site-packages/starlette/_utils.py:43
+.venv/lib/python3.14/site-packages/starlette/_utils.py:43
+  /Users/davidcvetkovski/Documents/Uni/TH/backend/.venv/lib/python3.14/site-packages/starlette/_utils.py:43: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    callable(obj) and asyncio.iscoroutinefunction(obj.__call__)
+
+tests/test_auth.py: 1 warning
+tests/test_items_api.py: 6 warnings
+tests/test_rbac.py: 9 warnings
+  /Users/davidcvetkovski/Documents/Uni/TH/backend/.venv/lib/python3.14/site-packages/sqlalchemy/sql/schema.py:3596: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+tests/test_auth.py::test_refresh_token_endpoint
+tests/test_auth.py::test_logout_clears_cookie
+  /Users/davidcvetkovski/Documents/Uni/TH/backend/.venv/lib/python3.14/site-packages/starlette/testclient.py:516: DeprecationWarning: Setting per-request cookies=<...> is being deprecated, because the expected behaviour on cookie persistence is ambiguous. Set cookies directly on the client instance instead.
+    return super().request(
+
+tests/test_rbac.py::test_constructor_can_create_draft
+  /Users/davidcvetkovski/Documents/Uni/TH/backend/.venv/lib/python3.14/site-packages/_pytest/python.py:170: PytestReturnNotNoneWarning: Test functions should return None, but tests/test_rbac.py::test_constructor_can_create_draft returned <class 'str'>.
+  Did you mean to use `assert` instead of `return`?
+  See https://docs.pytest.org/en/stable/how-to/assert.html#return-not-none for more information.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_auth.py::test_refresh_token_endpoint - AssertionError: asse...
+================== 1 failed, 23 passed, 109 warnings in 6.96s ==================

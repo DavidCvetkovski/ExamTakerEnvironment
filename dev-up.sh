@@ -10,7 +10,18 @@ echo "🚀 Starting OpenVision Development Environment..."
 
 # 1. Start Docker Database
 echo "📦 Starting Database (Docker)..."
-docker-compose up -d db
+
+# Detect docker-compose command (V2 vs V1)
+if docker compose version > /dev/null 2>&1; then
+    DOCKER_COMPOSE="docker compose"
+elif docker-compose version > /dev/null 2>&1; then
+    DOCKER_COMPOSE="docker-compose"
+else
+    echo "❌ Error: Docker Compose not found. Please install Docker Desktop."
+    exit 1
+fi
+
+$DOCKER_COMPOSE up -d db
 
 # 2. Setup Backend
 echo "🐍 Setting up Backend..."

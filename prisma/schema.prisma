@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../frontend/node_modules/.prisma/client"
 }
 
 generator py_client {

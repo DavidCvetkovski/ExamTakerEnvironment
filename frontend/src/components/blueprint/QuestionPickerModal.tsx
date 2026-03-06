@@ -12,21 +12,34 @@ export default function QuestionPickerModal({ isOpen, onClose, onSelect, exclude
     const { availableItems, fetchAvailableItems, isLoading } = useBlueprintStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [typeFilter, setTypeFilter] = useState<string>('all');
+    const [subjectFilter, setSubjectFilter] = useState<string>('all');
     const [inspectedItem, setInspectedItem] = useState<AvailableItem | null>(null);
 
+    // Reset inspection state when opening to avoid "ghosting" previous state
     useEffect(() => {
         if (isOpen) {
             fetchAvailableItems();
+            setInspectedItem(null);
+            setSearchQuery('');
         }
     }, [isOpen, fetchAvailableItems]);
 
+    // Cleanup when closing to ensure next open is fresh
+    const handleClose = () => {
+        setInspectedItem(null);
+        onClose();
+    };
+
     if (!isOpen) return null;
+
+    const uniqueSubjects = Array.from(new Set(availableItems.map(i => i.metadata_tags?.topic).filter(Boolean))) as string[];
 
     const filteredItems = availableItems.filter(item => {
         const matchesSearch = item.latest_content_preview.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesType = typeFilter === 'all' || item.latest_question_type === typeFilter;
+        const matchesSubject = subjectFilter === 'all' || item.metadata_tags?.topic === subjectFilter;
         const isExcluded = excludeIds.includes(item.id);
-        return matchesSearch && matchesType && !isExcluded;
+        return matchesSearch && matchesType && matchesSubject && !isExcluded;
     });
 
     return (
@@ -67,7 +80,7 @@ export default function QuestionPickerModal({ isOpen, onClose, onSelect, exclude
                 }}>
                     <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: '#fff' }}>Select Question</h2>
                     <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         style={{
                             background: 'rgba(255, 255, 255, 0.05)',
                             border: 'none',
@@ -123,8 +136,27 @@ export default function QuestionPickerModal({ isOpen, onClose, onSelect, exclude
                         }}
                     >
                         <option value="all">All Types</option>
-                        <option value="MULTIPLE_CHOICE">MCQ</option>
+                        <option value="MULTIPLE_CHOICE">Single Choice</option>
+                        <option value="MULTIPLE_RESPONSE">Multiple Choice</option>
                         <option value="ESSAY">Essay</option>
+                    </select>
+                    <select
+                        value={subjectFilter}
+                        onChange={(e) => setSubjectFilter(e.target.value)}
+                        style={{
+                            backgroundColor: '#0f172a',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '12px',
+                            padding: '12px 16px',
+                            color: '#fff',
+                            outline: 'none',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <option value="all">All Subjects</option>
+                        {uniqueSubjects.map(subject => (
+                            <option key={subject} value={subject}>{subject}</option>
+                        ))}
                     </select>
                 </div>
 
@@ -156,7 +188,11 @@ export default function QuestionPickerModal({ isOpen, onClose, onSelect, exclude
                                     <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 600 }}>Inspection View</h3>
                                 </div>
                                 <button
-                                    onClick={() => onSelect(inspectedItem)}
+                                    onClick={() => {
+                                        setInspectedItem(null);
+                                        onSelect(inspectedItem);
+                                    }}
+                                    disabled={excludeIds.includes(inspectedItem.id)}
                                     style={{
                                         padding: '12px 24px',
                                         backgroundColor: '#3b82f6',
@@ -164,11 +200,12 @@ export default function QuestionPickerModal({ isOpen, onClose, onSelect, exclude
                                         border: 'none',
                                         borderRadius: '12px',
                                         fontWeight: 600,
-                                        cursor: 'pointer',
-                                        boxShadow: '0 4px 14px rgba(59, 130, 246, 0.4)'
+                                        cursor: excludeIds.includes(inspectedItem.id) ? 'not-allowed' : 'pointer',
+                                        boxShadow: excludeIds.includes(inspectedItem.id) ? 'none' : '0 4px 14px rgba(59, 130, 246, 0.4)',
+                                        opacity: excludeIds.includes(inspectedItem.id) ? 0.5 : 1
                                     }}
                                 >
-                                    Select This Question
+                                    {excludeIds.includes(inspectedItem.id) ? 'Already Added' : 'Select This Question'}
                                 </button>
                             </div>
 
@@ -191,6 +228,10 @@ export default function QuestionPickerModal({ isOpen, onClose, onSelect, exclude
                                     <div>
                                         <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>Status</div>
                                         <div style={{ display: 'inline-flex', padding: '4px 10px', borderRadius: '6px', backgroundColor: 'rgba(34,197,94,0.1)', color: '#4ade80', fontSize: '0.9rem' }}>{inspectedItem.latest_status}</div>
+                                    </div>
+                                    <div>
+                                        <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>Points</div>
+                                        <div style={{ color: '#fff', fontSize: '1rem', fontWeight: 600 }}>{inspectedItem.metadata_tags?.points ?? 1} pt(s)</div>
                                     </div>
                                     {inspectedItem.metadata_tags?.topic && (
                                         <div>
@@ -245,16 +286,22 @@ export default function QuestionPickerModal({ isOpen, onClose, onSelect, exclude
                                         width: '44px',
                                         height: '44px',
                                         borderRadius: '12px',
-                                        backgroundColor: item.latest_question_type === 'MULTIPLE_CHOICE' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(139, 92, 246, 0.1)',
+                                        backgroundColor: item.latest_question_type === 'MULTIPLE_CHOICE' ? 'rgba(59, 130, 246, 0.1)' :
+                                            item.latest_question_type === 'MULTIPLE_RESPONSE' ? 'rgba(99, 102, 241, 0.1)' :
+                                                'rgba(168, 85, 247, 0.1)',
                                         display: 'flex',
                                         flexDirection: 'column',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        color: item.latest_question_type === 'MULTIPLE_CHOICE' ? '#60a5fa' : '#a78bfa',
+                                        color: item.latest_question_type === 'MULTIPLE_CHOICE' ? '#60a5fa' :
+                                            item.latest_question_type === 'MULTIPLE_RESPONSE' ? '#818cf8' :
+                                                '#c084fc',
                                         fontWeight: 800,
                                         fontSize: '0.65rem'
                                     }}>
-                                        {item.latest_question_type === 'MULTIPLE_CHOICE' ? 'MCQ' : 'ESS'}
+                                        {item.latest_question_type === 'MULTIPLE_CHOICE' ? '○ SC' :
+                                            item.latest_question_type === 'MULTIPLE_RESPONSE' ? '☐ MC' :
+                                                'ESS'}
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <div style={{ color: '#fff', fontSize: '0.95rem', fontWeight: 500, marginBottom: '6px' }}>
@@ -270,34 +317,45 @@ export default function QuestionPickerModal({ isOpen, onClose, onSelect, exclude
                                                     {item.metadata_tags.topic}
                                                 </div>
                                             )}
+                                            <div style={{ color: '#475569', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#475569' }}></span>
+                                                {item.metadata_tags?.points ?? 1} pt(s)
+                                            </div>
                                         </div>
                                     </div>
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            onSelect(item);
+                                            if (!excludeIds.includes(item.id)) {
+                                                onSelect(item);
+                                            }
                                         }}
+                                        disabled={excludeIds.includes(item.id)}
                                         style={{
                                             padding: '8px 16px',
                                             borderRadius: '10px',
-                                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                                            border: '1px solid rgba(59, 130, 246, 0.2)',
-                                            color: '#60a5fa',
+                                            backgroundColor: excludeIds.includes(item.id) ? 'rgba(255, 255, 255, 0.05)' : 'rgba(59, 130, 246, 0.1)',
+                                            border: '1px solid ' + (excludeIds.includes(item.id) ? 'rgba(255, 255, 255, 0.1)' : 'rgba(59, 130, 246, 0.2)'),
+                                            color: excludeIds.includes(item.id) ? '#444' : '#60a5fa',
                                             fontSize: '0.85rem',
                                             fontWeight: 700,
-                                            cursor: 'pointer',
+                                            cursor: excludeIds.includes(item.id) ? 'not-allowed' : 'pointer',
                                             transition: 'all 0.2s'
                                         }}
                                         onMouseOver={(e) => {
-                                            e.currentTarget.style.backgroundColor = '#3b82f6';
-                                            e.currentTarget.style.color = '#fff';
+                                            if (!excludeIds.includes(item.id)) {
+                                                e.currentTarget.style.backgroundColor = '#3b82f6';
+                                                e.currentTarget.style.color = '#fff';
+                                            }
                                         }}
                                         onMouseOut={(e) => {
-                                            e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-                                            e.currentTarget.style.color = '#60a5fa';
+                                            if (!excludeIds.includes(item.id)) {
+                                                e.currentTarget.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+                                                e.currentTarget.style.color = '#60a5fa';
+                                            }
                                         }}
                                     >
-                                        Select
+                                        {excludeIds.includes(item.id) ? 'Added' : 'Select'}
                                     </button>
                                 </div>
                             ))}
@@ -314,7 +372,7 @@ export default function QuestionPickerModal({ isOpen, onClose, onSelect, exclude
                     background: 'rgba(255, 255, 255, 0.01)'
                 }}>
                     <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         style={{
                             padding: '10px 20px',
                             backgroundColor: 'transparent',

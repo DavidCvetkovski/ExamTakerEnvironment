@@ -142,19 +142,6 @@ async def create_new_revision(lo_id: UUID, payload: ItemVersionCreate, current_u
     options_obj = payload.options.model_dump()
     metadata_obj = payload.metadata_tags
 
-    if latest and latest.status == ItemStatus.DRAFT.value:
-        # Overwrite the active draft
-        updated = await prisma.item_versions.update(
-            where={"id": latest.id},
-            data={
-                "content": Json(content_obj),
-                "options": Json(options_obj),
-                "metadata_tags": Json(metadata_obj) if metadata_obj else Json(None),
-                "question_type": payload.question_type.value
-            }
-        )
-        return updated
-
     next_v = (latest.version_number + 1) if latest else 1
     new_version = await prisma.item_versions.create(
         data={

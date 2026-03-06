@@ -13,7 +13,7 @@ interface MCQOption {
 export default function MCQOptionsPanel() {
     const { questionType, options, updateOptions } = useAuthoringStore();
 
-    if (questionType !== 'MULTIPLE_CHOICE') return null;
+    if (questionType !== 'MULTIPLE_CHOICE' && questionType !== 'MULTIPLE_RESPONSE') return null;
 
     const mcqOptions = options as MCQOption[];
 
@@ -27,9 +27,15 @@ export default function MCQOptionsPanel() {
     };
 
     const updateOption = (id: string, field: keyof MCQOption, value: string | boolean) => {
-        updateOptions(
-            mcqOptions.map((o) => (o.id === id ? { ...o, [field]: value } : o))
-        );
+        if (questionType === 'MULTIPLE_CHOICE' && field === 'is_correct' && value === true) {
+            updateOptions(
+                mcqOptions.map((o) => (o.id === id ? { ...o, is_correct: true } : { ...o, is_correct: false }))
+            );
+        } else {
+            updateOptions(
+                mcqOptions.map((o) => (o.id === id ? { ...o, [field]: value } : o))
+            );
+        }
     };
 
     return (
@@ -47,11 +53,16 @@ export default function MCQOptionsPanel() {
                     />
                     <label className="correct-toggle" title="Mark as correct">
                         <input
-                            type="checkbox"
+                            type={questionType === 'MULTIPLE_CHOICE' ? 'radio' : 'checkbox'}
+                            name={questionType === 'MULTIPLE_CHOICE' ? 'correct-option' : undefined}
                             checked={opt.is_correct}
                             onChange={(e) => updateOption(opt.id, 'is_correct', e.target.checked)}
                         />
-                        ✓
+                        <span className="toggle-icon">
+                            {questionType === 'MULTIPLE_CHOICE'
+                                ? (opt.is_correct ? '◉' : '○')
+                                : (opt.is_correct ? '☑' : '☐')}
+                        </span>
                     </label>
                     <button className="remove-btn" onClick={() => removeOption(opt.id)} title="Remove">
                         ✕

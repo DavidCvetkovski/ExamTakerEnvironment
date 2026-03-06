@@ -11,10 +11,21 @@ export default function ItemsLibraryPage() {
     const user = useAuthStore(state => state.user);
     const { items, isLoading, error, fetchItems, createItem } = useLibraryStore();
     const [isCreating, setIsCreating] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [subjectFilter, setSubjectFilter] = useState('all');
 
     useEffect(() => {
         fetchItems();
     }, [fetchItems]);
+
+    const uniqueSubjects = Array.from(new Set(items.map(i => i.metadata_tags?.topic).filter(Boolean))) as string[];
+
+    const filteredItems = items.filter(item => {
+        const matchesSearch = (item.latest_content_preview || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.id.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSubject = subjectFilter === 'all' || item.metadata_tags?.topic === subjectFilter;
+        return matchesSearch && matchesSubject;
+    });
 
     const handleCreateNew = async () => {
         setIsCreating(true);
@@ -39,6 +50,26 @@ export default function ItemsLibraryPage() {
         return (
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${color}`}>
                 {status.replace(/_/g, ' ')}
+            </span>
+        );
+    };
+
+    const DifficultyBadge = ({ level }: { level?: number }) => {
+        if (!level) return <span className="text-gray-400 text-xs italic">N/A</span>;
+
+        const colors = [
+            'bg-emerald-50 text-emerald-700 border-emerald-200', // 1
+            'bg-blue-50 text-blue-700 border-blue-200',       // 2
+            'bg-indigo-50 text-indigo-700 border-indigo-200',   // 3
+            'bg-amber-50 text-amber-700 border-amber-200',     // 4
+            'bg-rose-50 text-rose-700 border-rose-200',       // 5
+        ];
+
+        const color = colors[Math.min(level - 1, 4)] || colors[0];
+
+        return (
+            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${color} uppercase tracking-tight`}>
+                Lvl {level}
             </span>
         );
     };
@@ -79,6 +110,29 @@ export default function ItemsLibraryPage() {
                         </div>
                     </div>
 
+                    {/* Filters */}
+                    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-4">
+                        <div className="flex-1 relative">
+                            <input
+                                type="text"
+                                placeholder="Search questions..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none"
+                            />
+                        </div>
+                        <select
+                            value={subjectFilter}
+                            onChange={(e) => setSubjectFilter(e.target.value)}
+                            className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none cursor-pointer min-w-[150px]"
+                        >
+                            <option value="all">All Subjects</option>
+                            {uniqueSubjects.map(subject => (
+                                <option key={subject} value={subject}>{subject}</option>
+                            ))}
+                        </select>
+                    </div>
+
                     {/* Table Area */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                         {error && (
@@ -92,6 +146,9 @@ export default function ItemsLibraryPage() {
                                 <thead className="bg-gray-50">
                                     <tr>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preview</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Points</th>
+                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Difficulty</th>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Version</th>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -110,12 +167,12 @@ export default function ItemsLibraryPage() {
                                         </tr>
                                     ) : items.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500">
+                                            <td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-500">
                                                 No questions found. Click "Create New Question" to get started.
                                             </td>
                                         </tr>
                                     ) : (
-                                        items.map((item) => (
+                                        filteredItems.map((item) => (
                                             <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="text-sm font-medium text-gray-900 truncate max-w-[200px]" title={item.latest_content_preview}>
@@ -126,8 +183,21 @@ export default function ItemsLibraryPage() {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm text-gray-900 font-medium">
+                                                        {item.metadata_tags?.topic || <span className="text-gray-400 italic">General</span>}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm text-gray-900 font-medium">
+                                                        {item.metadata_tags?.points ?? 1}
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <DifficultyBadge level={item.metadata_tags?.difficulty} />
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="text-sm text-gray-600">
-                                                        {item.latest_question_type === 'MULTIPLE_CHOICE' ? 'MCQ' : 'Essay'}
+                                                        {item.latest_question_type === 'MULTIPLE_CHOICE' ? 'Single Choice' : item.latest_question_type === 'MULTIPLE_RESPONSE' ? 'Multiple Choice' : 'Essay'}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">

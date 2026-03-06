@@ -22,6 +22,8 @@ export default function AuthorPage() {
         fetchLatestVersion,
         learningObjectId,
         saveDraft,
+        metadataTags,
+        updateMetadataField,
     } = useAuthoringStore();
 
     const { user, logout } = useAuthStore();
@@ -51,10 +53,7 @@ export default function AuthorPage() {
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-white mb-2">✏️ Question Authoring</h1>
                     <p className="text-[#A1A1AA] text-sm">
-                        Create or edit question versions for Learning Object:
-                        <code className="ml-2 bg-[#242424] px-2 py-1 rounded text-blue-400 border border-[#333]">
-                            {learningObjectId || 'Loading...'}
-                        </code>
+                        Create or edit question versions for the selected Learning Object.
                     </p>
                 </div>
 
@@ -95,13 +94,37 @@ export default function AuthorPage() {
 
                             <div className="flex items-center gap-3">
                                 <label className="text-[#A1A1AA] flex items-center gap-2">
+                                    Subject:
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Math"
+                                        value={(metadataTags.topic as string) || ''}
+                                        onChange={(e) => updateMetadataField('topic', e.target.value)}
+                                        className="bg-[#1A1A1A] text-white border border-[#333] rounded px-3 py-1.5 focus:border-blue-500 outline-none transition-colors w-32"
+                                    />
+                                </label>
+
+                                <label className="text-[#A1A1AA] flex items-center gap-2">
+                                    Points:
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        value={(metadataTags.points as number) ?? 1}
+                                        onChange={(e) => updateMetadataField('points', parseInt(e.target.value) || 0)}
+                                        className="bg-[#1A1A1A] text-white border border-[#333] rounded px-3 py-1.5 focus:border-blue-500 outline-none transition-colors w-20"
+                                    />
+                                </label>
+
+                                <label className="text-[#A1A1AA] flex items-center gap-2">
                                     Type:
                                     <select
                                         value={questionType}
-                                        onChange={(e) => setQuestionType(e.target.value as 'MULTIPLE_CHOICE' | 'ESSAY')}
+                                        onChange={(e) => setQuestionType(e.target.value as 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY')}
                                         className="bg-[#1A1A1A] text-white border border-[#333] rounded px-3 py-1.5 focus:border-blue-500 outline-none transition-colors"
                                     >
-                                        <option value="MULTIPLE_CHOICE">Multiple Choice</option>
+                                        <option value="MULTIPLE_CHOICE">Single Choice</option>
+                                        <option value="MULTIPLE_RESPONSE">Multiple Choice</option>
                                         <option value="ESSAY">Essay</option>
                                     </select>
                                 </label>
@@ -125,7 +148,7 @@ export default function AuthorPage() {
 
                         {/* Options Panels */}
                         <div className="bg-[#1A1A1A] rounded-xl border border-[#333] overflow-hidden">
-                            {questionType === 'MULTIPLE_CHOICE' ? (
+                            {questionType === 'MULTIPLE_CHOICE' || questionType === 'MULTIPLE_RESPONSE' ? (
                                 <MCQOptionsPanel />
                             ) : (
                                 <EssayOptionsPanel />

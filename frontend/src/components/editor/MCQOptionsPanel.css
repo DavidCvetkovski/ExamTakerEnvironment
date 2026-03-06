@@ -54,11 +54,17 @@
 .correct-toggle {
     display: flex;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
+    width: 24px;
     color: #888;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 18px;
     transition: color 0.15s;
+    user-select: none;
+}
+
+.correct-toggle:hover {
+    color: #aaa;
 }
 
 .correct-toggle:has(input:checked) {

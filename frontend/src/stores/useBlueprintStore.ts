@@ -56,6 +56,7 @@ export interface AvailableItem {
         topic?: string;
         difficulty?: number;
         estimated_time_mins?: number;
+        points?: number;
     };
 }
 

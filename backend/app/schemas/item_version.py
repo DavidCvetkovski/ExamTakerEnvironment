@@ -14,13 +14,17 @@ class OptionsMCQ(BaseModel):
     question_type: Literal[QuestionType.MULTIPLE_CHOICE]
     choices: List[MCQOption]
 
+class OptionsMultipleResponse(BaseModel):
+    question_type: Literal[QuestionType.MULTIPLE_RESPONSE]
+    choices: List[MCQOption]
+
 class OptionsEssay(BaseModel):
     question_type: Literal[QuestionType.ESSAY]
     min_words: int
     max_words: int
 
 # Using a discriminated union to parse based on 'question_type' field
-OptionsSchema = Annotated[Union[OptionsMCQ, OptionsEssay], Field(discriminator="question_type")]
+OptionsSchema = Annotated[Union[OptionsMCQ, OptionsMultipleResponse, OptionsEssay], Field(discriminator="question_type")]
 
 class ItemVersionCreate(BaseModel):
     learning_object_id: UUID

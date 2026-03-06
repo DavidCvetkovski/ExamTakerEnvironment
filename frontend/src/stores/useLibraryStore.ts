@@ -7,8 +7,9 @@ export interface LearningObjectSummary {
     created_at: string;
     latest_version_number: number;
     latest_status: 'DRAFT' | 'READY_FOR_REVIEW' | 'APPROVED' | 'RETIRED';
-    latest_question_type: 'MULTIPLE_CHOICE' | 'ESSAY';
+    latest_question_type: 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY';
     latest_content_preview: string;
+    metadata_tags?: Record<string, any>;
 }
 
 interface LibraryState {

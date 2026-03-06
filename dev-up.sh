@@ -8,7 +8,34 @@ set -e
 
 echo "🚀 Starting OpenVision Development Environment..."
 
-# 0. Kill existing processes on 8000/3000 to prevent 'Address already in use'
+# --- 0. Prerequisite Checks ---
+check_cmd() {
+    if ! command -v "$1" &> /dev/null; then
+        echo "❌ Error: $1 is not installed."
+        exit 1
+    fi
+}
+
+check_cmd "docker"
+check_cmd "python3"
+check_cmd "npm"
+check_cmd "lsof"
+
+# --- 1. Environment Setup ---
+if [ ! -f ".env" ]; then
+    echo "📄 .env not found, creating from .env.example..."
+    if [ -f ".env.example" ]; then
+        cp .env.example .env
+    else
+        echo "❌ Error: .env.example missing. Cannot proceed."
+        exit 1
+    fi
+fi
+
+# Load env vars for current script (Prisma needs DATABASE_URL)
+set -a && source .env && set +a
+
+# --- 2. Cleanup ---
 echo "🧹 Cleaning up old processes..."
 lsof -ti:8000 | xargs kill -9 2>/dev/null || true
 lsof -ti:3000 | xargs kill -9 2>/dev/null || true
@@ -36,16 +63,16 @@ if [ ! -d ".venv" ]; then
     python3 -m venv .venv
 fi
 source .venv/bin/activate
+python3 -m pip install --upgrade pip -q
 pip install -q -r requirements.txt
 
 # Prisma Generation (Industry Standard)
 echo "💎 Generating Prisma Clients (JS & Python)..."
-prisma generate --schema=../prisma/schema.prisma
+npx prisma@5.17.0 generate --schema=../prisma/schema.prisma
 
 # Sync Prisma schema to the DB (creates/updates tables in development)
 echo "⚙️ Applying Database Schema (Prisma)..."
-set -a && source ../.env && set +a
-prisma db push --schema=../prisma/schema.prisma --accept-data-loss
+npx prisma@5.17.0 db push --schema=../prisma/schema.prisma --accept-data-loss
 cd ..
 
 # 3. Setup Frontend

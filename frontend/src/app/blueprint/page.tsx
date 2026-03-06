@@ -32,6 +32,8 @@ export default function BlueprintPage() {
     const [isEditing, setIsEditing] = useState(false);
     const [isStarting, setIsStarting] = useState(false);
     const [pickerOpen, setPickerOpen] = useState<{ blockIdx: number, ruleIdx: number } | null>(null);
+    const [draggedItem, setDraggedItem] = useState<{ blockIdx: number, ruleIdx: number } | null>(null);
+    const [dragOverItem, setDragOverItem] = useState<{ blockIdx: number, ruleIdx: number } | null>(null);
 
     useEffect(() => {
         fetchAvailableItems();
@@ -59,16 +61,15 @@ export default function BlueprintPage() {
     const handleAddRule = (blockIndex: number, type: 'FIXED' | 'RANDOM') => {
         if (!currentBlueprint || !currentBlueprint.blocks) return;
         const newBlocks = [...currentBlueprint.blocks];
-        const newRule: SelectionRule = type === 'FIXED'
-            ? { rule_type: 'FIXED', learning_object_id: '' }
-            : { rule_type: 'RANDOM', count: 1, tags: [] };
-
-        newBlocks[blockIndex].rules.push(newRule);
-        saveState({ blocks: newBlocks });
 
         if (type === 'FIXED') {
-            setPickerOpen({ blockIdx: blockIndex, ruleIdx: newBlocks[blockIndex].rules.length - 1 });
+            setPickerOpen({ blockIdx: blockIndex, ruleIdx: -1 });
+            return;
         }
+
+        const newRule: SelectionRule = { rule_type: 'RANDOM', count: 1, tags: [] };
+        newBlocks[blockIndex].rules.push(newRule);
+        saveState({ blocks: newBlocks });
     };
 
     const saveState = useCallback((patch: Partial<any>) => {
@@ -76,6 +77,46 @@ export default function BlueprintPage() {
             currentBlueprint: { ...useBlueprintStore.getState().currentBlueprint, ...patch } as any
         });
     }, []);
+
+    const handleDragStart = (e: React.DragEvent, blockIdx: number, ruleIdx: number) => {
+        setDraggedItem({ blockIdx, ruleIdx });
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => {
+            if (e.target instanceof HTMLElement) e.target.style.opacity = '0.5';
+        }, 0);
+    };
+
+    const handleDragEnter = (e: React.DragEvent, blockIdx: number, ruleIdx: number) => {
+        e.preventDefault();
+        setDragOverItem({ blockIdx, ruleIdx });
+    };
+
+    const handleDragEnd = (e: React.DragEvent) => {
+        if (e.target instanceof HTMLElement) e.target.style.opacity = '1';
+        setDraggedItem(null);
+        setDragOverItem(null);
+    };
+
+    const handleDrop = (e: React.DragEvent, targetBlockIdx: number, targetRuleIdx: number) => {
+        e.preventDefault();
+        if (!currentBlueprint?.blocks || !draggedItem) return;
+
+        // Clone deeply enough for our operation to avoid strict mode double issues
+        const newBlocks = currentBlueprint.blocks.map(b => ({ ...b, rules: [...b.rules] }));
+
+        const sourceBlockIdx = draggedItem.blockIdx;
+        const sourceRuleIdx = draggedItem.ruleIdx;
+
+        // Remove from original position
+        const [movedRule] = newBlocks[sourceBlockIdx].rules.splice(sourceRuleIdx, 1);
+
+        // Insert at new position
+        newBlocks[targetBlockIdx].rules.splice(targetRuleIdx, 0, movedRule);
+
+        saveState({ blocks: newBlocks });
+        setDraggedItem(null);
+        setDragOverItem(null);
+    };
 
     const handleSave = async () => {
         if (!currentBlueprint) return;
@@ -109,9 +150,10 @@ export default function BlueprintPage() {
 
     // --- Stats Calculation ---
     const stats = (() => {
-        if (!currentBlueprint || !currentBlueprint.blocks) return { totalCount: 0, totalTime: 0, topics: {} as Record<string, number> };
+        if (!currentBlueprint || !currentBlueprint.blocks) return { totalCount: 0, totalTime: 0, totalPoints: 0, topics: {} as Record<string, number> };
         let totalCount = 0;
         let totalTime = 0;
+        let totalPoints = 0;
         const topics: Record<string, number> = {};
 
         currentBlueprint.blocks.forEach(block => {
@@ -120,9 +162,11 @@ export default function BlueprintPage() {
                     totalCount += 1;
                     const item = availableItems.find(i => i.id === rule.learning_object_id);
                     totalTime += item?.metadata_tags?.estimated_time_mins || 2;
+                    totalPoints += item?.metadata_tags?.points || 1;
                 } else {
                     totalCount += rule.count || 0;
                     totalTime += (rule.count || 0) * 3; // Estimated 3 mins for random
+                    totalPoints += (rule.count || 0) * 1; // Default 1 point for random
                     if (rule.topic) {
                         topics[rule.topic] = (topics[rule.topic] || 0) + (rule.count || 0);
                     }
@@ -130,7 +174,7 @@ export default function BlueprintPage() {
             });
         });
 
-        return { totalCount, totalTime, topics };
+        return { totalCount, totalTime, totalPoints, topics };
     })();
 
     if (!isEditing) {
@@ -288,87 +332,118 @@ export default function BlueprintPage() {
                                                 </button>
                                             </div>
 
-                                            <div className="grid gap-3">
-                                                {block.rules.map((rule, rIdx) => (
-                                                    <div key={rIdx} className="group flex flex-col gap-4 bg-white/[0.03] hover:bg-white/[0.05] border border-white/5 rounded-2xl p-4 transition-all relative">
-                                                        <div className="flex items-center gap-4">
-                                                            <div className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-tight ${rule.rule_type === 'FIXED' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
-                                                                {rule.rule_type === 'FIXED' ? 'Fixed Item' : 'Smart Draw'}
-                                                            </div>
-
-                                                            {rule.rule_type === 'FIXED' ? (
-                                                                <div className="flex-1 flex items-center justify-between gap-4">
-                                                                    <div className="text-sm font-medium text-slate-200 truncate">
-                                                                        {rule.learning_object_id ? getItemPreview(rule.learning_object_id) : <span className="text-slate-600">No question selected</span>}
-                                                                    </div>
-                                                                    <button
-                                                                        onClick={() => setPickerOpen({ blockIdx: bIdx, ruleIdx: rIdx })}
-                                                                        className="px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-bold rounded-lg transition-colors border border-blue-500/20"
-                                                                    >
-                                                                        {rule.learning_object_id ? 'Change' : 'Select'}
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="flex-1 flex flex-wrap items-center gap-4">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Quantity:</span>
-                                                                        <input
-                                                                            type="number"
-                                                                            value={rule.count}
-                                                                            onChange={(e) => {
-                                                                                const newBlocks = [...currentBlueprint!.blocks!];
-                                                                                newBlocks[bIdx].rules[rIdx].count = parseInt(e.target.value) || 1;
-                                                                                saveState({ blocks: newBlocks });
-                                                                            }}
-                                                                            className="w-12 bg-black/40 border border-white/10 rounded-lg py-1 px-1 text-sm text-center focus:outline-none"
-                                                                        />
-                                                                    </div>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Topic:</span>
-                                                                        <input
-                                                                            placeholder="Any Topic"
-                                                                            value={rule.topic || ''}
-                                                                            onChange={(e) => {
-                                                                                const newBlocks = [...currentBlueprint!.blocks!];
-                                                                                newBlocks[bIdx].rules[rIdx].topic = e.target.value;
-                                                                                saveState({ blocks: newBlocks });
-                                                                            }}
-                                                                            className="w-32 bg-black/40 border border-white/10 rounded-lg py-1 px-2 text-sm focus:outline-none"
-                                                                        />
-                                                                    </div>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Difficulty:</span>
-                                                                        <select
-                                                                            value={rule.difficulty || ''}
-                                                                            onChange={(e) => {
-                                                                                const newBlocks = [...currentBlueprint!.blocks!];
-                                                                                newBlocks[bIdx].rules[rIdx].difficulty = e.target.value ? parseInt(e.target.value) : undefined;
-                                                                                saveState({ blocks: newBlocks });
-                                                                            }}
-                                                                            className="bg-black/40 border border-white/10 rounded-lg py-1 px-2 text-sm focus:outline-none appearance-none"
-                                                                        >
-                                                                            <option value="">Any</option>
-                                                                            {[1, 2, 3, 4, 5].map(d => (
-                                                                                <option key={d} value={d}>Level {d}</option>
-                                                                            ))}
-                                                                        </select>
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                            <button
-                                                                onClick={() => {
-                                                                    const newBlocks = [...currentBlueprint!.blocks!];
-                                                                    newBlocks[bIdx].rules.splice(rIdx, 1);
-                                                                    saveState({ blocks: newBlocks });
-                                                                }}
-                                                                className="opacity-0 group-hover:opacity-100 p-2 text-slate-600 hover:text-red-400 transition-all ml-auto"
-                                                            >
-                                                                ✕
-                                                            </button>
-                                                        </div>
+                                            <div
+                                                className="grid gap-3 min-h-[60px]"
+                                                onDragOver={(e) => e.preventDefault()}
+                                                onDrop={(e) => {
+                                                    e.preventDefault();
+                                                    // Allow dropping at the end of an empty block
+                                                    if (block.rules.length === 0 && draggedItem) {
+                                                        handleDrop(e, bIdx, 0);
+                                                    }
+                                                }}
+                                            >
+                                                {block.rules.length === 0 && (
+                                                    <div className="h-full min-h-[60px] border-2 border-dashed border-white/10 rounded-2xl flex items-center justify-center text-slate-500 text-xs font-semibold uppercase tracking-widest bg-white/[0.01]">
+                                                        Empty Section
                                                     </div>
-                                                ))}
+                                                )}
+                                                {block.rules.map((rule, rIdx) => {
+                                                    const isDragOver = dragOverItem?.blockIdx === bIdx && dragOverItem?.ruleIdx === rIdx;
+                                                    return (
+                                                        <div
+                                                            key={rIdx}
+                                                            draggable
+                                                            onDragStart={(e) => handleDragStart(e, bIdx, rIdx)}
+                                                            onDragEnter={(e) => handleDragEnter(e, bIdx, rIdx)}
+                                                            onDragEnd={handleDragEnd}
+                                                            onDragOver={(e) => e.preventDefault()}
+                                                            onDrop={(e) => handleDrop(e, bIdx, rIdx)}
+                                                            className={`group flex flex-col gap-4 bg-white/[0.03] hover:bg-white/[0.05] border border-white/5 rounded-2xl p-4 transition-all relative cursor-move
+                                                                    ${isDragOver ? 'border-t-2 border-t-indigo-500 bg-indigo-500/10 scale-[1.02]' : ''}`}
+                                                        >
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="text-slate-500 cursor-grab hover:text-white">
+                                                                    &#x2630;
+                                                                </div>
+                                                                <div className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-tight ${rule.rule_type === 'FIXED' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
+                                                                    {rule.rule_type === 'FIXED' ? 'Fixed Item' : 'Smart Draw'}
+                                                                </div>
+
+                                                                {rule.rule_type === 'FIXED' ? (
+                                                                    <div className="flex-1 flex items-center justify-between gap-4">
+                                                                        <div className="text-sm font-medium text-slate-200 truncate">
+                                                                            {rule.learning_object_id ? getItemPreview(rule.learning_object_id) : <span className="text-slate-600">No question selected</span>}
+                                                                        </div>
+                                                                        <button
+                                                                            onClick={() => setPickerOpen({ blockIdx: bIdx, ruleIdx: rIdx })}
+                                                                            className="px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-bold rounded-lg transition-colors border border-blue-500/20"
+                                                                        >
+                                                                            {rule.learning_object_id ? 'Change' : 'Select'}
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="flex-1 flex flex-wrap items-center gap-4">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Quantity:</span>
+                                                                            <input
+                                                                                type="number"
+                                                                                value={rule.count}
+                                                                                onChange={(e) => {
+                                                                                    const newBlocks = [...currentBlueprint!.blocks!];
+                                                                                    newBlocks[bIdx].rules[rIdx].count = parseInt(e.target.value) || 1;
+                                                                                    saveState({ blocks: newBlocks });
+                                                                                }}
+                                                                                className="w-12 bg-black/40 border border-white/10 rounded-lg py-1 px-1 text-sm text-center focus:outline-none"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Topic:</span>
+                                                                            <input
+                                                                                placeholder="Any Topic"
+                                                                                value={rule.topic || ''}
+                                                                                onChange={(e) => {
+                                                                                    const newBlocks = [...currentBlueprint!.blocks!];
+                                                                                    newBlocks[bIdx].rules[rIdx].topic = e.target.value;
+                                                                                    saveState({ blocks: newBlocks });
+                                                                                }}
+                                                                                className="w-32 bg-black/40 border border-white/10 rounded-lg py-1 px-2 text-sm focus:outline-none"
+                                                                            />
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Difficulty:</span>
+                                                                            <select
+                                                                                value={rule.difficulty || ''}
+                                                                                onChange={(e) => {
+                                                                                    const newBlocks = [...currentBlueprint!.blocks!];
+                                                                                    newBlocks[bIdx].rules[rIdx].difficulty = e.target.value ? parseInt(e.target.value) : undefined;
+                                                                                    saveState({ blocks: newBlocks });
+                                                                                }}
+                                                                                className="bg-black/40 border border-white/10 rounded-lg py-1 px-2 text-sm focus:outline-none appearance-none"
+                                                                            >
+                                                                                <option value="">Any</option>
+                                                                                {[1, 2, 3, 4, 5].map(d => (
+                                                                                    <option key={d} value={d}>Level {d}</option>
+                                                                                ))}
+                                                                            </select>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const newBlocks = [...currentBlueprint!.blocks!];
+                                                                        newBlocks[bIdx].rules.splice(rIdx, 1);
+                                                                        saveState({ blocks: newBlocks });
+                                                                    }}
+                                                                    className="opacity-0 group-hover:opacity-100 p-2 text-slate-600 hover:text-red-400 transition-all ml-auto"
+                                                                >
+                                                                    ✕
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })}
                                             </div>
 
                                             <div className="mt-6 flex gap-3">
@@ -445,10 +520,14 @@ export default function BlueprintPage() {
                             </h4>
 
                             <div className="space-y-8">
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-3 gap-4">
                                     <div className="bg-white/5 rounded-2xl p-4">
                                         <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Items</div>
                                         <div className="text-2xl font-black">{stats.totalCount}</div>
+                                    </div>
+                                    <div className="bg-white/5 rounded-2xl p-4">
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Points</div>
+                                        <div className="text-2xl font-black">{stats.totalPoints}</div>
                                     </div>
                                     <div className="bg-white/5 rounded-2xl p-4">
                                         <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Time</div>
@@ -515,7 +594,11 @@ export default function BlueprintPage() {
                     onSelect={(item) => {
                         if (pickerOpen && currentBlueprint?.blocks) {
                             const newBlocks = [...currentBlueprint.blocks];
-                            newBlocks[pickerOpen.blockIdx].rules[pickerOpen.ruleIdx].learning_object_id = item.id;
+                            if (pickerOpen.ruleIdx === -1) {
+                                newBlocks[pickerOpen.blockIdx].rules.push({ rule_type: 'FIXED', learning_object_id: item.id });
+                            } else {
+                                newBlocks[pickerOpen.blockIdx].rules[pickerOpen.ruleIdx].learning_object_id = item.id;
+                            }
                             saveState({ blocks: newBlocks });
                             setPickerOpen(null);
                         }

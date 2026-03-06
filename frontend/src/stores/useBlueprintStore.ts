@@ -8,6 +8,9 @@ export interface SelectionRule {
     learning_object_id?: string;
     count?: number;
     tags?: string[];
+    subject?: string;
+    topic?: string;
+    difficulty?: number;
 }
 
 export interface TestBlock {
@@ -43,15 +46,30 @@ export interface ValidationResponse {
     blocks: ValidationBlock[];
 }
 
+export interface AvailableItem {
+    id: string;
+    latest_question_type: string;
+    latest_content_preview: string;
+    latest_status: string;
+    metadata_tags?: {
+        subject?: string;
+        topic?: string;
+        difficulty?: number;
+        estimated_time_mins?: number;
+    };
+}
+
 interface BlueprintState {
     blueprints: TestDefinition[];
     currentBlueprint: Partial<TestDefinition> | null;
+    availableItems: AvailableItem[];
     isLoading: boolean;
     error: string | null;
     validation: ValidationResponse | null;
 
     fetchBlueprints: () => Promise<void>;
     fetchBlueprint: (id: string) => Promise<void>;
+    fetchAvailableItems: () => Promise<void>;
     saveBlueprint: (data: Partial<TestDefinition>) => Promise<string>;
     validateBlueprint: (id: string) => Promise<void>;
     resetCurrent: () => void;
@@ -60,9 +78,20 @@ interface BlueprintState {
 export const useBlueprintStore = create<BlueprintState>((set, get) => ({
     blueprints: [],
     currentBlueprint: null,
+    availableItems: [],
     isLoading: false,
     error: null,
     validation: null,
+
+    fetchAvailableItems: async () => {
+        set({ isLoading: true, error: null });
+        try {
+            const response = await api.get<AvailableItem[]>('learning-objects');
+            set({ availableItems: response.data, isLoading: false });
+        } catch (err: any) {
+            set({ error: err.response?.data?.detail || 'Failed to fetch items', isLoading: false });
+        }
+    },
 
     fetchBlueprints: async () => {
         set({ isLoading: true, error: null });

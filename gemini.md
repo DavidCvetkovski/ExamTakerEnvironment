@@ -34,6 +34,14 @@ Before writing a new script or component, check the codebase per your directive.
 **3. Update directives as you learn**
 Directives are living documents. When you discover API constraints, better approaches, common errors, or timing expectations—update the directive. But don't create or overwrite foundational Master Plan directives without asking unless explicitly told to. Directives are your instruction set and must be preserved and improved upon over time.
 
+**4. Always plan in Linear**
+Every piece of work — new feature, bug fix, refactor, or Epoch — must be represented in Linear as an issue **before** or **while** starting it. Linear is the source of truth for what is being worked on right now, what is blocked, and what is coming next. This runs alongside (not instead of) the `directives/` docs:
+- **Before starting an Epoch:** Create or update the corresponding Linear issue/milestone. Set it to `In Progress`.
+- **Before starting a bug fix or sub-task:** Create a Linear issue for it (even if small). Link it to the parent Epoch issue.
+- **When work is done:** Mark the Linear issue as `Done`. Update status in the directive doc too.
+- **New discoveries or scope changes:** Add them as new Linear issues immediately so nothing gets lost.
+Linear is always kept in sync with the current branch and directive state. If it's not in Linear, it doesn't exist.
+
 ## Self-annealing loop
 
 Errors are learning opportunities. When something breaks:

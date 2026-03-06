@@ -1,27 +1,29 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useBlueprintStore, TestBlock, SelectionRule } from '@/stores/useBlueprintStore';
 import { useExamStore } from '@/stores/useExamStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useRouter, useSearchParams } from 'next/navigation';
+import QuestionPickerModal from '@/components/blueprint/QuestionPickerModal';
 
 export default function BlueprintPage() {
     const {
         blueprints,
         currentBlueprint,
+        availableItems,
         isLoading,
         error,
         validation,
         fetchBlueprints,
         fetchBlueprint,
+        fetchAvailableItems,
         saveBlueprint,
         validateBlueprint,
         resetCurrent
     } = useBlueprintStore();
 
-    const { user, logout } = useAuthStore();
     const { instantiateSession } = useExamStore();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -29,8 +31,10 @@ export default function BlueprintPage() {
 
     const [isEditing, setIsEditing] = useState(false);
     const [isStarting, setIsStarting] = useState(false);
+    const [pickerOpen, setPickerOpen] = useState<{ blockIdx: number, ruleIdx: number } | null>(null);
 
     useEffect(() => {
+        fetchAvailableItems();
         if (idFromUrl) {
             fetchBlueprint(idFromUrl);
             setIsEditing(true);
@@ -38,7 +42,7 @@ export default function BlueprintPage() {
             fetchBlueprints();
             setIsEditing(false);
         }
-    }, [idFromUrl, fetchBlueprints, fetchBlueprint]);
+    }, [idFromUrl, fetchBlueprints, fetchBlueprint, fetchAvailableItems]);
 
     const handleCreateNew = () => {
         resetCurrent();
@@ -61,15 +65,17 @@ export default function BlueprintPage() {
 
         newBlocks[blockIndex].rules.push(newRule);
         saveState({ blocks: newBlocks });
+
+        if (type === 'FIXED') {
+            setPickerOpen({ blockIdx: blockIndex, ruleIdx: newBlocks[blockIndex].rules.length - 1 });
+        }
     };
 
-    const saveState = (patch: Partial<any>) => {
-        // Local update to currentBlueprint for immediate UI feedback
-        // In a real app, you might want a separate local state before saving
+    const saveState = useCallback((patch: Partial<any>) => {
         useBlueprintStore.setState({
-            currentBlueprint: { ...currentBlueprint, ...patch }
+            currentBlueprint: { ...useBlueprintStore.getState().currentBlueprint, ...patch } as any
         });
-    };
+    }, []);
 
     const handleSave = async () => {
         if (!currentBlueprint) return;
@@ -96,34 +102,97 @@ export default function BlueprintPage() {
         }
     };
 
+    const getItemPreview = (id: string) => {
+        const item = availableItems.find(i => i.id === id);
+        return item ? item.latest_content_preview : 'Select a question...';
+    };
+
+    // --- Stats Calculation ---
+    const stats = (() => {
+        if (!currentBlueprint || !currentBlueprint.blocks) return { totalCount: 0, totalTime: 0, topics: {} as Record<string, number> };
+        let totalCount = 0;
+        let totalTime = 0;
+        const topics: Record<string, number> = {};
+
+        currentBlueprint.blocks.forEach(block => {
+            block.rules.forEach(rule => {
+                if (rule.rule_type === 'FIXED') {
+                    totalCount += 1;
+                    const item = availableItems.find(i => i.id === rule.learning_object_id);
+                    totalTime += item?.metadata_tags?.estimated_time_mins || 2;
+                } else {
+                    totalCount += rule.count || 0;
+                    totalTime += (rule.count || 0) * 3; // Estimated 3 mins for random
+                    if (rule.topic) {
+                        topics[rule.topic] = (topics[rule.topic] || 0) + (rule.count || 0);
+                    }
+                }
+            });
+        });
+
+        return { totalCount, totalTime, topics };
+    })();
+
     if (!isEditing) {
         return (
             <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN', 'STUDENT']}>
-                <div style={{ maxWidth: 1000, margin: '40px auto', padding: '0 20px', color: '#fff' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-                        <h1>📋 Test Blueprints</h1>
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-white">
+                    <div className="flex justify-between items-end mb-12">
+                        <div>
+                            <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">
+                                Test Blueprints
+                            </h1>
+                            <p className="mt-2 text-slate-400">Design and manage rule-based exam definitions.</p>
+                        </div>
                         <button
                             onClick={handleCreateNew}
-                            style={{ padding: '10px 20px', background: '#667eea', border: 'none', borderRadius: 6, color: '#fff', cursor: 'pointer', fontWeight: 600 }}
+                            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 transition-all active:scale-95"
                         >
-                            + Create New Blueprint
+                            <span className="mr-2 text-xl">+</span> New Blueprint
                         </button>
                     </div>
 
-                    {isLoading && <p>Loading blueprints...</p>}
-                    {error && <p style={{ color: '#f87171' }}>{error}</p>}
+                    {isLoading && blueprints.length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-24 opacity-50">
+                            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                            <p>Loading blueprints...</p>
+                        </div>
+                    )}
+                    {error && <div className="p-4 bg-red-900/20 border border-red-500/50 rounded-xl text-red-400 mb-8">{error}</div>}
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+                    {!isLoading && blueprints.length === 0 && (
+                        <div className="text-center py-20 bg-slate-900/30 rounded-3xl border border-dashed border-slate-800">
+                            <p className="text-slate-500 mb-6">No blueprints found. Get started by creating your first one!</p>
+                            <button onClick={handleCreateNew} className="text-indigo-400 font-semibold hover:text-indigo-300">
+                                Create Blueprint →
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {blueprints.map(bp => (
                             <div
                                 key={bp.id}
                                 onClick={() => router.push(`/blueprint?id=${bp.id}`)}
-                                style={{ background: '#16213e', padding: 20, borderRadius: 12, border: '1px solid #333', cursor: 'pointer' }}
+                                className="group relative bg-slate-900/50 hover:bg-slate-800/80 p-6 rounded-3xl border border-white/5 hover:border-white/10 transition-all cursor-pointer backdrop-blur-sm"
                             >
-                                <h3 style={{ margin: '0 0 8px' }}>{bp.title}</h3>
-                                <p style={{ color: '#888', fontSize: 14, margin: '0 0 16px' }}>{bp.description || 'No description'}</p>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#555' }}>
-                                    <span>{bp.blocks.length} Sections</span>
+                                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span className="text-indigo-400 text-sm font-medium">Edit →</span>
+                                </div>
+                                <h3 className="text-xl font-bold mb-2 pr-12 line-clamp-1">{bp.title}</h3>
+                                <p className="text-slate-400 text-sm mb-6 line-clamp-2 min-h-[40px]">{bp.description || 'No description provided.'}</p>
+
+                                <div className="flex items-center justify-between pt-4 border-t border-white/5 text-xs text-slate-500 font-medium tracking-wider uppercase">
+                                    <div className="flex items-center gap-4">
+                                        <span className="flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                            {bp.blocks.length} Sections
+                                        </span>
+                                        <span className="flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                                            {bp.duration_minutes} min
+                                        </span>
+                                    </div>
                                     <span>{new Date(bp.updated_at).toLocaleDateString()}</span>
                                 </div>
                             </div>
@@ -136,195 +205,322 @@ export default function BlueprintPage() {
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN', 'STUDENT']}>
-            <div style={{ maxWidth: 900, margin: '40px auto', padding: '0 20px', color: '#fff' }}>
-                <button onClick={() => router.push('/blueprint')} style={{ background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', marginBottom: 20 }}>
-                    ← Back to List
-                </button>
+            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-12 text-white">
+                <div className="flex gap-8">
+                    {/* Main Editor */}
+                    <div className="flex-1">
+                        <button
+                            onClick={() => router.push('/blueprint')}
+                            className="group flex items-center text-slate-400 hover:text-white mb-8 transition-colors"
+                        >
+                            <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> Back to Blueprints
+                        </button>
 
-                <div style={{ background: '#16213e', padding: 32, borderRadius: 16, border: '1px solid #333' }}>
-                    <input
-                        type="text"
-                        placeholder="Blueprint Title"
-                        value={currentBlueprint?.title || ''}
-                        onChange={(e) => saveState({ title: e.target.value })}
-                        style={{ width: '100%', background: 'transparent', border: 'none', borderBottom: '2px solid #333', color: '#fff', fontSize: '2rem', fontWeight: 700, marginBottom: 12, outline: 'none' }}
-                    />
-                    <textarea
-                        placeholder="Description (optional)"
-                        value={currentBlueprint?.description || ''}
-                        onChange={(e) => saveState({ description: e.target.value })}
-                        style={{ width: '100%', background: 'transparent', border: 'none', color: '#888', fontSize: '1rem', marginBottom: 32, resize: 'none', outline: 'none' }}
-                    />
-
-                    <div style={{ display: 'flex', gap: 24, marginBottom: 32 }}>
-                        <div style={{ flex: 1 }}>
-                            <label style={{ display: 'block', color: '#555', fontSize: 12, textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>Duration (minutes)</label>
-                            <input
-                                type="number"
-                                value={currentBlueprint?.duration_minutes || 60}
-                                onChange={(e) => saveState({ duration_minutes: parseInt(e.target.value) })}
-                                style={{ background: '#0d1117', border: '1px solid #333', borderRadius: 8, padding: '10px 14px', color: '#fff', width: '100%' }}
-                            />
-                        </div>
-                        <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                        <div className="bg-slate-900/80 backdrop-blur-xl rounded-[32px] border border-white/10 shadow-2xl overflow-hidden min-h-[700px]">
+                            {/* Hero Section */}
+                            <div className="p-8 pb-0">
                                 <input
-                                    type="checkbox"
-                                    checked={currentBlueprint?.shuffle_questions || false}
-                                    onChange={(e) => saveState({ shuffle_questions: e.target.checked })}
+                                    type="text"
+                                    placeholder="Untitled Blueprint"
+                                    value={currentBlueprint?.title || ''}
+                                    onChange={(e) => saveState({ title: e.target.value })}
+                                    className="w-100 bg-transparent border-none text-white text-4xl font-black placeholder-white/20 focus:ring-0 mb-2 p-0 w-full"
                                 />
-                                <span>Shuffle Questions</span>
-                            </label>
-                        </div>
-                    </div>
+                                <textarea
+                                    placeholder="Decribe the purpose of this test (optional)..."
+                                    value={currentBlueprint?.description || ''}
+                                    onChange={(e) => saveState({ description: e.target.value })}
+                                    rows={1}
+                                    className="w-100 bg-transparent border-none text-slate-400 text-lg placeholder-white/10 focus:ring-0 mb-8 p-0 resize-none w-full"
+                                />
 
-                    <h2 style={{ marginBottom: 20 }}>Sections & Rules</h2>
-
-                    {(currentBlueprint?.blocks || []).map((block, bIdx) => (
-                        <div key={bIdx} style={{ background: '#0d1117', padding: 24, borderRadius: 12, marginBottom: 20, border: '1px solid #222' }}>
-                            <input
-                                value={block.title}
-                                onChange={(e) => {
-                                    const newBlocks = [...currentBlueprint!.blocks!];
-                                    newBlocks[bIdx].title = e.target.value;
-                                    saveState({ blocks: newBlocks });
-                                }}
-                                style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.2rem', fontWeight: 600, marginBottom: 16, width: '100%' }}
-                            />
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                                {block.rules.map((rule, rIdx) => (
-                                    <div key={rIdx} style={{ background: '#16213e', padding: 12, borderRadius: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
-                                        <div style={{ padding: '4px 8px', background: rule.rule_type === 'FIXED' ? '#3b82f6' : '#8b5cf6', borderRadius: 4, fontSize: 10, fontWeight: 800 }}>
-                                            {rule.rule_type}
-                                        </div>
-                                        {rule.rule_type === 'FIXED' ? (
+                                {/* Config Bar */}
+                                <div className="flex flex-wrap items-center gap-6 p-6 bg-white/5 rounded-2xl mb-12">
+                                    <div className="flex-1 min-w-[150px]">
+                                        <label className="block text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-2">Manual Duration</label>
+                                        <div className="flex items-center">
                                             <input
-                                                placeholder="Learning Object UUID"
-                                                value={rule.learning_object_id || ''}
-                                                onChange={(e) => {
-                                                    const newBlocks = [...currentBlueprint!.blocks!];
-                                                    newBlocks[bIdx].rules[rIdx].learning_object_id = e.target.value;
-                                                    saveState({ blocks: newBlocks });
-                                                }}
-                                                style={{ flex: 1, background: '#0d1117', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', color: '#fff', fontSize: 13, fontFamily: 'monospace' }}
+                                                type="number"
+                                                value={currentBlueprint?.duration_minutes || 60}
+                                                onChange={(e) => saveState({ duration_minutes: parseInt(e.target.value) || 0 })}
+                                                className="bg-black/20 border border-white/10 rounded-lg py-2 px-3 text-white focus:outline-none focus:border-indigo-500/50 w-24"
                                             />
-                                        ) : (
-                                            <>
-                                                <input
-                                                    type="number"
-                                                    placeholder="Count"
-                                                    value={rule.count}
-                                                    onChange={(e) => {
-                                                        const newBlocks = [...currentBlueprint!.blocks!];
-                                                        newBlocks[bIdx].rules[rIdx].count = parseInt(e.target.value);
-                                                        saveState({ blocks: newBlocks });
-                                                    }}
-                                                    style={{ width: 60, background: '#0d1117', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', color: '#fff' }}
-                                                />
-                                                <input
-                                                    placeholder="Tags (comma separated)"
-                                                    value={(rule.tags || []).join(', ')}
-                                                    onChange={(e) => {
-                                                        const newBlocks = [...currentBlueprint!.blocks!];
-                                                        newBlocks[bIdx].rules[rIdx].tags = e.target.value.split(',').map(s => s.trim()).filter(s => s);
-                                                        saveState({ blocks: newBlocks });
-                                                    }}
-                                                    style={{ flex: 1, background: '#0d1117', border: '1px solid #333', borderRadius: 4, padding: '6px 10px', color: '#fff' }}
-                                                />
-                                            </>
-                                        )}
-                                        <button
-                                            onClick={() => {
-                                                const newBlocks = [...currentBlueprint!.blocks!];
-                                                newBlocks[bIdx].rules.splice(rIdx, 1);
-                                                saveState({ blocks: newBlocks });
-                                            }}
-                                            style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer' }}
-                                        >
-                                            ✕
-                                        </button>
+                                            <span className="ml-3 text-slate-400 text-sm font-medium">minutes</span>
+                                        </div>
                                     </div>
-                                ))}
-                            </div>
-
-                            <div style={{ marginTop: 16, display: 'flex', gap: 10 }}>
-                                <button
-                                    onClick={() => handleAddRule(bIdx, 'FIXED')}
-                                    style={{ background: '#3b82f633', border: '1px solid #3b82f6', color: '#3b82f6', padding: '6px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}
-                                >
-                                    + Add Item
-                                </button>
-                                <button
-                                    onClick={() => handleAddRule(bIdx, 'RANDOM')}
-                                    style={{ background: '#8b5cf633', border: '1px solid #8b5cf6', color: '#8b5cf6', padding: '6px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}
-                                >
-                                    + Add Random
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-
-                    <button
-                        onClick={handleAddBlock}
-                        style={{ width: '100%', padding: '12px', background: 'transparent', border: '2px dashed #333', color: '#555', borderRadius: 12, cursor: 'pointer', marginBottom: 32 }}
-                    >
-                        + Add New Section
-                    </button>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                            {validation && (
-                                <div style={{ color: validation.valid ? '#4ade80' : '#f87171', fontSize: 14, fontWeight: 600 }}>
-                                    {validation.valid ? '✓ Blueprint Valid' : '✕ Blueprint Incomplete/Invalid'}
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={() => saveState({ shuffle_questions: !currentBlueprint?.shuffle_questions })}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${currentBlueprint?.shuffle_questions ? 'bg-indigo-600' : 'bg-slate-700'}`}
+                                        >
+                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${currentBlueprint?.shuffle_questions ? 'translate-x-6' : 'translate-x-1'}`} />
+                                        </button>
+                                        <span className="text-sm font-semibold text-slate-300">Shuffle Questions</span>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-                        <div style={{ display: 'flex', gap: 16 }}>
-                            {idFromUrl && (
-                                <>
+                            </div>
+
+                            {/* Content Area */}
+                            <div className="p-8 pt-0">
+                                <div className="space-y-12">
+                                    {(currentBlueprint?.blocks || []).map((block, bIdx) => (
+                                        <div key={bIdx} className="relative">
+                                            <div className="absolute -left-4 top-0 bottom-0 w-1 bg-indigo-500/20 rounded-full"></div>
+                                            <div className="flex justify-between items-center mb-6">
+                                                <input
+                                                    value={block.title}
+                                                    onChange={(e) => {
+                                                        const newBlocks = [...currentBlueprint!.blocks!];
+                                                        newBlocks[bIdx].title = e.target.value;
+                                                        saveState({ blocks: newBlocks });
+                                                    }}
+                                                    className="bg-transparent border-none text-xl font-bold text-white focus:ring-0 p-0"
+                                                />
+                                                <button
+                                                    onClick={() => {
+                                                        const newBlocks = [...currentBlueprint!.blocks!];
+                                                        newBlocks.splice(bIdx, 1);
+                                                        saveState({ blocks: newBlocks });
+                                                    }}
+                                                    className="text-slate-600 hover:text-red-400 text-sm font-medium transition-colors"
+                                                >
+                                                    Remove Section
+                                                </button>
+                                            </div>
+
+                                            <div className="grid gap-3">
+                                                {block.rules.map((rule, rIdx) => (
+                                                    <div key={rIdx} className="group flex flex-col gap-4 bg-white/[0.03] hover:bg-white/[0.05] border border-white/5 rounded-2xl p-4 transition-all relative">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-tight ${rule.rule_type === 'FIXED' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
+                                                                {rule.rule_type === 'FIXED' ? 'Fixed Item' : 'Smart Draw'}
+                                                            </div>
+
+                                                            {rule.rule_type === 'FIXED' ? (
+                                                                <div className="flex-1 flex items-center justify-between gap-4">
+                                                                    <div className="text-sm font-medium text-slate-200 truncate">
+                                                                        {rule.learning_object_id ? getItemPreview(rule.learning_object_id) : <span className="text-slate-600">No question selected</span>}
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={() => setPickerOpen({ blockIdx: bIdx, ruleIdx: rIdx })}
+                                                                        className="px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-bold rounded-lg transition-colors border border-blue-500/20"
+                                                                    >
+                                                                        {rule.learning_object_id ? 'Change' : 'Select'}
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex-1 flex flex-wrap items-center gap-4">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Quantity:</span>
+                                                                        <input
+                                                                            type="number"
+                                                                            value={rule.count}
+                                                                            onChange={(e) => {
+                                                                                const newBlocks = [...currentBlueprint!.blocks!];
+                                                                                newBlocks[bIdx].rules[rIdx].count = parseInt(e.target.value) || 1;
+                                                                                saveState({ blocks: newBlocks });
+                                                                            }}
+                                                                            className="w-12 bg-black/40 border border-white/10 rounded-lg py-1 px-1 text-sm text-center focus:outline-none"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Topic:</span>
+                                                                        <input
+                                                                            placeholder="Any Topic"
+                                                                            value={rule.topic || ''}
+                                                                            onChange={(e) => {
+                                                                                const newBlocks = [...currentBlueprint!.blocks!];
+                                                                                newBlocks[bIdx].rules[rIdx].topic = e.target.value;
+                                                                                saveState({ blocks: newBlocks });
+                                                                            }}
+                                                                            className="w-32 bg-black/40 border border-white/10 rounded-lg py-1 px-2 text-sm focus:outline-none"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Difficulty:</span>
+                                                                        <select
+                                                                            value={rule.difficulty || ''}
+                                                                            onChange={(e) => {
+                                                                                const newBlocks = [...currentBlueprint!.blocks!];
+                                                                                newBlocks[bIdx].rules[rIdx].difficulty = e.target.value ? parseInt(e.target.value) : undefined;
+                                                                                saveState({ blocks: newBlocks });
+                                                                            }}
+                                                                            className="bg-black/40 border border-white/10 rounded-lg py-1 px-2 text-sm focus:outline-none appearance-none"
+                                                                        >
+                                                                            <option value="">Any</option>
+                                                                            {[1, 2, 3, 4, 5].map(d => (
+                                                                                <option key={d} value={d}>Level {d}</option>
+                                                                            ))}
+                                                                        </select>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            <button
+                                                                onClick={() => {
+                                                                    const newBlocks = [...currentBlueprint!.blocks!];
+                                                                    newBlocks[bIdx].rules.splice(rIdx, 1);
+                                                                    saveState({ blocks: newBlocks });
+                                                                }}
+                                                                className="opacity-0 group-hover:opacity-100 p-2 text-slate-600 hover:text-red-400 transition-all ml-auto"
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            <div className="mt-6 flex gap-3">
+                                                <button
+                                                    onClick={() => handleAddRule(bIdx, 'FIXED')}
+                                                    className="px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-bold rounded-xl transition-all border border-blue-500/10 flex items-center"
+                                                >
+                                                    <span className="mr-2 text-base">+</span> Specific Item
+                                                </button>
+                                                <button
+                                                    onClick={() => handleAddRule(bIdx, 'RANDOM')}
+                                                    className="px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 text-xs font-bold rounded-xl transition-all border border-purple-500/10 flex items-center"
+                                                >
+                                                    <span className="mr-2 text-base">+</span> Smart Rule
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <button
+                                    onClick={handleAddBlock}
+                                    className="w-full mt-12 py-10 border-2 border-dashed border-white/5 rounded-3xl text-slate-600 hover:text-slate-400 hover:border-white/10 hover:bg-white/[0.01] transition-all flex flex-col items-center justify-center gap-2"
+                                >
+                                    <span className="text-3xl">+</span>
+                                    <span className="text-sm font-bold uppercase tracking-widest">Add New Section</span>
+                                </button>
+                            </div>
+
+                            {/* Sticky Footer */}
+                            <div className="sticky bottom-0 bg-slate-900/90 backdrop-blur-xl border-t border-white/10 p-6 px-8 flex justify-between items-center z-10">
+                                <div className="flex items-center gap-4">
+                                    {validation && (
+                                        <div className={`flex items-center gap-2 text-sm font-bold ${validation.valid ? 'text-green-400' : 'text-amber-400 underline decoration-amber-400/30 cursor-help'}`}>
+                                            {validation.valid ? '✓ Ready to Publish' : '✕ Rules Incomplete'}
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex gap-4">
+                                    {idFromUrl && (
+                                        <>
+                                            <button
+                                                onClick={handleStartPreview}
+                                                disabled={isStarting}
+                                                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20"
+                                            >
+                                                {isStarting ? 'Loading...' : '🚀 Test Session'}
+                                            </button>
+                                            <button
+                                                onClick={() => validateBlueprint(idFromUrl)}
+                                                className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold rounded-xl transition-all border border-white/5"
+                                            >
+                                                Validate
+                                            </button>
+                                        </>
+                                    )}
                                     <button
-                                        onClick={handleStartPreview}
-                                        disabled={isStarting}
-                                        style={{ padding: '10px 24px', background: '#3b82f6', border: 'none', borderRadius: 8, color: '#fff', cursor: 'pointer', fontWeight: 600, opacity: isStarting ? 0.5 : 1 }}
+                                        onClick={handleSave}
+                                        className="px-10 py-2.5 bg-green-500 hover:bg-green-400 text-slate-950 text-sm font-black rounded-xl transition-all shadow-lg shadow-green-500/20"
                                     >
-                                        {isStarting ? 'Starting...' : '🚀 Start Test'}
+                                        Publish Blueprint
                                     </button>
-                                    <button
-                                        onClick={() => validateBlueprint(idFromUrl)}
-                                        style={{ padding: '10px 24px', background: '#16213e', border: '1px solid #333', borderRadius: 8, color: '#fff', cursor: 'pointer' }}
-                                    >
-                                        🔍 Validate Rules
-                                    </button>
-                                </>
-                            )}
-                            <button
-                                onClick={handleSave}
-                                style={{ padding: '10px 32px', background: '#4ade80', border: 'none', borderRadius: 8, color: '#0d1117', cursor: 'pointer', fontWeight: 700 }}
-                            >
-                                💾 Save Blueprint
-                            </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {error && <p style={{ color: '#f87171', marginTop: 16, textAlign: 'right' }}>{error}</p>}
+                    {/* Breakdown Sidebar */}
+                    <div className="w-80 space-y-6">
+                        <div className="bg-slate-900/50 backdrop-blur-md rounded-[32px] border border-white/10 p-6 sticky top-12">
+                            <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-6 flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                                Live Breakdown
+                            </h4>
+
+                            <div className="space-y-8">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-white/5 rounded-2xl p-4">
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Items</div>
+                                        <div className="text-2xl font-black">{stats.totalCount}</div>
+                                    </div>
+                                    <div className="bg-white/5 rounded-2xl p-4">
+                                        <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Time</div>
+                                        <div className="text-2xl font-black">{stats.totalTime}m</div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-4">Topic Coverage</label>
+                                    <div className="space-y-3">
+                                        {Object.entries(stats.topics).length > 0 ? (
+                                            Object.entries(stats.topics).map(([topic, count]) => (
+                                                <div key={topic} className="space-y-1">
+                                                    <div className="flex justify-between text-xs font-semibold">
+                                                        <span className="text-slate-300">{topic}</span>
+                                                        <span className="text-indigo-400">{Math.round((count / stats.totalCount) * 100)}%</span>
+                                                    </div>
+                                                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                                                            style={{ width: `${(count / (stats.totalCount || 1)) * 100}%` }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <p className="text-xs text-slate-600 italic">No topics selected yet.</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="pt-6 border-t border-white/5">
+                                    <div className="flex items-center justify-between p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
+                                        <div className="text-[10px] font-bold text-indigo-300 uppercase">Complexity</div>
+                                        <div className="text-lg font-black text-white">Dynamic</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {validation && !validation.valid && (
+                            <div className="bg-red-900/10 border border-red-500/20 rounded-[32px] p-6">
+                                <h4 className="text-xs font-black uppercase tracking-widest text-red-400 mb-4">Issues</h4>
+                                <div className="space-y-3">
+                                    {validation.blocks.flatMap(b => b.rule_validation).filter(r => !r.valid).slice(0, 3).map((r, i) => (
+                                        <div key={i} className="text-[11px] text-red-400/80 bg-red-500/5 p-3 rounded-xl border border-red-500/10">
+                                            {r.reason}
+                                        </div>
+                                    ))}
+                                    {validation.blocks.flatMap(b => b.rule_validation).filter(r => !r.valid).length > 3 && (
+                                        <p className="text-[10px] text-center text-slate-500">+{validation.blocks.flatMap(b => b.rule_validation).filter(r => !r.valid).length - 3} more issues below</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                {validation && !validation.valid && (
-                    <div style={{ marginTop: 20, background: '#7f1d1d33', border: '1px solid #7f1d1d', padding: 20, borderRadius: 12 }}>
-                        <h4 style={{ margin: 0, color: '#f87171', marginBottom: 12 }}>Validation Details</h4>
-                        {validation.blocks.map((b, i) => (
-                            <div key={i} style={{ marginBottom: 10 }}>
-                                <div style={{ fontWeight: 600 }}>{b.title}</div>
-                                {b.rule_validation.map((r, j) => (
-                                    <div key={j} style={{ fontSize: 13, color: r.valid ? '#4ade80' : '#f87171', marginLeft: 16 }}>
-                                        • {r.rule}: {r.reason} {r.matching_count !== undefined && `(${r.matching_count} found)`}
-                                    </div>
-                                ))}
-                            </div>
-                        ))}
-                    </div>
-                )}
+                {/* Question Picker */}
+                <QuestionPickerModal
+                    isOpen={!!pickerOpen}
+                    excludeIds={currentBlueprint?.blocks?.flatMap(b => b.rules.filter(r => r.rule_type === 'FIXED' && r.learning_object_id).map(r => r.learning_object_id!)) || []}
+                    onClose={() => setPickerOpen(null)}
+                    onSelect={(item) => {
+                        if (pickerOpen && currentBlueprint?.blocks) {
+                            const newBlocks = [...currentBlueprint.blocks];
+                            newBlocks[pickerOpen.blockIdx].rules[pickerOpen.ruleIdx].learning_object_id = item.id;
+                            saveState({ blocks: newBlocks });
+                            setPickerOpen(null);
+                        }
+                    }}
+                />
             </div>
         </ProtectedRoute>
     );

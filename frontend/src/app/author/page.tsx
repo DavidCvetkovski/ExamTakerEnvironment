@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import TipTapEditor from '@/components/editor/TipTapEditor';
 import MCQOptionsPanel from '@/components/editor/MCQOptionsPanel';
 import { useAuthoringStore } from '@/stores/useAuthoringStore';
@@ -8,131 +9,124 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 export default function AuthorPage() {
+    const searchParams = useSearchParams();
+    const loIdParam = searchParams.get('lo_id');
+    const fetchedRef = useRef<string | null>(null);
+
     const {
         saveStatus,
         versionNumber,
         questionType,
         setQuestionType,
-        setLearningObjectId,
+        fetchLatestVersion,
         learningObjectId,
         saveDraft,
     } = useAuthoringStore();
 
     const { user, logout } = useAuthStore();
-    const [loIdInput, setLoIdInput] = useState('');
 
-    const handleConnect = () => {
-        if (loIdInput.trim()) {
-            setLearningObjectId(loIdInput.trim());
+    // Always fetch on mount when lo_id param is present, guard against double-render
+    useEffect(() => {
+        if (loIdParam && fetchedRef.current !== loIdParam) {
+            fetchedRef.current = loIdParam;
+            fetchLatestVersion(loIdParam);
         }
-    };
+    }, [loIdParam, fetchLatestVersion]);
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <div style={{ maxWidth: 900, margin: '40px auto', padding: '0 20px', fontFamily: 'system-ui, sans-serif' }}>
+            <div className="max-w-4xl mx-auto py-10 px-6 font-sans">
 
                 <button
                     onClick={() => window.location.href = '/items'}
-                    style={{ background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', marginBottom: 20, padding: 0 }}
+                    className="text-blue-400 hover:text-blue-300 transition-colors mb-6 flex items-center gap-2 text-sm font-medium"
                 >
-                    ← Back to Library
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    Back to Library
                 </button>
-                <div style={{ marginBottom: 24 }}>
-                    <h1 style={{ color: '#fff', marginBottom: 4, fontSize: '1.8rem' }}>✏️ Question Authoring Workbench</h1>
+
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold text-white mb-2">✏️ Question Authoring</h1>
+                    <p className="text-[#A1A1AA] text-sm">
+                        Create or edit question versions for Learning Object:
+                        <code className="ml-2 bg-[#242424] px-2 py-1 rounded text-blue-400 border border-[#333]">
+                            {learningObjectId || 'Loading...'}
+                        </code>
+                    </p>
                 </div>
 
-                {/* Connection Bar */}
                 {!learningObjectId ? (
-                    <div style={{
-                        padding: '16px 20px', background: '#16213e', borderRadius: 8, marginBottom: 20,
-                        border: '1px solid #333'
-                    }}>
-                        <p style={{ color: '#888', fontSize: 13, margin: '0 0 8px' }}>
-                            Paste the <strong style={{ color: '#e0e0e0' }}>LearningObject UUID</strong> from the seed script to connect:
-                        </p>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                            <input
-                                type="text"
-                                value={loIdInput}
-                                onChange={(e) => setLoIdInput(e.target.value)}
-                                placeholder="e.g. cc480f39-7f17-4949-8742-a24a86aba7bf"
-                                style={{
-                                    flex: 1, padding: '8px 12px', background: '#0d1117', border: '1px solid #333',
-                                    borderRadius: 6, color: '#e0e0e0', fontSize: 13, fontFamily: 'monospace'
-                                }}
-                            />
-                            <button
-                                onClick={handleConnect}
-                                style={{
-                                    padding: '8px 20px', background: '#667eea', border: 'none', borderRadius: 6,
-                                    color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 13
-                                }}
-                            >
-                                Connect
-                            </button>
-                        </div>
+                    <div className="bg-[#242424] border border-[#333] p-12 text-center rounded-xl space-y-4">
+                        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto" />
+                        <p className="text-[#A1A1AA]">Linking to learning object...</p>
+                        <p className="text-xs text-[#555]">If this persists, go back to the library and try again.</p>
                     </div>
                 ) : (
-                    <>
-                        {/* Status Bar */}
-                        <div style={{
-                            display: 'flex', gap: 16, marginBottom: 16, alignItems: 'center',
-                            padding: '10px 16px', background: '#16213e', borderRadius: 8, fontSize: 13,
-                            border: '1px solid #333'
-                        }}>
-                            <span style={{ color: '#888' }}>
-                                Save:{' '}
-                                <span style={{
-                                    fontWeight: 600,
-                                    color: saveStatus === 'SAVED' ? '#4ade80'
-                                        : saveStatus === 'SAVING' ? '#fbbf24'
-                                            : saveStatus === 'ERROR' ? '#f87171'
-                                                : '#666'
-                                }}>
-                                    {saveStatus === 'IDLE' ? 'Not saved yet'
+                    <div className="space-y-6">
+                        {/* Control Bar */}
+                        <div className="flex flex-wrap items-center gap-4 p-4 bg-[#242424] border border-[#333] rounded-xl text-sm">
+                            <div className="flex items-center gap-2">
+                                <span className="text-[#A1A1AA]">Status:</span>
+                                <span className={`font-bold ${saveStatus === 'SAVED' ? 'text-emerald-400'
+                                    : saveStatus === 'SAVING' ? 'text-amber-400'
+                                        : saveStatus === 'ERROR' ? 'text-rose-400'
+                                            : 'text-gray-500'
+                                    }`}>
+                                    {saveStatus === 'IDLE' ? 'Ready'
                                         : saveStatus === 'SAVING' ? '⏳ Saving...'
-                                            : saveStatus === 'SAVED' ? '✓ All changes saved'
-                                                : '✕ Error saving'}
+                                            : saveStatus === 'SAVED' ? '✓ Changes saved'
+                                                : '✕ Save Failed'}
                                 </span>
-                            </span>
-                            <span style={{ color: '#555' }}>|</span>
-                            <span style={{ color: '#888' }}>Version: <strong style={{ color: '#e0e0e0' }}>{versionNumber || '—'}</strong></span>
-                            <span style={{ flex: 1 }} />
-                            <label style={{ color: '#888' }}>
-                                Type:{' '}
-                                <select
-                                    value={questionType}
-                                    onChange={(e) => setQuestionType(e.target.value as 'MULTIPLE_CHOICE' | 'ESSAY')}
-                                    style={{
-                                        background: '#0d1117', color: '#e0e0e0', border: '1px solid #333',
-                                        borderRadius: 4, padding: '4px 8px', fontSize: 13
-                                    }}
+                            </div>
+
+                            <div className="h-4 w-px bg-[#333]" />
+
+                            <div className="flex items-center gap-2">
+                                <span className="text-[#A1A1AA]">Version:</span>
+                                <span className="text-white font-mono bg-[#1A1A1A] px-2 py-0.5 rounded border border-[#333]">
+                                    v{versionNumber || 1}
+                                </span>
+                            </div>
+
+                            <div className="flex-1" />
+
+                            <div className="flex items-center gap-3">
+                                <label className="text-[#A1A1AA] flex items-center gap-2">
+                                    Type:
+                                    <select
+                                        value={questionType}
+                                        onChange={(e) => setQuestionType(e.target.value as 'MULTIPLE_CHOICE' | 'ESSAY')}
+                                        className="bg-[#1A1A1A] text-white border border-[#333] rounded px-3 py-1.5 focus:border-blue-500 outline-none transition-colors"
+                                    >
+                                        <option value="MULTIPLE_CHOICE">Multiple Choice</option>
+                                        <option value="ESSAY">Essay</option>
+                                    </select>
+                                </label>
+
+                                <button
+                                    onClick={saveDraft}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-emerald-50 px-4 py-2 rounded font-bold transition-colors shadow-lg shadow-emerald-900/10 flex items-center gap-2"
                                 >
-                                    <option value="MULTIPLE_CHOICE">Multiple Choice</option>
-                                    <option value="ESSAY">Essay</option>
-                                </select>
-                            </label>
-                            <button
-                                onClick={saveDraft}
-                                style={{
-                                    padding: '4px 14px', background: '#4ade80', border: 'none', borderRadius: 4,
-                                    color: '#0d1117', cursor: 'pointer', fontWeight: 600, fontSize: 12
-                                }}
-                            >
-                                💾 Save Now
-                            </button>
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                    </svg>
+                                    Save
+                                </button>
+                            </div>
                         </div>
 
                         {/* TipTap Editor */}
-                        <TipTapEditor />
+                        <div className="bg-[#1A1A1A] rounded-xl border border-[#333] overflow-hidden">
+                            <TipTapEditor />
+                        </div>
 
                         {/* MCQ Options Panel */}
-                        <MCQOptionsPanel />
-
-                        <p style={{ color: '#444', fontSize: 11, marginTop: 16 }}>
-                            Connected to LO: <code style={{ color: '#667eea' }}>{learningObjectId}</code>
-                        </p>
-                    </>
+                        <div className="bg-[#1A1A1A] rounded-xl border border-[#333] overflow-hidden">
+                            <MCQOptionsPanel />
+                        </div>
+                    </div>
                 )}
             </div>
         </ProtectedRoute>

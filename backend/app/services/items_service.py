@@ -18,6 +18,34 @@ STATUS_TRANSITIONS: dict[tuple[ItemStatus, ItemStatus], set[UserRole]] = {
     (ItemStatus.APPROVED, ItemStatus.RETIRED):           {UserRole.ADMIN},
 }
 
+def extract_text_from_tiptap_json(content: dict) -> str:
+    """Recursively extracts text from TipTap JSON structure."""
+    if not content:
+        return ""
+    
+    text_parts = []
+    
+    def _recurse(node):
+        if isinstance(node, dict):
+            # 1. TipTap text node
+            if node.get("type") == "text" and "text" in node:
+                text_parts.append(str(node.get("text", "")))
+            # 2. Simple container (like seed data {"text": "..."})
+            elif "text" in node and not isinstance(node["text"], (dict, list)):
+                text_parts.append(str(node["text"]))
+            
+            # Recurse into children
+            for key in ["content", "choices"]: # choices for MCQ options fallback
+                children = node.get(key)
+                if children:
+                    _recurse(children)
+        elif isinstance(node, list):
+            for item in node:
+                _recurse(item)
+                
+    _recurse(content)
+    return " ".join(text_parts).strip()
+
 def list_learning_objects(db: Session) -> List[LearningObjectListResponse]:
     """Return a list of all Learning Objects with their latest version metadata."""
     objects = db.query(LearningObject).all()
@@ -31,15 +59,21 @@ def list_learning_objects(db: Session) -> List[LearningObjectListResponse]:
             .first()
         )
         if latest:
-            # Basic preview extraction from TipTap JSON
+            # Better text extraction for preview
             preview = "New Question"
-            if isinstance(latest.content, dict):
-                # Basic safety for preview
-                content_list = latest.content.get("content", [])
-                if content_list and len(content_list) > 0:
-                    preview = str(content_list[0])[:50] + "..."
-                else:
-                    preview = str(latest.content)[:50] + "..."
+            
+            content_data = latest.content
+            if isinstance(content_data, str):
+                import json
+                try:
+                    content_data = json.loads(content_data)
+                except:
+                    pass
+
+            if isinstance(content_data, dict):
+                full_text = extract_text_from_tiptap_json(content_data)
+                if full_text:
+                    preview = full_text[:100] + ("..." if len(full_text) > 100 else "")
                 
             results.append(LearningObjectListResponse(
                 id=lo.id,
@@ -48,7 +82,8 @@ def list_learning_objects(db: Session) -> List[LearningObjectListResponse]:
                 latest_version_number=latest.version_number,
                 latest_status=latest.status,
                 latest_question_type=latest.question_type,
-                latest_content_preview=preview
+                latest_content_preview=preview,
+                metadata_tags=latest.metadata_tags
             ))
             
     return results

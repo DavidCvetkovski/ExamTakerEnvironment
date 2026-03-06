@@ -26,6 +26,7 @@ interface AuthoringState {
     updateOptions: (options: MCQOption[] | { min_words: number; max_words: number }) => void;
     updateMetadata: (tags: Record<string, unknown>) => void;
     saveDraft: () => Promise<void>;
+    fetchLatestVersion: (loId: string) => Promise<void>;
 }
 
 // Debounce timer reference
@@ -53,13 +54,8 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
         }, 3000);
     },
 
-    updateOptions: (options) => {
-        set({ options });
-    },
-
-    updateMetadata: (tags) => {
-        set({ metadataTags: tags });
-    },
+    updateOptions: (options) => set({ options }),
+    updateMetadata: (tags) => set({ metadataTags: tags }),
 
     saveDraft: async () => {
         const state = get();
@@ -85,6 +81,46 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
             const data = res.data;
             set({ itemId: data.id, versionNumber: data.version_number, saveStatus: 'SAVED' });
         } catch {
+            set({ saveStatus: 'ERROR' });
+        }
+    },
+
+    fetchLatestVersion: async (loId: string) => {
+        set({ saveStatus: 'SAVING', learningObjectId: loId });
+        try {
+            const res = await api.get(`learning-objects/${loId}/versions`);
+            const versions = res.data;
+            if (versions && versions.length > 0) {
+                const latest = versions[0];
+                let content = latest.content || {};
+
+                // Normalize simple text content to TipTap JSON
+                if (content.text && !content.type) {
+                    content = {
+                        type: 'doc',
+                        content: [
+                            {
+                                type: 'paragraph',
+                                content: [{ type: 'text', text: content.text }]
+                            }
+                        ]
+                    };
+                }
+
+                set({
+                    itemId: latest.id,
+                    versionNumber: latest.version_number,
+                    questionType: latest.question_type,
+                    tiptapJson: content,
+                    options: latest.options?.choices || latest.options || [],
+                    metadataTags: latest.metadata_tags || {},
+                    saveStatus: 'IDLE'
+                });
+            } else {
+                set({ saveStatus: 'IDLE' });
+            }
+        } catch (error) {
+            console.error("Failed to fetch version:", error);
             set({ saveStatus: 'ERROR' });
         }
     },

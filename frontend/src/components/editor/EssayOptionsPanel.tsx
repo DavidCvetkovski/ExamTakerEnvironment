@@ -13,7 +13,7 @@ export default function EssayOptionsPanel() {
   const essayOptions = (Array.isArray(options) ? { min_words: 0, max_words: 500 } : options) as { min_words: number; max_words: number };
 
   const handleChange = (field: 'min_words' | 'max_words', value: string) => {
-    const num = parseInt(value, 10) || 0;
+    const num = value === '' ? '' : parseInt(value, 10);
     updateOptions({ ...essayOptions, [field]: num });
   };
 
@@ -29,9 +29,9 @@ export default function EssayOptionsPanel() {
           <label className="essay-label">Minimum Words</label>
           <input
             type="number"
-            value={essayOptions.min_words}
+            value={essayOptions.min_words ?? ''}
             onChange={(e) => handleChange('min_words', e.target.value)}
-            className="essay-number-input"
+            className="essay-number-input [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             min="0"
           />
         </div>
@@ -40,9 +40,9 @@ export default function EssayOptionsPanel() {
           <label className="essay-label">Maximum Words</label>
           <input
             type="number"
-            value={essayOptions.max_words}
+            value={essayOptions.max_words ?? ''}
             onChange={(e) => handleChange('max_words', e.target.value)}
-            className="essay-number-input"
+            className="essay-number-input [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             min="0"
           />
         </div>

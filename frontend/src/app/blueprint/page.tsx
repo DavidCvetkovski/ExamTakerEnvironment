@@ -285,9 +285,9 @@ export default function BlueprintPage() {
                                         <div className="flex items-center">
                                             <input
                                                 type="number"
-                                                value={currentBlueprint?.duration_minutes || 60}
-                                                onChange={(e) => saveState({ duration_minutes: parseInt(e.target.value) || 0 })}
-                                                className="bg-black/20 border border-white/10 rounded-lg py-2 px-3 text-white focus:outline-none focus:border-indigo-500/50 w-24"
+                                                value={currentBlueprint?.duration_minutes ?? ''}
+                                                onChange={(e) => saveState({ duration_minutes: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                                                className="bg-black/20 border border-white/10 rounded-lg py-2 px-3 text-white focus:outline-none focus:border-indigo-500/50 w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                             />
                                             <span className="ml-3 text-slate-400 text-sm font-medium">minutes</span>
                                         </div>
@@ -388,13 +388,13 @@ export default function BlueprintPage() {
                                                                             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Quantity:</span>
                                                                             <input
                                                                                 type="number"
-                                                                                value={rule.count}
+                                                                                value={rule.count ?? ''}
                                                                                 onChange={(e) => {
                                                                                     const newBlocks = [...currentBlueprint!.blocks!];
-                                                                                    newBlocks[bIdx].rules[rIdx].count = parseInt(e.target.value) || 1;
+                                                                                    newBlocks[bIdx].rules[rIdx].count = e.target.value === '' ? '' as any : parseInt(e.target.value);
                                                                                     saveState({ blocks: newBlocks });
                                                                                 }}
-                                                                                className="w-12 bg-black/40 border border-white/10 rounded-lg py-1 px-1 text-sm text-center focus:outline-none"
+                                                                                className="w-12 bg-black/40 border border-white/10 rounded-lg py-1 px-1 text-sm text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                             />
                                                                         </div>
                                                                         <div className="flex items-center gap-2">

@@ -110,9 +110,9 @@ export default function AuthorPage() {
                                         type="number"
                                         min="0"
                                         step="1"
-                                        value={(metadataTags.points as number) ?? 1}
-                                        onChange={(e) => updateMetadataField('points', parseInt(e.target.value) || 0)}
-                                        className="bg-[#1A1A1A] text-white border border-[#333] rounded px-3 py-1.5 focus:border-blue-500 outline-none transition-colors w-20"
+                                        value={metadataTags.points !== undefined ? metadataTags.points as number : ''}
+                                        onChange={(e) => updateMetadataField('points', e.target.value === '' ? '' : parseInt(e.target.value))}
+                                        className="bg-[#1A1A1A] text-white border border-[#333] rounded px-3 py-1.5 focus:border-blue-500 outline-none transition-colors w-20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                     />
                                 </label>
 

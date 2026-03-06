@@ -47,10 +47,24 @@ if [ ! -d "node_modules" ]; then
 fi
 cd ..
 
+# Parse flags
+SEED_DB=false
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --seed) SEED_DB=true ;;
+    esac
+    shift
+done
+
 # 4. Start Servers
 echo "📡 Starting Backend (Port 8000)..."
 cd backend
 source .venv/bin/activate
+if [ "$SEED_DB" = true ]; then
+    echo "🌱 Seeding Database..."
+    export PYTHONPATH=$PYTHONPATH:.
+    python3 seed_e2e.py
+fi
 uvicorn app.main:app --host 127.0.0.1 --port 8000 > /dev/null 2>&1 &
 BACKEND_PID=$!
 cd ..
@@ -93,6 +107,10 @@ echo "✅ Environment is ready!"
 echo "🌐 Opening http://localhost:3000 in your browser..."
 open http://localhost:3000
 
+echo "-------------------------------------------------------"
+echo "Login Credentials (e2e):"
+echo "  Admin:   admin_e2e@vu.nl / adminpass123"
+echo "  Student: student_e2e@vu.nl / studentpass123"
 echo "-------------------------------------------------------"
 echo "Press Ctrl+C to stop both servers."
 echo "-------------------------------------------------------"

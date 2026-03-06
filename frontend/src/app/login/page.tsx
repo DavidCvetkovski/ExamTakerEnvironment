@@ -6,15 +6,20 @@ import { useAuthStore } from '../../stores/useAuthStore';
 
 export default function LoginPage() {
     const router = useRouter();
-    const { login, isAuthenticated, isLoading } = useAuthStore();
+    const { login, isAuthenticated, isLoading, initialize } = useAuthStore();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
 
+    // Initialize session check on mount
+    useEffect(() => {
+        initialize();
+    }, [initialize]);
+
     useEffect(() => {
         if (isAuthenticated) {
-            router.push('/author'); // Redirect to dashboard if already logged in
+            router.push('/items'); // Redirect to library dashboard if already logged in
         }
     }, [isAuthenticated, router]);
 
@@ -25,7 +30,13 @@ export default function LoginPage() {
             await login(email, password);
             // Let the useEffect handle the redirect
         } catch (err: any) {
-            setError(err.response?.data?.detail || 'Login failed. Please try again.');
+            if (!err.response) {
+                setError('Cannot connect to the backend server. Please verify that the database and API are running.');
+            } else if (err.response.status === 500) {
+                setError('Internal server error. The database might be offline or misconfigured.');
+            } else {
+                setError(err.response.data?.detail || 'Login failed. Please check your credentials and try again.');
+            }
         }
     };
 

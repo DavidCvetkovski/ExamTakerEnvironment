@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, String, DateTime, Boolean, Enum
+from sqlalchemy import Column, String, DateTime, Boolean, Enum, Float
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from datetime import datetime
@@ -22,4 +22,5 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     role = Column(Enum(UserRole), default=UserRole.STUDENT, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+    provision_time_multiplier = Column(Float, default=1.0, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)

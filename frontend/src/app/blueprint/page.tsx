@@ -98,7 +98,7 @@ export default function BlueprintPage() {
 
     if (!isEditing) {
         return (
-            <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
+            <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN', 'STUDENT']}>
                 <div style={{ maxWidth: 1000, margin: '40px auto', padding: '0 20px', color: '#fff' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
                         <h1>📋 Test Blueprints</h1>
@@ -135,7 +135,7 @@ export default function BlueprintPage() {
     }
 
     return (
-        <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
+        <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN', 'STUDENT']}>
             <div style={{ maxWidth: 900, margin: '40px auto', padding: '0 20px', color: '#fff' }}>
                 <button onClick={() => router.push('/blueprint')} style={{ background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', marginBottom: 20 }}>
                     ← Back to List

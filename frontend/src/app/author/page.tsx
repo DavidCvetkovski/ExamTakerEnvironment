@@ -31,24 +31,14 @@ export default function AuthorPage() {
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
             <div style={{ maxWidth: 900, margin: '40px auto', padding: '0 20px', fontFamily: 'system-ui, sans-serif' }}>
 
-                {/* Header with Logout */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-                    <div>
-                        <h1 style={{ color: '#fff', marginBottom: 4, fontSize: '1.8rem' }}>✏️ Question Authoring Workbench</h1>
-                        <p style={{ color: '#666', fontSize: 14, margin: 0 }}>
-                            Logged in as <strong style={{ color: '#e0e0e0' }}>{user?.email}</strong> ({user?.role})
-                        </p>
-                    </div>
-                    <button
-                        onClick={logout}
-                        style={{
-                            background: 'transparent', color: '#f87171', border: '1px solid #f87171',
-                            padding: '6px 12px', borderRadius: 4, cursor: 'pointer', fontSize: 12,
-                            fontWeight: 600
-                        }}
-                    >
-                        Sign Out
-                    </button>
+                <button
+                    onClick={() => window.location.href = '/items'}
+                    style={{ background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', marginBottom: 20, padding: 0 }}
+                >
+                    ← Back to Library
+                </button>
+                <div style={{ marginBottom: 24 }}>
+                    <h1 style={{ color: '#fff', marginBottom: 4, fontSize: '1.8rem' }}>✏️ Question Authoring Workbench</h1>
                 </div>
 
                 {/* Connection Bar */}

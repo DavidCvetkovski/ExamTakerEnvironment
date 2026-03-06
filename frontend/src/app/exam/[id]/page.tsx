@@ -24,7 +24,11 @@ export default function ExamPage() {
 
         const interval = setInterval(() => {
             const now = new Date().getTime();
-            const end = new Date(currentSession.expires_at).getTime();
+            // Safely parse naive datetime strings as UTC
+            const tzExpiresAt = currentSession.expires_at.endsWith('Z') || currentSession.expires_at.includes('+')
+                ? currentSession.expires_at
+                : `${currentSession.expires_at}Z`;
+            const end = new Date(tzExpiresAt).getTime();
             const diff = end - now;
 
             if (diff <= 0) {

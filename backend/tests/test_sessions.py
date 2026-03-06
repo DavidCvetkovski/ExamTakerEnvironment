@@ -146,6 +146,41 @@ def test_instantiate_and_freeze(setup_db):
     
     db.close()
 
+
+def test_random_rule_under_provision_raises(setup_db):
+    # Create a new test definition that over-asks the random rule
+    db = TestingSessionLocal()
+    admin = db.query(User).filter(User.email == "admin_freeze@vu.nl").first()
+
+    under_provisioned_test = TestDefinition(
+        title="Under-provisioned Exam",
+        created_by=admin.id,
+        blocks=[
+            {
+                "title": "Section",
+                "rules": [
+                    {"rule_type": "RANDOM", "count": 10, "tags": ["math"]},
+                ],
+            }
+        ],
+        duration_minutes=30,
+    )
+    db.add(under_provisioned_test)
+    db.commit()
+    db.refresh(under_provisioned_test)
+    db.close()
+
+    # Student attempts to instantiate; should get 400 due to insufficient candidates
+    token = login("student_freeze@vu.nl", "pass")
+    resp = client.post(
+        "/api/sessions/",
+        json={"test_definition_id": str(under_provisioned_test.id)},
+        headers=auth(token),
+    )
+    assert resp.status_code == 400
+    detail = resp.json()["detail"]
+    assert "Random rule failed" in detail
+
 def test_unauthorized_access(setup_db):
     # Setup another student
     db = TestingSessionLocal()

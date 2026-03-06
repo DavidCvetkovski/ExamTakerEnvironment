@@ -26,6 +26,12 @@ def seed():
         hashed_password=hash_password("adminpass123"),
         role=UserRole.ADMIN
     )
+    # Create Constructor
+    constructor = User(
+        email="constructor_e2e@vu.nl",
+        hashed_password=hash_password("conpass123"),
+        role=UserRole.CONSTRUCTOR
+    )
     # Create Student with 1.25x accommodation
     student = User(
         email="student_e2e@vu.nl",
@@ -33,7 +39,7 @@ def seed():
         role=UserRole.STUDENT,
         provision_time_multiplier=1.25
     )
-    db.add_all([admin, student])
+    db.add_all([admin, constructor, student])
     db.commit()
 
     # Create Item Bank

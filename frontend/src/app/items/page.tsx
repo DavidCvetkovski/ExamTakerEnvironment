@@ -178,9 +178,6 @@ export default function ItemsLibraryPage() {
                                                     <div className="text-sm font-medium text-gray-900 truncate max-w-[200px]" title={item.latest_content_preview}>
                                                         {item.latest_content_preview || 'Empty Question'}
                                                     </div>
-                                                    <div className="text-xs text-gray-500 font-mono mt-0.5" title={item.id}>
-                                                        ID: {item.id.substring(0, 8)}...
-                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="text-sm text-gray-900 font-medium">

@@ -1,59 +1,21 @@
 INFO:     Will watch for changes in these directories: ['/Users/davidcvetkovski/Documents/Uni/TH/backend']
 INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [13666] using WatchFiles
+INFO:     Started reloader process [14821] using WatchFiles
 /Users/davidcvetkovski/Documents/Uni/TH/backend/.venv/lib/python3.14/site-packages/prisma/_compat.py:149: UserWarning: Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.
   from pydantic.v1 import Extra as Extra
-INFO:     Started server process [13673]
+INFO:     Started server process [14826]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     127.0.0.1:50551 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50580 - "POST /api/auth/refresh HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50581 - "POST /api/auth/refresh HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50587 - "OPTIONS /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50588 - "OPTIONS /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50581 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50580 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50588 - "OPTIONS /api/tests/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50587 - "OPTIONS /api/tests/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50580 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50581 - "GET /api/tests/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50580 - "GET /api/tests/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50593 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50593 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50593 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50596 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50599 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50752 - "OPTIONS /api/learning-objects/dc78a11f-0c91-47f3-9129-9cf1078ec09d/versions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50753 - "GET /api/learning-objects/dc78a11f-0c91-47f3-9129-9cf1078ec09d/versions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50752 - "OPTIONS /api/learning-objects/dc78a11f-0c91-47f3-9129-9cf1078ec09d/versions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50753 - "POST /api/learning-objects/dc78a11f-0c91-47f3-9129-9cf1078ec09d/versions HTTP/1.1" 200 OK
-WARNING:  WatchFiles detected changes in 'seed_e2e.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [13673]
-/Users/davidcvetkovski/Documents/Uni/TH/backend/.venv/lib/python3.14/site-packages/prisma/_compat.py:149: UserWarning: Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.
-  from pydantic.v1 import Extra as Extra
-INFO:     Started server process [14058]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'app/services/exam_sessions_service.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [14058]
-/Users/davidcvetkovski/Documents/Uni/TH/backend/.venv/lib/python3.14/site-packages/prisma/_compat.py:149: UserWarning: Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.
-  from pydantic.v1 import Extra as Extra
-INFO:     Started server process [14095]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-WARNING:  WatchFiles detected changes in 'app/services/blueprints_service.py'. Reloading...
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [14095]
-/Users/davidcvetkovski/Documents/Uni/TH/backend/.venv/lib/python3.14/site-packages/prisma/_compat.py:149: UserWarning: Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.
-  from pydantic.v1 import Extra as Extra
-INFO:     Started server process [14109]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
+INFO:     127.0.0.1:50927 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50939 - "POST /api/auth/refresh HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50940 - "POST /api/auth/refresh HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50944 - "OPTIONS /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50945 - "OPTIONS /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50940 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50939 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50949 - "GET /api/tests/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50948 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50954 - "GET /api/tests/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50949 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50949 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50954 - "GET /api/learning-objects HTTP/1.1" 200 OK

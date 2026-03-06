@@ -308,9 +308,6 @@ export default function QuestionPickerModal({ isOpen, onClose, onSelect, exclude
                                             {item.latest_content_preview}
                                         </div>
                                         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                            <div style={{ color: '#64748b', fontSize: '0.75rem', fontFamily: 'monospace' }}>
-                                                ID: {item.id.substring(0, 8)}
-                                            </div>
                                             {item.metadata_tags?.topic && (
                                                 <div style={{ color: '#475569', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                     <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#475569' }}></span>

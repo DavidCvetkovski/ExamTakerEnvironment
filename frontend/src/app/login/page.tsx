@@ -52,11 +52,15 @@ export default function LoginPage() {
         <div className="min-h-screen bg-[#1A1A1A] flex items-center justify-center text-white font-sans">
             <div className="w-full max-w-md bg-[#242424] p-8 space-y-6">
                 <h1 className="text-2xl font-bold text-center">OpenVision SSO</h1>
-                <p className="text-[#A1A1AA] text-sm text-center">
-                    Test credentials:<br />
-                    admin@vu.nl | prof@vu.nl | reviewer@vu.nl | student@vu.nl<br />
-                    (passwords: *pass123)
-                </p>
+                <div className="bg-[#1A1A1A] border border-[#333] p-4 text-xs space-y-2">
+                    <p className="text-blue-400 font-bold uppercase tracking-wider text-[10px]">Test Credentials</p>
+                    <div className="grid grid-cols-1 gap-1 text-[#A1A1AA]">
+                        <p><span className="w-20 inline-block">Admin:</span> <code className="text-white">admin_e2e@vu.nl</code></p>
+                        <p><span className="w-20 inline-block">Constructor:</span> <code className="text-white">constructor_e2e@vu.nl</code></p>
+                        <p><span className="w-20 inline-block">Student:</span> <code className="text-white">student_e2e@vu.nl</code></p>
+                        <p className="mt-1 pt-1 border-t border-[#333]"><span className="w-20 inline-block font-bold">Password:</span> <code className="text-white">*pass123</code></p>
+                    </div>
+                </div>
 
                 {error && (
                     <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 text-sm rounded">

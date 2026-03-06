@@ -99,13 +99,13 @@ while ! curl -s http://127.0.0.1:8000/health > /dev/null; do
     fi
 done
 
-while ! curl -s http://localhost:3000/login > /dev/null; do
+while ! curl -s http://127.0.0.1:3000/login > /dev/null; do
     sleep 1
 done
 
 echo "✅ Environment is ready!"
-echo "🌐 Opening http://localhost:3000 in your browser..."
-open http://localhost:3000
+echo "🌐 Opening http://127.0.0.1:3000 in your browser..."
+open http://127.0.0.1:3000
 
 echo "-------------------------------------------------------"
 echo "Login Credentials (e2e):"

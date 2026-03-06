@@ -1,0 +1,134 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+generator py_client {
+  provider             = "prisma-client-py"
+  interface            = "asyncio"
+  recursive_type_depth = 5
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model alembic_version {
+  version_num String @id(map: "alembic_version_pkc") @db.VarChar(32)
+}
+
+model exam_sessions {
+  id                 String           @id @default(uuid()) @db.Uuid
+  test_definition_id String           @db.Uuid
+  student_id         String           @db.Uuid
+  items              Json
+  status             sessionstatus
+  started_at         DateTime         @db.Timestamp(6)
+  submitted_at       DateTime?        @db.Timestamp(6)
+  expires_at         DateTime         @db.Timestamp(6)
+  users              users            @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  test_definitions   test_definitions @relation(fields: [test_definition_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model item_banks {
+  id               String             @id @default(uuid()) @db.Uuid
+  name             String             @db.VarChar
+  created_at       DateTime?          @default(now()) @db.Timestamp(6)
+  created_by       String?            @db.Uuid
+  users            users?             @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  learning_objects learning_objects[]
+}
+
+model item_versions {
+  id                 String           @id @default(uuid()) @db.Uuid
+  learning_object_id String           @db.Uuid
+  version_number     Int
+  status             itemstatus
+  question_type      questiontype
+  content            Json
+  options            Json
+  metadata_tags      Json?
+  created_at         DateTime?        @default(now()) @db.Timestamp(6)
+  created_by         String?          @db.Uuid
+  users              users?           @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  learning_objects   learning_objects @relation(fields: [learning_object_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model learning_objects {
+  id            String          @id @default(uuid()) @db.Uuid
+  bank_id       String          @db.Uuid
+  created_at    DateTime?       @default(now()) @db.Timestamp(6)
+  created_by    String?         @db.Uuid
+  item_versions item_versions[]
+  item_banks    item_banks      @relation(fields: [bank_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users         users?          @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model media_assets {
+  id           String    @id @default(uuid()) @db.Uuid
+  filename     String    @db.VarChar
+  mime_type    String    @db.VarChar
+  storage_path String    @db.VarChar
+  size_bytes   Int?
+  created_at   DateTime? @default(now()) @db.Timestamp(6)
+  created_by   String?   @db.Uuid
+  users        users?    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model test_definitions {
+  id                String          @id @default(uuid()) @db.Uuid
+  title             String          @db.VarChar
+  description       String?
+  created_by        String?         @db.Uuid
+  blocks            Json
+  duration_minutes  Int
+  shuffle_questions Boolean?
+  created_at        DateTime?       @default(now()) @db.Timestamp(6)
+  updated_at        DateTime?       @db.Timestamp(6)
+  exam_sessions     exam_sessions[]
+  users             users?          @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model users {
+  id                        String             @id @default(uuid()) @db.Uuid
+  email                     String             @unique(map: "ix_users_email") @db.VarChar
+  vunet_id                  String?            @unique(map: "ix_users_vunet_id") @db.VarChar
+  hashed_password           String             @db.VarChar
+  role                      userrole
+  is_active                 Boolean          @default(true)
+  provision_time_multiplier Float            @default(1.0)
+  created_at                DateTime?          @default(now()) @db.Timestamp(6)
+  exam_sessions             exam_sessions[]
+  item_banks                item_banks[]
+  item_versions             item_versions[]
+  learning_objects          learning_objects[]
+  media_assets              media_assets[]
+  test_definitions          test_definitions[]
+}
+
+enum itemstatus {
+  DRAFT
+  READY_FOR_REVIEW
+  APPROVED
+  RETIRED
+}
+
+enum questiontype {
+  MULTIPLE_CHOICE
+  MULTIPLE_RESPONSE
+  ESSAY
+  HOTSPOT
+}
+
+enum sessionstatus {
+  STARTED
+  SUBMITTED
+  EXPIRED
+}
+
+enum userrole {
+  ADMIN
+  CONSTRUCTOR
+  REVIEWER
+  STUDENT
+}

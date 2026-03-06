@@ -24,11 +24,16 @@ The repository will adhere to the following structure:
 1.  **Start of Epoch:** When the user approves an Epoch Blueprint, the AI will immediately check out a new branch from `main`:
     `git checkout -b feature/epoch-2-authoring`
 2.  **During the Epoch:** The AI and user work collaboratively. All commits happen within this branch.
-3.  **End of Epoch:** Once all Stages of the Epoch are complete and verified end-to-end, the AI will automatically push the branch, merge it into `main`, and push the updated `main` branch to GitHub. No manual Pull Request review is required.
-    *   `git push origin feature/epoch-X`
-    *   `git checkout main`
-    *   `git merge feature/epoch-X`
-    *   `git push origin main`
+3.  **End of Epoch — Security Gate (MANDATORY before every merge to `main`):**
+    Before merging any feature branch into `main`, a security check **must** be performed using **Aikido**:
+    1. Run Aikido's security scan against the current branch (`aikido scan` or via the Aikido CI integration).
+    2. Review all findings — fix any **Critical** or **High** severity issues immediately before proceeding.
+    3. Document Medium/Low findings as Linear issues for follow-up (do not block the merge for these unless they are exploitable in the current context).
+    4. Only once the security scan passes (zero Critical/High unresolved issues) may the merge proceed:
+    - `git checkout main`
+    - `git merge feature/epoch-X`
+    - `git push origin main`
+    This gate applies to **every** merge to `main`, not just Epoch boundaries — including hotfixes, bug fixes, and refactors.
 
 ---
 

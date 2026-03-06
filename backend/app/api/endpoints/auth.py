@@ -13,21 +13,23 @@ from app.services import users_service as svc
 router = APIRouter(prefix="/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
+from app.core.prisma_db import get_prisma, prisma
+from prisma import Prisma
+
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-def register(payload: RegisterRequest, response: Response, db: Session = Depends(get_db)):
+async def register(payload: RegisterRequest, response: Response):
     """Create a new user account."""
-    return svc.register_user(db=db, payload=payload, response=response)
+    return await svc.register_user(payload=payload, response=response)
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: LoginRequest, response: Response, db: Session = Depends(get_db)):
+async def login(payload: LoginRequest, response: Response):
     """Authenticate with email + password."""
-    return svc.authenticate_user(db=db, payload=payload, response=response)
+    return await svc.authenticate_user(payload=payload, response=response)
 
 @router.post("/refresh", response_model=TokenResponse)
-def refresh(
+async def refresh(
     response: Response,
     refresh_token: Optional[str] = Cookie(None),
-    db: Session = Depends(get_db),
 ):
     """Use refresh token cookie to get new tokens."""
     if not refresh_token:
@@ -43,17 +45,16 @@ def refresh(
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token.")
 
-    return svc.refresh_tokens(db=db, user_id=payload["sub"], response=response)
+    return await svc.refresh_tokens(user_id=payload["sub"], response=response)
 
 @router.post("/logout")
-def logout(response: Response):
+async def logout(response: Response):
     """Clear the refresh token cookie."""
     response.delete_cookie("refresh_token")
     return {"detail": "Logged out successfully."}
 
 @router.get("/me", response_model=UserPublic)
-def get_me(
-    db: Session = Depends(get_db),
+async def get_me(
     token: str = Depends(oauth2_scheme),
 ):
     """Return the current user's profile."""
@@ -66,7 +67,7 @@ def get_me(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = db.query(User).filter(User.id == payload["sub"]).first()
+    user = await prisma.users.find_unique(where={"id": payload["sub"]})
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
     return user

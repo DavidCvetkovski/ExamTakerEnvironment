@@ -8,6 +8,11 @@ set -e
 
 echo "🚀 Starting OpenVision Development Environment..."
 
+# 0. Kill existing processes on 8000/3000 to prevent 'Address already in use'
+echo "🧹 Cleaning up old processes..."
+lsof -ti:8000 | xargs kill -9 2>/dev/null || true
+lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+
 # 1. Start Docker Database
 echo "📦 Starting Database (Docker)..."
 
@@ -21,7 +26,7 @@ else
     exit 1
 fi
 
-$DOCKER_COMPOSE up -d db
+$DOCKER_COMPOSE up -d
 
 # 2. Setup Backend
 echo "🐍 Setting up Backend..."
@@ -33,9 +38,14 @@ fi
 source .venv/bin/activate
 pip install -q -r requirements.txt
 
-# Run migrations
-echo "⚙️ Running Database Migrations..."
-alembic upgrade head
+# Prisma Generation (Industry Standard)
+echo "💎 Generating Prisma Clients (JS & Python)..."
+prisma generate --schema=../prisma/schema.prisma
+
+# Sync Prisma schema to the DB (creates/updates tables in development)
+echo "⚙️ Applying Database Schema (Prisma)..."
+set -a && source ../.env && set +a
+prisma db push --schema=../prisma/schema.prisma --accept-data-loss
 cd ..
 
 # 3. Setup Frontend
@@ -49,23 +59,20 @@ cd ..
 
 # Parse flags
 SEED_DB=false
-while [[ "$#" -gt 0 ]]; do
-    case $1 in
-        --seed) SEED_DB=true ;;
-    esac
-    shift
+for arg in "$@"; do
+    if [[ "$arg" == "--seed" ]] || [[ "$arg" == "-seed" ]] || [[ "$arg" == "seed" ]]; then
+        SEED_DB=true
+    fi
 done
 
 # 4. Start Servers
 echo "📡 Starting Backend (Port 8000)..."
 cd backend
-source .venv/bin/activate
 if [ "$SEED_DB" = true ]; then
-    echo "🌱 Seeding Database..."
-    export PYTHONPATH=$PYTHONPATH:.
-    python3 seed_e2e.py
+    echo "🌱 Seeding/Resetting Database (Preserving Users)..."
+    ./.venv/bin/python seed_e2e.py
 fi
-uvicorn app.main:app --host 127.0.0.1 --port 8000 > /dev/null 2>&1 &
+./.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload > backend.log 2>&1 &
 BACKEND_PID=$!
 cd ..
 

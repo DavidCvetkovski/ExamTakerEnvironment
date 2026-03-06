@@ -1,82 +1,79 @@
-import os
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from datetime import datetime, timedelta
-import uuid
-
-from app.main import app
-from app.core.database import Base, get_db
-from app.models.user import User, UserRole
-from app.models.test_definition import TestDefinition
-from app.models.exam_session import ExamSession, SessionStatus
+from httpx import AsyncClient
+from app.core.prisma_db import prisma
 from app.core.security import hash_password
+from app.models.user import UserRole
+from datetime import datetime, timedelta, timezone
+import prisma as prisma_lib
 
-POSTGRES_USER = os.environ.get("POSTGRES_USER", "postgres")
-POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "password")
-POSTGRES_DB = os.environ.get("POSTGRES_DB", "openvision")
-POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "localhost")
-POSTGRES_PORT = os.environ.get("POSTGRES_PORT", "5432")
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+ADMIN_EMAIL, ADMIN_PASS = "admin_acc@vu.nl", "pass"
+STANDARD_STUDENT, STANDARD_PASS = "student_standard@vu.nl", "pass"
+EXTRA_STUDENT, EXTRA_PASS = "student_extra@vu.nl", "pass"
 
-def override_get_db():
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-app.dependency_overrides[get_db] = override_get_db
-client = TestClient(app)
-
-@pytest.fixture(scope="module", autouse=True)
-def setup_db():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    db = TestingSessionLocal()
-    
-    admin = User(email="admin_acc@vu.nl", hashed_password=hash_password("pass"), role=UserRole.ADMIN)
+@pytest.fixture(scope="function")
+async def setup_accommodations_data(cleanup_database):
+    admin = await prisma.users.create(
+        data={
+            "email": ADMIN_EMAIL,
+            "hashed_password": hash_password(ADMIN_PASS),
+            "role": UserRole.ADMIN,
+        }
+    )
     # Standard student
-    student = User(email="student_standard@vu.nl", hashed_password=hash_password("pass"), role=UserRole.STUDENT, provision_time_multiplier=1.0)
+    student = await prisma.users.create(
+        data={
+            "email": STANDARD_STUDENT,
+            "hashed_password": hash_password(STANDARD_PASS),
+            "role": UserRole.STUDENT,
+            "provision_time_multiplier": 1.0,
+        }
+    )
     # Student with 25% extra time
-    student_acc = User(email="student_extra@vu.nl", hashed_password=hash_password("pass"), role=UserRole.STUDENT, provision_time_multiplier=1.25)
-    
-    db.add_all([admin, student, student_acc])
-    db.commit()
+    student_acc = await prisma.users.create(
+        data={
+            "email": EXTRA_STUDENT,
+            "hashed_password": hash_password(EXTRA_PASS),
+            "role": UserRole.STUDENT,
+            "provision_time_multiplier": 1.25,
+        }
+    )
     
     # Create a Test Blueprint (60 minutes)
-    test = TestDefinition(
-        title="Timed Exam",
-        created_by=admin.id,
-        blocks=[{
-            "title": "Section 1",
-            "rules": []
-        }],
-        duration_minutes=60
+    test = await prisma.test_definitions.create(
+        data={
+            "title": "Timed Exam",
+            "created_by": admin.id,
+            "blocks": prisma_lib.Json([{
+                "title": "Section 1",
+                "rules": []
+            }]),
+            "duration_minutes": 60
+        }
     )
-    db.add(test)
-    db.commit()
-    db.refresh(test)
     
-    yield {"test_id": str(test.id)}
-    db.close()
+    return {"test_id": test.id}
 
-def login(email: str, password: str) -> str:
-    resp = client.post("/api/auth/login", json={"email": email, "password": password})
+async def login(ac: AsyncClient, email: str, password: str) -> str:
+    resp = await ac.post("/api/auth/login", json={"email": email, "password": password})
     assert resp.status_code == 200
     return resp.json()["access_token"]
 
 def auth(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
-def test_time_multiplier_application(setup_db):
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+@pytest.mark.anyio
+async def test_time_multiplier_application(ac: AsyncClient, setup_accommodations_data):
     # 1. Standard student
-    token = login("student_standard@vu.nl", "pass")
-    resp = client.post("/api/sessions/", json={"test_definition_id": setup_db["test_id"]}, headers=auth(token))
+    token = await login(ac, STANDARD_STUDENT, STANDARD_PASS)
+    resp = await ac.post("/api/sessions/", json={"test_definition_id": setup_accommodations_data["test_id"]}, headers=auth(token))
     assert resp.status_code == 201
     data = resp.json()
     
@@ -86,8 +83,8 @@ def test_time_multiplier_application(setup_db):
     assert abs(diff - 60) < 1 # Should be roughly 60 mins
     
     # 2. Extra time student
-    token_acc = login("student_extra@vu.nl", "pass")
-    resp_acc = client.post("/api/sessions/", json={"test_definition_id": setup_db["test_id"]}, headers=auth(token_acc))
+    token_acc = await login(ac, EXTRA_STUDENT, EXTRA_PASS)
+    resp_acc = await ac.post("/api/sessions/", json={"test_definition_id": setup_accommodations_data["test_id"]}, headers=auth(token_acc))
     assert resp_acc.status_code == 201
     data_acc = resp_acc.json()
     
@@ -96,23 +93,26 @@ def test_time_multiplier_application(setup_db):
     diff_acc = (expires_at_acc - started_at_acc).total_seconds() / 60
     assert abs(diff_acc - 75) < 1 # 60 * 1.25 = 75 mins
 
-def test_auto_expiration_on_retrieval(setup_db):
-    token = login("student_standard@vu.nl", "pass")
+@pytest.mark.anyio
+async def test_auto_expiration_on_retrieval(ac: AsyncClient, setup_accommodations_data):
+    token = await login(ac, STANDARD_STUDENT, STANDARD_PASS)
     headers = auth(token)
     
     # Create session
-    resp = client.post("/api/sessions/", json={"test_definition_id": setup_db["test_id"]}, headers=headers)
+    resp = await ac.post("/api/sessions/", json={"test_definition_id": setup_accommodations_data["test_id"]}, headers=headers)
     assert resp.status_code == 201
     session_id = resp.json()["id"]
     
     # Manually expire it in the database
-    db = TestingSessionLocal()
-    session = db.query(ExamSession).filter(ExamSession.id == session_id).first()
-    session.expires_at = datetime.utcnow() - timedelta(minutes=10)
-    db.commit()
-    db.close()
+    # Use update_many and include required fields to bypass Prisma Python Union parsing bug on Python 3.14
+    await prisma.exam_sessions.update_many(
+        where={"id": session_id},
+        data={
+            "expires_at": datetime.now(timezone.utc) - timedelta(minutes=10),
+        }
+    )
     
     # Retrieve it
-    get_resp = client.get(f"/api/sessions/{session_id}", headers=headers)
+    get_resp = await ac.get(f"/api/sessions/{session_id}", headers=headers)
     assert get_resp.status_code == 200
     assert get_resp.json()["status"] == "EXPIRED"

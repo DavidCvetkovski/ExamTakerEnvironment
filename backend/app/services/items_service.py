@@ -1,21 +1,21 @@
-from typing import List, Optional, Set
+from typing import List, Optional
 from uuid import UUID
-from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
+import json
 
-from app.models.user import User, UserRole
-from app.models.item_version import ItemVersion, ItemStatus, QuestionType
-from app.models.learning_object import LearningObject
-from app.models.item_bank import ItemBank
+from app.core.prisma_db import prisma
+from prisma import Json
+from app.models.user import UserRole
+from app.models.item_version import ItemStatus, QuestionType
 from app.schemas.item_version import ItemVersionCreate
 from app.schemas.learning_object import LearningObjectListResponse
 
 # Maps (current_status, new_status) → set of roles allowed to make that move
-STATUS_TRANSITIONS: dict[tuple[ItemStatus, ItemStatus], set[UserRole]] = {
+STATUS_TRANSITIONS = {
     (ItemStatus.DRAFT, ItemStatus.READY_FOR_REVIEW): {UserRole.CONSTRUCTOR, UserRole.ADMIN},
-    (ItemStatus.READY_FOR_REVIEW, ItemStatus.APPROVED):  {UserRole.REVIEWER, UserRole.ADMIN},
-    (ItemStatus.READY_FOR_REVIEW, ItemStatus.DRAFT):    {UserRole.REVIEWER, UserRole.ADMIN},  # rejection
-    (ItemStatus.APPROVED, ItemStatus.RETIRED):           {UserRole.ADMIN},
+    (ItemStatus.READY_FOR_REVIEW, ItemStatus.APPROVED): {UserRole.REVIEWER, UserRole.ADMIN},
+    (ItemStatus.READY_FOR_REVIEW, ItemStatus.DRAFT): {UserRole.REVIEWER, UserRole.ADMIN},  # rejection
+    (ItemStatus.APPROVED, ItemStatus.RETIRED): {UserRole.ADMIN},
 }
 
 def extract_text_from_tiptap_json(content: dict) -> str:
@@ -46,25 +46,28 @@ def extract_text_from_tiptap_json(content: dict) -> str:
     _recurse(content)
     return " ".join(text_parts).strip()
 
-def list_learning_objects(db: Session) -> List[LearningObjectListResponse]:
+async def list_learning_objects() -> List[LearningObjectListResponse]:
     """Return a list of all Learning Objects with their latest version metadata."""
-    objects = db.query(LearningObject).all()
-    results = []
+    # Fetch all LOs with their versions, sorted by version_number desc
+    objects = await prisma.learning_objects.find_many(
+        include={
+            "item_versions": {
+                "order_by": {"version_number": "desc"},
+                "take": 1
+            }
+        }
+    )
     
+    results = []
     for lo in objects:
-        latest = (
-            db.query(ItemVersion)
-            .filter(ItemVersion.learning_object_id == lo.id)
-            .order_by(ItemVersion.version_number.desc())
-            .first()
-        )
+        latest = lo.item_versions[0] if lo.item_versions else None
         if latest:
             # Better text extraction for preview
             preview = "New Question"
             
             content_data = latest.content
+            # Prisma returns Json as dict/list, no need to json.loads unless it's a string double-encoded
             if isinstance(content_data, str):
-                import json
                 try:
                     content_data = json.loads(content_data)
                 except:
@@ -76,142 +79,160 @@ def list_learning_objects(db: Session) -> List[LearningObjectListResponse]:
                     preview = full_text[:100] + ("..." if len(full_text) > 100 else "")
                 
             results.append(LearningObjectListResponse(
-                id=lo.id,
-                bank_id=lo.bank_id,
+                id=UUID(lo.id),
+                bank_id=UUID(lo.bank_id),
                 created_at=lo.created_at,
                 latest_version_number=latest.version_number,
-                latest_status=latest.status,
-                latest_question_type=latest.question_type,
+                latest_status=ItemStatus(latest.status),
+                latest_question_type=QuestionType(latest.question_type),
                 latest_content_preview=preview,
                 metadata_tags=latest.metadata_tags
             ))
             
     return results
 
-def create_learning_object(db: Session, current_user: User) -> dict:
+async def create_learning_object(current_user_id: str) -> dict:
     """Creates a new Learning Object and its initial DRAFT version."""
-    bank = db.query(ItemBank).first()
+    bank = await prisma.item_banks.find_first()
     if not bank:
-        bank = ItemBank(name="Default Bank", created_by=current_user.id)
-        db.add(bank)
-        db.commit()
-        db.refresh(bank)
+        bank = await prisma.item_banks.create(
+            data={
+                "name": "Default Bank",
+                "created_by": current_user_id
+            }
+        )
         
-    new_lo = LearningObject(bank_id=bank.id, created_by=current_user.id)
-    db.add(new_lo)
-    db.commit()
-    db.refresh(new_lo)
-    
-    initial_version = ItemVersion(
-        learning_object_id=new_lo.id,
-        status=ItemStatus.DRAFT,
-        version_number=1,
-        question_type=QuestionType.MULTIPLE_CHOICE,
-        content={"type": "doc", "content": [{"type": "paragraph"}]},
-        options={"question_type": "MULTIPLE_CHOICE", "choices": [{"id": "A", "text": "", "is_correct": True, "weight": 1.0}]},
-        created_by=current_user.id
+    new_lo = await prisma.learning_objects.create(
+        data={
+            "bank_id": bank.id,
+            "created_by": current_user_id
+        }
     )
-    db.add(initial_version)
-    db.commit()
+    
+    await prisma.item_versions.create(
+        data={
+            "learning_object_id": new_lo.id,
+            "created_by": current_user_id,
+            "version_number": 1,
+            "status": ItemStatus.DRAFT.value,
+            "question_type": QuestionType.MULTIPLE_CHOICE.value,
+            "content": Json({"type": "doc", "content": [{"type": "paragraph"}]}),
+            "options": Json({"question_type": "MULTIPLE_CHOICE", "choices": [{"id": "A", "text": "", "is_correct": True, "weight": 1.0}]}),
+        }
+    )
     
     return {"status": "created", "learning_object_id": str(new_lo.id)}
 
-def get_item_versions(db: Session, lo_id: UUID) -> List[ItemVersion]:
+async def get_item_versions(lo_id: UUID) -> List[dict]:
     """Return the complete version history of a Learning Object."""
-    return (
-        db.query(ItemVersion)
-        .filter(ItemVersion.learning_object_id == lo_id)
-        .order_by(ItemVersion.version_number.desc())
-        .all()
+    versions = await prisma.item_versions.find_many(
+        where={"learning_object_id": str(lo_id)},
+        order={"version_number": "desc"}
     )
+    return [v.__dict__ for v in versions] # Convert to dict if necessary, or let Prisma handle
 
-def create_new_revision(db: Session, lo_id: UUID, payload: ItemVersionCreate, current_user: User) -> ItemVersion:
+async def create_new_revision(lo_id: UUID, payload: ItemVersionCreate, current_user_id: str) -> dict:
     """Core Immutability Controller logic for revisions."""
-    latest = (
-        db.query(ItemVersion)
-        .filter(ItemVersion.learning_object_id == lo_id)
-        .order_by(ItemVersion.version_number.desc())
-        .first()
+    latest = await prisma.item_versions.find_first(
+        where={"learning_object_id": str(lo_id)},
+        order={"version_number": "desc"}
     )
 
-    if latest and latest.status == ItemStatus.DRAFT:
+    content_obj = payload.content if not isinstance(payload.content, str) else json.loads(payload.content)
+    options_obj = payload.options.model_dump()
+    metadata_obj = payload.metadata_tags
+
+    if latest and latest.status == ItemStatus.DRAFT.value:
         # Overwrite the active draft
-        latest.content = payload.content
-        latest.options = payload.options.model_dump()
-        latest.metadata_tags = payload.metadata_tags
-        latest.question_type = payload.question_type
-        db.commit()
-        db.refresh(latest)
-        return latest
+        updated = await prisma.item_versions.update(
+            where={"id": latest.id},
+            data={
+                "content": Json(content_obj),
+                "options": Json(options_obj),
+                "metadata_tags": Json(metadata_obj) if metadata_obj else Json(None),
+                "question_type": payload.question_type.value
+            }
+        )
+        return updated
 
     next_v = (latest.version_number + 1) if latest else 1
-    new_version = ItemVersion(
-        learning_object_id=lo_id,
-        version_number=next_v,
-        status=ItemStatus.DRAFT,
-        question_type=payload.question_type,
-        content=payload.content,
-        options=payload.options.model_dump(),
-        metadata_tags=payload.metadata_tags,
-        created_by=current_user.id,
+    new_version = await prisma.item_versions.create(
+        data={
+            "learning_object_id": str(lo_id),
+            "created_by": current_user_id,
+            "version_number": next_v,
+            "status": ItemStatus.DRAFT.value,
+            "question_type": payload.question_type.value,
+            "content": Json(content_obj),
+            "options": Json(options_obj),
+            "metadata_tags": Json(metadata_obj) if metadata_obj else Json(None),
+        }
     )
-    db.add(new_version)
-    db.commit()
-    db.refresh(new_version)
     return new_version
 
-def transition_item_status(
-    db: Session, 
+async def transition_item_status(
     lo_id: UUID, 
     version_id: UUID, 
     new_status: ItemStatus, 
-    current_user: User,
+    current_user_role: UserRole,
     feedback: Optional[str] = None
-) -> ItemVersion:
+) -> dict:
     """Enforces status transition rules."""
-    version = db.query(ItemVersion).filter(
-        ItemVersion.id == version_id,
-        ItemVersion.learning_object_id == lo_id,
-    ).first()
+    version = await prisma.item_versions.find_first(
+        where={
+            "id": str(version_id),
+            "learning_object_id": str(lo_id),
+        }
+    )
 
     if not version:
         raise HTTPException(status_code=404, detail="ItemVersion not found.")
 
-    key = (version.status, new_status)
+    current_status = ItemStatus(version.status)
+    key = (current_status, new_status)
     allowed_roles = STATUS_TRANSITIONS.get(key)
 
     if allowed_roles is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Transition from {version.status.value} → {new_status.value} is not allowed.",
+            detail=f"Transition from {current_status.value} → {new_status.value} is not allowed.",
         )
 
-    if current_user.role not in allowed_roles:
+    if current_user_role not in allowed_roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Transition requires one of: {[r.value for r in allowed_roles]}",
         )
 
-    version.status = new_status
+    data = {"status": new_status.value}
 
     if feedback and new_status == ItemStatus.DRAFT:
-        if version.metadata_tags is None:
-            version.metadata_tags = {}
-        version.metadata_tags = {**version.metadata_tags, "review_feedback": feedback}
+        metadata = version.metadata_tags
+        if isinstance(metadata, str):
+            try:
+                metadata = json.loads(metadata)
+            except:
+                metadata = {}
+        if not metadata:
+            metadata = {}
+        metadata["review_feedback"] = feedback
+        data["metadata_tags"] = Json(metadata)
 
-    db.commit()
-    db.refresh(version)
-    return version
+    updated = await prisma.item_versions.update(
+        where={"id": version.id},
+        data=data
+    )
+    return updated
 
-def delete_learning_object(db: Session, lo_id: UUID) -> dict:
+async def delete_learning_object(lo_id: UUID) -> dict:
     """Soft-deletes a Learning Object by retiring all versions."""
-    lo = db.query(LearningObject).filter(LearningObject.id == lo_id).first()
+    lo = await prisma.learning_objects.find_unique(where={"id": str(lo_id)})
     if not lo:
         raise HTTPException(status_code=404, detail="Learning Object not found.")
 
-    versions = db.query(ItemVersion).filter(ItemVersion.learning_object_id == lo_id).all()
-    for v in versions:
-        v.status = ItemStatus.RETIRED
+    await prisma.item_versions.update_many(
+        where={"learning_object_id": str(lo_id)},
+        data={"status": ItemStatus.RETIRED.value}
+    )
 
-    db.commit()
     return {"status": "soft_deleted", "learning_object_id": str(lo_id)}

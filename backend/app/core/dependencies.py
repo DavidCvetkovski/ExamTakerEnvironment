@@ -13,12 +13,13 @@ from app.models.user import User, UserRole
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
-def get_current_user(
+from app.core.prisma_db import get_prisma, prisma
+
+async def get_current_user(
     token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
 ) -> User:
     """
-    Decodes the JWT access token, validates expiry, fetches the User from the DB.
+    Decodes the JWT access token, validates expiry, fetches the User from the DB using Prisma.
     Raises 401 if token is invalid/expired/user not found.
     Raises 403 if the user account is deactivated.
     """
@@ -35,9 +36,11 @@ def get_current_user(
     except JWTError:
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == user_id).first()
+    # Use Prisma to fetch user
+    user = await prisma.users.find_unique(where={"id": user_id})
     if user is None:
         raise credentials_exception
+    
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

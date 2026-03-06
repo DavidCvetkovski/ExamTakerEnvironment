@@ -1,80 +1,59 @@
-import os
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-from app.main import app
-from app.core.database import Base, get_db
-from app.models.item_bank import ItemBank
-from app.models.user import User, UserRole
+from httpx import AsyncClient
+from app.core.prisma_db import prisma
 from app.core.security import hash_password
+from app.models.user import UserRole
 
-POSTGRES_USER = os.environ.get("POSTGRES_USER", "postgres")
-POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "password")
-POSTGRES_DB = os.environ.get("POSTGRES_DB", "openvision")
-POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "localhost")
-POSTGRES_PORT = os.environ.get("POSTGRES_PORT", "5432")
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-SQLALCHEMY_DATABASE_URL = f"postgresql+psycopg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+LIB_EMAIL, LIB_PASS = "lib_admin@vu.nl", "pass"
 
-def override_get_db():
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-app.dependency_overrides[get_db] = override_get_db
-
-client = TestClient(app)
-
-@pytest.fixture(scope="module", autouse=True)
-def setup_db():
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    db = TestingSessionLocal()
-    
+@pytest.fixture(scope="function")
+async def setup_library_data(cleanup_database):
     # Setup base entities
-    user = User(
-        email="lib_admin@vu.nl", 
-        hashed_password=hash_password("pass"),
-        role=UserRole.CONSTRUCTOR
+    user = await prisma.users.create(
+        data={
+            "email": LIB_EMAIL,
+            "hashed_password": hash_password(LIB_PASS),
+            "role": UserRole.CONSTRUCTOR,
+        }
     )
-    db.add(user)
-    db.commit()
-    yield
-    db.close()
+    return {"user": user}
 
-def login(email: str, password: str) -> str:
-    resp = client.post("/api/auth/login", json={"email": email, "password": password})
+async def login(ac: AsyncClient, email: str, password: str) -> str:
+    resp = await ac.post("/api/auth/login", json={"email": email, "password": password})
     assert resp.status_code == 200, f"Login failed: {resp.text}"
     return resp.json()["access_token"]
 
 def auth(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
-def test_list_learning_objects_empty():
-    token = login("lib_admin@vu.nl", "pass")
-    
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+@pytest.mark.anyio
+async def test_list_learning_objects_empty(ac: AsyncClient, setup_library_data):
+    token = await login(ac, LIB_EMAIL, LIB_PASS)
     headers = auth(token)
-    response = client.get("/api/learning-objects", headers=headers)
+    response = await ac.get("/api/learning-objects", headers=headers)
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
-def test_create_and_list_learning_object():
-    token = login("lib_admin@vu.nl", "pass")
+@pytest.mark.anyio
+async def test_create_and_list_learning_object(ac: AsyncClient, setup_library_data):
+    token = await login(ac, LIB_EMAIL, LIB_PASS)
     headers = auth(token)
     
     # Create new LO
-    create_res = client.post("/api/learning-objects", headers=headers)
+    create_res = await ac.post("/api/learning-objects", headers=headers)
     assert create_res.status_code == 200
     lo_id = create_res.json()["learning_object_id"]
     
     # List LOs
-    list_res = client.get("/api/learning-objects", headers=headers)
+    list_res = await ac.get("/api/learning-objects", headers=headers)
     assert list_res.status_code == 200
     data = list_res.json()
     assert len(data) > 0

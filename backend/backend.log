@@ -1,6 +1,59 @@
-INFO:     Started server process [21953]
+INFO:     Will watch for changes in these directories: ['/Users/davidcvetkovski/Documents/Uni/TH/backend']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [89028] using WatchFiles
+/Users/davidcvetkovski/Documents/Uni/TH/backend/.venv/lib/python3.14/site-packages/prisma/_compat.py:149: UserWarning: Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.
+  from pydantic.v1 import Extra as Extra
+INFO:     Started server process [89033]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-ERROR:    [Errno 48] error while attempting to bind on address ('127.0.0.1', 8000): address already in use
+INFO:     127.0.0.1:63508 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63521 - "POST /api/auth/refresh HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63523 - "OPTIONS /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63524 - "OPTIONS /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63521 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63525 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63525 - "POST /api/auth/refresh HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63521 - "POST /api/auth/refresh HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63521 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63525 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63524 - "OPTIONS /api/learning-objects/511ba3d7-bba8-49ec-96f6-33593e77ebec/versions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63525 - "GET /api/learning-objects/511ba3d7-bba8-49ec-96f6-33593e77ebec/versions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63524 - "OPTIONS /api/learning-objects/511ba3d7-bba8-49ec-96f6-33593e77ebec/versions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63525 - "POST /api/learning-objects/511ba3d7-bba8-49ec-96f6-33593e77ebec/versions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63525 - "POST /api/learning-objects/511ba3d7-bba8-49ec-96f6-33593e77ebec/versions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63525 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63535 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63524 - "OPTIONS /api/tests/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63537 - "OPTIONS /api/tests/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63535 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63525 - "GET /api/tests/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63535 - "GET /api/tests/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63540 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63540 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63535 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63535 - "GET /api/learning-objects/511ba3d7-bba8-49ec-96f6-33593e77ebec/versions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63545 - "POST /api/learning-objects/511ba3d7-bba8-49ec-96f6-33593e77ebec/versions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63545 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63549 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63549 - "POST /api/learning-objects/511ba3d7-bba8-49ec-96f6-33593e77ebec/versions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63552 - "GET /api/tests/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63551 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63557 - "GET /api/tests/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63552 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63552 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63552 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63552 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63565 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63565 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63574 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63577 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63577 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63588 - "GET /api/tests/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63587 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63593 - "GET /api/tests/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63588 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     Shutting down
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
+INFO:     Finished server process [89033]
+INFO:     Stopping reloader process [89028]

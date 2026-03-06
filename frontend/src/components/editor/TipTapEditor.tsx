@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight';
@@ -17,7 +18,7 @@ export default function TipTapEditor() {
     const editor = useEditor({
         extensions: [
             StarterKit.configure({
-                codeBlock: false, // Disable default, we use lowlight version
+                codeBlock: false,
             }),
             CodeBlockLowlight.configure({
                 lowlight,
@@ -31,6 +32,16 @@ export default function TipTapEditor() {
         },
         immediatelyRender: false,
     });
+
+    // Reactive content update when tiptapJson changes (e.g., after fetch)
+    useEffect(() => {
+        if (editor && tiptapJson && Object.keys(tiptapJson).length > 0) {
+            const currentJson = editor.getJSON();
+            if (JSON.stringify(currentJson) !== JSON.stringify(tiptapJson)) {
+                editor.commands.setContent(tiptapJson);
+            }
+        }
+    }, [tiptapJson, editor]);
 
     if (!editor) return null;
 

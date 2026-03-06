@@ -25,3 +25,6 @@ frontend/.vercel/
 .idea/
 .DS_Store
 *.swp
+
+/generated/prisma
+*.log

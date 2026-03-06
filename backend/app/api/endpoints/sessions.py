@@ -14,29 +14,25 @@ from app.services.exam_sessions_service import (
 router = APIRouter()
 
 @router.post("/", response_model=ExamSessionResponse, status_code=status.HTTP_201_CREATED)
-def instantiate_session(
+async def instantiate_session(
     payload: ExamSessionCreate,
-    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """
     Instantiate (Freeze) a Test Blueprint into a specific student session.
     """
-    return instantiate_session_for_student(
-        db=db,
+    return await instantiate_session_for_student(
         test_definition_id=payload.test_definition_id,
         current_user=current_user,
     )
 
 @router.get("/{session_id}", response_model=ExamSessionResponse)
-def get_exam_session(
+async def get_exam_session(
     session_id: UUID,
-    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Retrieve the frozen exam session."""
-    return get_exam_session_for_user(
-        db=db,
+    return await get_exam_session_for_user(
         session_id=session_id,
         current_user=current_user,
     )

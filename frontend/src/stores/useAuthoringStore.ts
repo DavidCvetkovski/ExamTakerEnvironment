@@ -43,7 +43,18 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
     metadataTags: {},
 
     setLearningObjectId: (id) => set({ learningObjectId: id }),
-    setQuestionType: (type) => set({ questionType: type }),
+    setQuestionType: (type) => {
+        const currentOptions = get().options;
+        let newOptions = currentOptions;
+
+        if (type === 'ESSAY' && Array.isArray(currentOptions)) {
+            newOptions = { min_words: 50, max_words: 500 };
+        } else if (type === 'MULTIPLE_CHOICE' && !Array.isArray(currentOptions)) {
+            newOptions = [];
+        }
+
+        set({ questionType: type, options: newOptions });
+    },
 
     updateTipTap: (json) => {
         set({ tiptapJson: json });
@@ -64,10 +75,21 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
         set({ saveStatus: 'SAVING' });
 
         try {
-            const optionsPayload =
-                state.questionType === 'MULTIPLE_CHOICE'
-                    ? { question_type: 'MULTIPLE_CHOICE', choices: state.options }
-                    : { question_type: 'ESSAY', ...(state.options as { min_words: number; max_words: number }) };
+            let optionsPayload: any;
+            if (state.questionType === 'MULTIPLE_CHOICE') {
+                optionsPayload = {
+                    question_type: 'MULTIPLE_CHOICE',
+                    choices: Array.isArray(state.options) ? state.options : []
+                };
+            } else {
+                const essayOpts = Array.isArray(state.options)
+                    ? { min_words: 50, max_words: 500 }
+                    : state.options;
+                optionsPayload = {
+                    question_type: 'ESSAY',
+                    ...essayOpts
+                };
+            }
 
             const res = await api.post(`learning-objects/${state.learningObjectId}/versions`, {
                 learning_object_id: state.learningObjectId,
@@ -80,7 +102,8 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
 
             const data = res.data;
             set({ itemId: data.id, versionNumber: data.version_number, saveStatus: 'SAVED' });
-        } catch {
+        } catch (error) {
+            console.error("Save failed:", error);
             set({ saveStatus: 'ERROR' });
         }
     },
@@ -107,12 +130,31 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
                     };
                 }
 
+                // Correctly extract options based on type
+                let optionsData: any = latest.options;
+                if (latest.question_type === 'MULTIPLE_CHOICE') {
+                    const rawChoices = latest.options?.choices || [];
+                    // Ensure every choice has an ID (A, B, C...) for backend schema compliance
+                    optionsData = Array.isArray(rawChoices) ? rawChoices.map((choice: any, index: number) => ({
+                        ...choice,
+                        id: choice.id || String.fromCharCode(65 + index),
+                        weight: choice.weight ?? 1.0
+                    })) : [];
+                } else if (latest.question_type === 'ESSAY') {
+                    // Extract just the word counts, but exclude question_type from state to avoid spread issues
+                    const { question_type, ...rest } = latest.options || {};
+                    optionsData = {
+                        min_words: rest.min_words ?? 50,
+                        max_words: rest.max_words ?? 500
+                    };
+                }
+
                 set({
                     itemId: latest.id,
                     versionNumber: latest.version_number,
                     questionType: latest.question_type,
                     tiptapJson: content,
-                    options: latest.options?.choices || latest.options || [],
+                    options: optionsData,
                     metadataTags: latest.metadata_tags || {},
                     saveStatus: 'IDLE'
                 });

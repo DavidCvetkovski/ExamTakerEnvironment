@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import TipTapEditor from '@/components/editor/TipTapEditor';
 import MCQOptionsPanel from '@/components/editor/MCQOptionsPanel';
+import EssayOptionsPanel from '@/components/editor/EssayOptionsPanel';
 import { useAuthoringStore } from '@/stores/useAuthoringStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -122,9 +123,13 @@ export default function AuthorPage() {
                             <TipTapEditor />
                         </div>
 
-                        {/* MCQ Options Panel */}
+                        {/* Options Panels */}
                         <div className="bg-[#1A1A1A] rounded-xl border border-[#333] overflow-hidden">
-                            <MCQOptionsPanel />
+                            {questionType === 'MULTIPLE_CHOICE' ? (
+                                <MCQOptionsPanel />
+                            ) : (
+                                <EssayOptionsPanel />
+                            )}
                         </div>
                     </div>
                 )}

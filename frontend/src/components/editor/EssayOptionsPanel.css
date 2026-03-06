@@ -1,0 +1,61 @@
+.essay-options-container {
+  padding: 1.5rem;
+  background-color: #1a1a1a;
+  border-radius: 0.75rem;
+  border: 1px solid #333;
+  margin-top: 1.5rem;
+}
+
+.essay-options-header {
+  margin-bottom: 1.5rem;
+}
+
+.essay-options-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 0.25rem;
+}
+
+.essay-options-subtitle {
+  font-size: 0.875rem;
+  color: #a1a1aa;
+}
+
+.essay-inputs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.essay-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.essay-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #a1a1aa;
+}
+
+.essay-number-input {
+  background-color: #242424;
+  border: 1px solid #333;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  color: #fff;
+  font-size: 0.875rem;
+  transition: border-color 0.2s;
+}
+
+.essay-number-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.essay-number-input::-webkit-inner-spin-button,
+.essay-number-input::-webkit-outer-spin-button {
+  opacity: 1;
+}

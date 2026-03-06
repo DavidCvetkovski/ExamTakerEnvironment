@@ -28,12 +28,19 @@ class ItemVersionCreate(BaseModel):
     question_type: QuestionType
     content: Dict[str, Any]  # The TipTap JSON State and/or raw HTML
     options: OptionsSchema
-    metadata_tags: Dict[str, Any] = Field(default_factory=dict)
+    metadata_tags: Optional[Dict[str, Any]] = None
 
-class ItemVersionResponse(ItemVersionCreate):
-    id: UUID
+# Response model is independent - handles what Prisma actually returns
+class ItemVersionResponse(BaseModel):
+    id: str
+    learning_object_id: str
     version_number: int
-    created_at: datetime
-    created_by: Optional[UUID] = None
-    
+    status: str
+    question_type: str
+    content: Optional[Any] = None
+    options: Optional[Any] = None
+    metadata_tags: Optional[Any] = None
+    created_at: Optional[datetime] = None
+    created_by: Optional[str] = None
+
     model_config = ConfigDict(from_attributes=True)

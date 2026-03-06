@@ -92,7 +92,7 @@ def seed():
                 version_number=1,
                 status=ItemStatus.APPROVED,
                 question_type=QuestionType.MULTIPLE_CHOICE,
-                content={"text": f"[{meta['subject']}] {meta['topic']} Question {i+1}?"},
+                content={"text": f"{meta['topic']} Question {i+1}?"},
                 options={"choices": [{"id": "A", "text": "Correct Answer", "is_correct": True}, {"id": "B", "text": "Wrong Answer", "is_correct": False}]},
                 metadata_tags={
                     "subject": meta["subject"],

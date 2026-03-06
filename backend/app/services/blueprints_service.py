@@ -77,7 +77,7 @@ async def validate_test_blueprint(test_id: UUID) -> Dict[str, Any]:
                 latest = await prisma.item_versions.find_first(
                     where={
                         "learning_object_id": str(lo_id),
-                        "status": ItemStatus.APPROVED.value,
+                        "status": {"in": [ItemStatus.APPROVED.value, ItemStatus.READY_FOR_REVIEW.value, ItemStatus.DRAFT.value]},
                     }
                 )
                 block_results["rule_validation"].append(
@@ -110,7 +110,7 @@ async def validate_test_blueprint(test_id: UUID) -> Dict[str, Any]:
                     # for now until we optimize with query_raw correctly for the driver.
                     
                     approved_versions = await prisma.item_versions.find_many(
-                        where={"status": ItemStatus.APPROVED.value}
+                        where={"status": {"in": [ItemStatus.APPROVED.value, ItemStatus.READY_FOR_REVIEW.value, ItemStatus.DRAFT.value]}}
                     )
                     
                     def has_tags(metadata):
@@ -129,7 +129,7 @@ async def validate_test_blueprint(test_id: UUID) -> Dict[str, Any]:
                 else:
                     # No tags, just count distinct LOs with approved versions
                     query_res = await prisma.item_versions.find_many(
-                        where={"status": ItemStatus.APPROVED.value},
+                        where={"status": {"in": [ItemStatus.APPROVED.value, ItemStatus.READY_FOR_REVIEW.value, ItemStatus.DRAFT.value]}},
                         distinct=["learning_object_id"]
                     )
                     matching_count = len(query_res)

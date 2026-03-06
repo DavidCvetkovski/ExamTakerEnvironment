@@ -1,75 +1,59 @@
 INFO:     Will watch for changes in these directories: ['/Users/davidcvetkovski/Documents/Uni/TH/backend']
 INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [12213] using WatchFiles
+INFO:     Started reloader process [13666] using WatchFiles
 /Users/davidcvetkovski/Documents/Uni/TH/backend/.venv/lib/python3.14/site-packages/prisma/_compat.py:149: UserWarning: Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.
   from pydantic.v1 import Extra as Extra
-INFO:     Started server process [12218]
+INFO:     Started server process [13673]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     127.0.0.1:50300 - "GET /health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50312 - "POST /api/auth/refresh HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50313 - "POST /api/auth/refresh HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50313 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50312 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50322 - "OPTIONS /api/auth/logout HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50312 - "POST /api/auth/logout HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50312 - "POST /api/auth/refresh HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50313 - "POST /api/auth/refresh HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50327 - "OPTIONS /api/auth/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50328 - "POST /api/auth/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50328 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50333 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50327 - "OPTIONS /api/tests/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50335 - "OPTIONS /api/tests/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50333 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50328 - "GET /api/tests/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50333 - "GET /api/tests/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50338 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50338 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50338 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50338 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50338 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50364 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50364 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50370 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50423 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50426 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50437 - "POST /api/learning-objects HTTP/1.1" 403 Forbidden
-INFO:     127.0.0.1:50437 - "POST /api/learning-objects HTTP/1.1" 403 Forbidden
-INFO:     127.0.0.1:50437 - "POST /api/learning-objects HTTP/1.1" 403 Forbidden
-INFO:     127.0.0.1:50437 - "POST /api/auth/logout HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50437 - "POST /api/auth/refresh HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50445 - "POST /api/auth/refresh HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50451 - "POST /api/auth/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50451 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50454 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50454 - "POST /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50454 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50460 - "OPTIONS /api/learning-objects/59e2a470-925a-42e2-83ea-025b76c1d964/versions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50454 - "GET /api/learning-objects/59e2a470-925a-42e2-83ea-025b76c1d964/versions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50460 - "OPTIONS /api/learning-objects/59e2a470-925a-42e2-83ea-025b76c1d964/versions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50454 - "POST /api/learning-objects/59e2a470-925a-42e2-83ea-025b76c1d964/versions HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50454 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50462 - "GET /api/tests/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50454 - "GET /api/tests/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50465 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50465 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50465 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50484 - "OPTIONS /api/tests/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50485 - "POST /api/tests/ HTTP/1.1" 201 Created
-INFO:     127.0.0.1:50484 - "OPTIONS /api/tests/aa5e97ac-7feb-483a-b7e8-33ab7fe93803 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50485 - "GET /api/learning-objects HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50489 - "GET /api/tests/aa5e97ac-7feb-483a-b7e8-33ab7fe93803 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50484 - "OPTIONS /api/tests/aa5e97ac-7feb-483a-b7e8-33ab7fe93803/validate HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50489 - "POST /api/tests/aa5e97ac-7feb-483a-b7e8-33ab7fe93803/validate HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50484 - "OPTIONS /api/sessions/ HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50489 - "POST /api/sessions/ HTTP/1.1" 201 Created
-INFO:     127.0.0.1:50484 - "OPTIONS /api/sessions/e9eb4bfa-6d72-432c-a95f-d7b1979cab4e HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50494 - "OPTIONS /api/sessions/e9eb4bfa-6d72-432c-a95f-d7b1979cab4e HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50489 - "GET /api/sessions/e9eb4bfa-6d72-432c-a95f-d7b1979cab4e HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50485 - "GET /api/sessions/e9eb4bfa-6d72-432c-a95f-d7b1979cab4e HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50551 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50580 - "POST /api/auth/refresh HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50581 - "POST /api/auth/refresh HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50587 - "OPTIONS /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50588 - "OPTIONS /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50581 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50580 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50588 - "OPTIONS /api/tests/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50587 - "OPTIONS /api/tests/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50580 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50581 - "GET /api/tests/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50580 - "GET /api/tests/ HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50593 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50593 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50593 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50596 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50599 - "GET /api/learning-objects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50752 - "OPTIONS /api/learning-objects/dc78a11f-0c91-47f3-9129-9cf1078ec09d/versions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50753 - "GET /api/learning-objects/dc78a11f-0c91-47f3-9129-9cf1078ec09d/versions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50752 - "OPTIONS /api/learning-objects/dc78a11f-0c91-47f3-9129-9cf1078ec09d/versions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50753 - "POST /api/learning-objects/dc78a11f-0c91-47f3-9129-9cf1078ec09d/versions HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'seed_e2e.py'. Reloading...
 INFO:     Shutting down
 INFO:     Waiting for application shutdown.
 INFO:     Application shutdown complete.
-INFO:     Finished server process [12218]
-INFO:     Stopping reloader process [12213]
+INFO:     Finished server process [13673]
+/Users/davidcvetkovski/Documents/Uni/TH/backend/.venv/lib/python3.14/site-packages/prisma/_compat.py:149: UserWarning: Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.
+  from pydantic.v1 import Extra as Extra
+INFO:     Started server process [14058]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app/services/exam_sessions_service.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [14058]
+/Users/davidcvetkovski/Documents/Uni/TH/backend/.venv/lib/python3.14/site-packages/prisma/_compat.py:149: UserWarning: Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.
+  from pydantic.v1 import Extra as Extra
+INFO:     Started server process [14095]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app/services/blueprints_service.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [14095]
+/Users/davidcvetkovski/Documents/Uni/TH/backend/.venv/lib/python3.14/site-packages/prisma/_compat.py:149: UserWarning: Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.
+  from pydantic.v1 import Extra as Extra
+INFO:     Started server process [14109]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.

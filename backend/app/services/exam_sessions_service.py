@@ -28,7 +28,7 @@ async def _select_items_for_test_definition(test) -> List[dict]:
                 latest_approved = await prisma.item_versions.find_first(
                     where={
                         "learning_object_id": str(lo_id),
-                        "status": ItemStatus.APPROVED.value,
+                        "status": {"in": [ItemStatus.APPROVED.value, ItemStatus.READY_FOR_REVIEW.value, ItemStatus.DRAFT.value]},
                     },
                     order={"version_number": "desc"}
                 )
@@ -61,7 +61,7 @@ async def _select_items_for_test_definition(test) -> List[dict]:
                 # If tags exist, they must match too.
                 
                 query_args = {
-                    "where": {"status": ItemStatus.APPROVED.value},
+                    "where": {"status": {"in": [ItemStatus.APPROVED.value, ItemStatus.READY_FOR_REVIEW.value, ItemStatus.DRAFT.value]}},
                     "order": {"version_number": "desc"}
                 }
                 

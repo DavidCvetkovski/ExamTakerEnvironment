@@ -1,6 +1,6 @@
 
 > frontend@0.1.0 dev
-> next dev
+> next dev -p 3000
 
 ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
  We detected multiple lockfiles and selected the directory of /Users/davidcvetkovski/package-lock.json as the root directory.
@@ -14,16 +14,13 @@
 - Network:       http://192.168.1.31:3000
 
 ✓ Starting...
-✓ Ready in 729ms
- GET / 307 in 384ms (compile: 254ms, render: 130ms)
- GET /author 200 in 342ms (compile: 100ms, render: 242ms)
- GET / 307 in 124ms (compile: 1572µs, render: 122ms)
- GET /author 200 in 108ms (compile: 5ms, render: 103ms)
- GET /login?redirect=%2Fauthor 200 in 49ms (compile: 32ms, render: 17ms)
- GET /login?redirect=%2Fauthor 200 in 42ms (compile: 3ms, render: 39ms)
- GET /author 200 in 29ms (compile: 9ms, render: 20ms)
- GET /login?redirect=%2Fauthor 200 in 19ms (compile: 4ms, render: 15ms)
- GET /api/auth/login 404 in 136ms (compile: 83ms, render: 52ms)
- GET / 307 in 67ms (compile: 7ms, render: 59ms)
- GET /author 200 in 29ms (compile: 2ms, render: 27ms)
- GET /login?redirect=%2Fauthor 200 in 16ms (compile: 2ms, render: 14ms)
+✓ Ready in 669ms
+ GET /login 200 in 692ms (compile: 569ms, render: 123ms)
+ GET /login 200 in 26ms (compile: 3ms, render: 23ms)
+⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ GET /items 200 in 49ms (compile: 30ms, render: 19ms)
+ GET /items 200 in 39ms (compile: 1289µs, render: 37ms)
+ GET /login 200 in 177ms (compile: 81ms, render: 95ms)
+ GET /items 200 in 51ms (compile: 31ms, render: 20ms)
+ GET /items 200 in 42ms (compile: 2ms, render: 40ms)

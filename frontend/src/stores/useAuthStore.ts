@@ -99,12 +99,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     },
 
     initialize: async () => {
+        // If we already have a session in memory, don't re-initialize
+        if (get().isAuthenticated && get().user) {
+            set({ isLoading: false });
+            return;
+        }
+
         set({ isLoading: true });
         try {
-            // Attemps to refresh token on app load (which works if httpOnly cookie is valid)
             await get().refreshToken();
         } catch (error) {
-            // Silent fail on load if no session
             set({ isAuthenticated: false, user: null });
         } finally {
             set({ isLoading: false });

@@ -5,6 +5,7 @@ UI/UX Pro Max Core - BM25 search engine for UI/UX style guides
 """
 
 import csv
+import os
 import re
 from pathlib import Path
 from math import log
@@ -158,7 +159,11 @@ class BM25:
 # ============ SEARCH FUNCTIONS ============
 def _load_csv(filepath):
     """Load CSV and return list of dicts"""
-    with open(filepath, 'r', encoding='utf-8') as f:
+    base_real = os.path.realpath(DATA_DIR)
+    target_real = os.path.realpath(filepath)
+    if os.path.commonpath([base_real, target_real]) != base_real:
+        raise Exception("Invalid file path")
+    with open(target_real, 'r', encoding='utf-8') as f:
         return list(csv.DictReader(f))
 
 

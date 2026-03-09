@@ -158,7 +158,14 @@ class BM25:
 # ============ SEARCH FUNCTIONS ============
 def _load_csv(filepath):
     """Load CSV and return list of dicts"""
-    with open(filepath, 'r', encoding='utf-8') as f:
+    base_dir = Path(__file__).parent.parent / "data"
+    base_dir = base_dir.resolve()
+    filepath_resolved = Path(filepath).resolve()
+    try:
+        filepath_resolved.relative_to(base_dir)
+    except ValueError:
+        raise Exception("Invalid file path")
+    with open(filepath_resolved, 'r', encoding='utf-8') as f:
         return list(csv.DictReader(f))
 
 

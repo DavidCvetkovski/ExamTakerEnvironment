@@ -520,7 +520,12 @@ def persist_design_system(design_system: dict, page: str = None, output_dir: str
     
     # Generate and write MASTER.md
     master_content = format_master_md(design_system)
-    with open(master_file, 'w', encoding='utf-8') as f:
+    master_file_resolved = master_file.resolve()
+    try:
+        master_file_resolved.relative_to(base_dir.resolve())
+    except ValueError:
+        raise Exception('Invalid file path')
+    with open(master_file_resolved, 'w', encoding='utf-8') as f:
         f.write(master_content)
     created_files.append(str(master_file))
     
@@ -528,7 +533,12 @@ def persist_design_system(design_system: dict, page: str = None, output_dir: str
     if page:
         page_file = pages_dir / f"{page.lower().replace(' ', '-')}.md"
         page_content = format_page_override_md(design_system, page, page_query)
-        with open(page_file, 'w', encoding='utf-8') as f:
+        page_file_resolved = page_file.resolve()
+        try:
+            page_file_resolved.relative_to(base_dir.resolve())
+        except ValueError:
+            raise Exception('Invalid file path')
+        with open(page_file_resolved, 'w', encoding='utf-8') as f:
             f.write(page_content)
         created_files.append(str(page_file))
     

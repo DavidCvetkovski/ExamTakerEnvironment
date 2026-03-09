@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useBlueprintStore, AvailableItem } from '@/stores/useBlueprintStore';
 
 interface QuestionPickerModalProps {
@@ -9,28 +9,40 @@ interface QuestionPickerModalProps {
 }
 
 export default function QuestionPickerModal({ isOpen, onClose, onSelect, excludeIds = [] }: QuestionPickerModalProps) {
+    if (!isOpen) {
+        return null;
+    }
+
+    return (
+        <OpenQuestionPickerModal
+            onClose={onClose}
+            onSelect={onSelect}
+            excludeIds={excludeIds}
+        />
+    );
+}
+
+interface OpenQuestionPickerModalProps {
+    onClose: () => void;
+    onSelect: (item: AvailableItem) => void;
+    excludeIds: string[];
+}
+
+function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestionPickerModalProps) {
     const { availableItems, fetchAvailableItems, isLoading } = useBlueprintStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [typeFilter, setTypeFilter] = useState<string>('all');
     const [subjectFilter, setSubjectFilter] = useState<string>('all');
     const [inspectedItem, setInspectedItem] = useState<AvailableItem | null>(null);
 
-    // Reset inspection state when opening to avoid "ghosting" previous state
     useEffect(() => {
-        if (isOpen) {
-            fetchAvailableItems();
-            setInspectedItem(null);
-            setSearchQuery('');
-        }
-    }, [isOpen, fetchAvailableItems]);
+        fetchAvailableItems();
+    }, [fetchAvailableItems]);
 
-    // Cleanup when closing to ensure next open is fresh
     const handleClose = () => {
         setInspectedItem(null);
         onClose();
     };
-
-    if (!isOpen) return null;
 
     const uniqueSubjects = Array.from(new Set(availableItems.map(i => i.metadata_tags?.topic).filter(Boolean))) as string[];
 

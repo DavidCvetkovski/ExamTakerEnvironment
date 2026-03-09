@@ -9,6 +9,7 @@ from prisma import Json
 from app.core.prisma_db import prisma
 from app.models.exam_session import SessionStatus
 from app.models.interaction_event import InteractionEventType
+from app.services.exam_sessions_service import serialize_exam_session
 
 
 async def _get_session_with_ownership_check(
@@ -191,4 +192,4 @@ async def submit_exam_session(
         },
     )
 
-    return updated_session
+    return serialize_exam_session(updated_session)

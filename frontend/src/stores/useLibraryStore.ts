@@ -9,7 +9,7 @@ export interface LearningObjectSummary {
     latest_status: 'DRAFT' | 'READY_FOR_REVIEW' | 'APPROVED' | 'RETIRED';
     latest_question_type: 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY';
     latest_content_preview: string;
-    metadata_tags?: Record<string, any>;
+    metadata_tags?: Record<string, unknown>;
 }
 
 interface LibraryState {
@@ -18,6 +18,10 @@ interface LibraryState {
     error: string | null;
     fetchItems: () => Promise<void>;
     createItem: () => Promise<string>;
+}
+
+function getApiErrorMessage(error: unknown, fallback: string): string {
+    return (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail || fallback;
 }
 
 export const useLibraryStore = create<LibraryState>((set) => ({
@@ -30,9 +34,9 @@ export const useLibraryStore = create<LibraryState>((set) => ({
         try {
             const response = await api.get<LearningObjectSummary[]>('learning-objects');
             set({ items: response.data, isLoading: false });
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Failed to fetch library items:', err);
-            set({ error: err.response?.data?.detail || 'Failed to load items', isLoading: false });
+            set({ error: getApiErrorMessage(err, 'Failed to load items'), isLoading: false });
         }
     },
 
@@ -43,9 +47,9 @@ export const useLibraryStore = create<LibraryState>((set) => ({
             // Refresh list
             await useLibraryStore.getState().fetchItems();
             return response.data.learning_object_id;
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Failed to create new item:', err);
-            set({ error: err.response?.data?.detail || 'Failed to create item', isLoading: false });
+            set({ error: getApiErrorMessage(err, 'Failed to create item'), isLoading: false });
             throw err;
         }
     },

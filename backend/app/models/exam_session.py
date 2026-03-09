@@ -11,12 +11,24 @@ class SessionStatus(str, enum.Enum):
     SUBMITTED = "SUBMITTED"
     EXPIRED = "EXPIRED"
 
+
+class ExamSessionMode(str, enum.Enum):
+    ASSIGNED = "ASSIGNED"
+    PRACTICE = "PRACTICE"
+
+
 class ExamSession(Base):
     __tablename__ = "exam_sessions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     test_definition_id = Column(UUID(as_uuid=True), ForeignKey("test_definitions.id"), nullable=False)
     student_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    scheduled_session_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("scheduled_exam_sessions.id"),
+        nullable=True,
+        index=True,
+    )
     
     # "The Freeze": A static snapshot of selected items
     # [
@@ -33,6 +45,11 @@ class ExamSession(Base):
     items = Column(JSONB, nullable=False, default=list)
     
     status = Column(Enum(SessionStatus), default=SessionStatus.STARTED, nullable=False)
+    session_mode = Column(
+        Enum(ExamSessionMode),
+        default=ExamSessionMode.PRACTICE,
+        nullable=False,
+    )
     
     started_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     submitted_at = Column(DateTime, nullable=True)
@@ -41,3 +58,4 @@ class ExamSession(Base):
     # Relationships
     test_definition = relationship("TestDefinition")
     student = relationship("User")
+    scheduled_session = relationship("ScheduledExamSession")

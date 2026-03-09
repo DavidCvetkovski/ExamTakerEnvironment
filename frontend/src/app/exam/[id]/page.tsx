@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useExamStore } from '@/stores/useExamStore';
@@ -130,6 +131,7 @@ export default function ExamPage() {
             <SubmissionConfirmation
                 sessionId={currentSession.id}
                 submittedAt={currentSession.submitted_at}
+                returnPath={currentSession.return_path}
             />
         );
     }
@@ -183,6 +185,12 @@ export default function ExamPage() {
                             <p className="text-gray-400 mt-2">
                                 Your exam time has ended. All saved answers have been recorded.
                             </p>
+                            <Link
+                                href={currentSession.return_path}
+                                className="mt-6 inline-flex rounded-xl border border-gray-600 px-4 py-2 text-sm font-semibold text-gray-200 transition hover:bg-gray-800"
+                            >
+                                Back to Home
+                            </Link>
                         </div>
                     ) : currentItem ? (
                         <div className="space-y-6">

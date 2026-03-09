@@ -94,16 +94,17 @@ def auth(token: str) -> dict:
 
 @pytest.mark.anyio
 async def test_instantiate_and_freeze(ac: AsyncClient, setup_sessions_data):
-    token = await login(ac, STUDENT_EMAIL, STUDENT_PASS)
+    token = await login(ac, ADMIN_EMAIL, ADMIN_PASS)
     headers = auth(token)
     
-    resp = await ac.post("/api/sessions/", json={"test_definition_id": setup_sessions_data["test_id"]}, headers=headers)
+    resp = await ac.post("/api/sessions/practice", json={"test_definition_id": setup_sessions_data["test_id"]}, headers=headers)
     assert resp.status_code == 201
     data = resp.json()
     
     assert data["test_definition_id"] == setup_sessions_data["test_id"]
     assert len(data["items"]) == 3 # 1 Fixed + 2 Random
     assert data["status"] == "STARTED"
+    assert data["session_mode"] == "PRACTICE"
     
     # Check item snapshots
     item_ids = [item["learning_object_id"] for item in data["items"]]
@@ -156,9 +157,9 @@ async def test_random_rule_under_provision_raises(ac: AsyncClient, setup_session
     )
 
     # Student attempts to instantiate; should get 400 due to insufficient candidates
-    token = await login(ac, STUDENT_EMAIL, STUDENT_PASS)
+    token = await login(ac, ADMIN_EMAIL, ADMIN_PASS)
     resp = await ac.post(
-        "/api/sessions/",
+        "/api/sessions/practice",
         json={"test_definition_id": under_provisioned_test.id},
         headers=auth(token),
     )
@@ -177,12 +178,22 @@ async def test_unauthorized_access(ac: AsyncClient, setup_sessions_data):
         }
     )
     
-    # Student 1 creates a session
-    s1_token = await login(ac, STUDENT_EMAIL, STUDENT_PASS)
-    resp = await ac.post("/api/sessions/", json={"test_definition_id": setup_sessions_data["test_id"]}, headers=auth(s1_token))
+    # Admin creates a practice session
+    admin_token = await login(ac, ADMIN_EMAIL, ADMIN_PASS)
+    resp = await ac.post("/api/sessions/practice", json={"test_definition_id": setup_sessions_data["test_id"]}, headers=auth(admin_token))
     session_id = resp.json()["id"]
     
     # Student 2 tries to access IT
     s2_token = await login(ac, "other_session@vu.nl", "pass")
     get_resp = await ac.get(f"/api/sessions/{session_id}", headers=auth(s2_token))
     assert get_resp.status_code == 403
+
+@pytest.mark.anyio
+async def test_student_cannot_use_legacy_practice_endpoint(ac: AsyncClient, setup_sessions_data):
+    token = await login(ac, STUDENT_EMAIL, STUDENT_PASS)
+    resp = await ac.post(
+        "/api/sessions/",
+        json={"test_definition_id": setup_sessions_data["test_id"]},
+        headers=auth(token),
+    )
+    assert resp.status_code == 403

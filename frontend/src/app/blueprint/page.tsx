@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useBlueprintStore, TestBlock, SelectionRule } from '@/stores/useBlueprintStore';
+import { useBlueprintStore, SelectionRule, TestDefinition } from '@/stores/useBlueprintStore';
 import { useExamStore } from '@/stores/useExamStore';
-import { useAuthStore } from '@/stores/useAuthStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useRouter, useSearchParams } from 'next/navigation';
 import QuestionPickerModal from '@/components/blueprint/QuestionPickerModal';
+import BlueprintSaveIndicator from '@/components/blueprint/BlueprintSaveIndicator';
+
+type BlueprintDraft = Partial<TestDefinition>;
 
 export default function BlueprintPage() {
     const {
@@ -15,12 +17,10 @@ export default function BlueprintPage() {
         availableItems,
         isLoading,
         error,
-        validation,
         fetchBlueprints,
         fetchBlueprint,
         fetchAvailableItems,
         saveBlueprint,
-        validateBlueprint,
         resetCurrent
     } = useBlueprintStore();
 
@@ -72,9 +72,10 @@ export default function BlueprintPage() {
         saveState({ blocks: newBlocks });
     };
 
-    const saveState = useCallback((patch: Partial<any>) => {
+    const saveState = useCallback((patch: BlueprintDraft) => {
+        const existingBlueprint = useBlueprintStore.getState().currentBlueprint ?? {};
         useBlueprintStore.setState({
-            currentBlueprint: { ...useBlueprintStore.getState().currentBlueprint, ...patch } as any
+            currentBlueprint: { ...existingBlueprint, ...patch }
         });
     }, []);
 
@@ -125,7 +126,7 @@ export default function BlueprintPage() {
             if (!idFromUrl) {
                 router.push(`/blueprint?id=${id}`);
             }
-        } catch (e) {
+        } catch {
             // Error handled by store
         }
     };
@@ -179,7 +180,7 @@ export default function BlueprintPage() {
 
     if (!isEditing) {
         return (
-            <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN', 'STUDENT']}>
+            <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-white">
                     <div className="flex justify-between items-end mb-12">
                         <div>
@@ -248,7 +249,7 @@ export default function BlueprintPage() {
     }
 
     return (
-        <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN', 'STUDENT']}>
+        <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-12 text-white">
                 <div className="flex gap-8">
                     {/* Main Editor */}
@@ -286,7 +287,9 @@ export default function BlueprintPage() {
                                             <input
                                                 type="number"
                                                 value={currentBlueprint?.duration_minutes ?? ''}
-                                                onChange={(e) => saveState({ duration_minutes: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                                                onChange={(e) => saveState({
+                                                    duration_minutes: e.target.value === '' ? undefined : parseInt(e.target.value, 10)
+                                                })}
                                                 className="bg-black/20 border border-white/10 rounded-lg py-2 px-3 text-white focus:outline-none focus:border-indigo-500/50 w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                             />
                                             <span className="ml-3 text-slate-400 text-sm font-medium">minutes</span>
@@ -391,7 +394,9 @@ export default function BlueprintPage() {
                                                                                 value={rule.count ?? ''}
                                                                                 onChange={(e) => {
                                                                                     const newBlocks = [...currentBlueprint!.blocks!];
-                                                                                    newBlocks[bIdx].rules[rIdx].count = e.target.value === '' ? '' as any : parseInt(e.target.value);
+                                                                                    newBlocks[bIdx].rules[rIdx].count = e.target.value === ''
+                                                                                        ? undefined
+                                                                                        : parseInt(e.target.value, 10);
                                                                                     saveState({ blocks: newBlocks });
                                                                                 }}
                                                                                 className="w-12 bg-black/40 border border-white/10 rounded-lg py-1 px-1 text-sm text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
@@ -476,29 +481,17 @@ export default function BlueprintPage() {
                             {/* Sticky Footer */}
                             <div className="sticky bottom-0 bg-slate-900/90 backdrop-blur-xl border-t border-white/10 p-6 px-8 flex justify-between items-center z-10">
                                 <div className="flex items-center gap-4">
-                                    {validation && (
-                                        <div className={`flex items-center gap-2 text-sm font-bold ${validation.valid ? 'text-green-400' : 'text-amber-400 underline decoration-amber-400/30 cursor-help'}`}>
-                                            {validation.valid ? '✓ Ready to Publish' : '✕ Rules Incomplete'}
-                                        </div>
-                                    )}
+                                    <BlueprintSaveIndicator />
                                 </div>
                                 <div className="flex gap-4">
                                     {idFromUrl && (
-                                        <>
-                                            <button
-                                                onClick={handleStartPreview}
-                                                disabled={isStarting}
-                                                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20"
-                                            >
-                                                {isStarting ? 'Loading...' : '🚀 Test Session'}
-                                            </button>
-                                            <button
-                                                onClick={() => validateBlueprint(idFromUrl)}
-                                                className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-sm font-bold rounded-xl transition-all border border-white/5"
-                                            >
-                                                Validate
-                                            </button>
-                                        </>
+                                        <button
+                                            onClick={handleStartPreview}
+                                            disabled={isStarting}
+                                            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20"
+                                        >
+                                            {isStarting ? 'Loading...' : 'Practice Blueprint'}
+                                        </button>
                                     )}
                                     <button
                                         onClick={handleSave}
@@ -568,21 +561,6 @@ export default function BlueprintPage() {
                             </div>
                         </div>
 
-                        {validation && !validation.valid && (
-                            <div className="bg-red-900/10 border border-red-500/20 rounded-[32px] p-6">
-                                <h4 className="text-xs font-black uppercase tracking-widest text-red-400 mb-4">Issues</h4>
-                                <div className="space-y-3">
-                                    {validation.blocks.flatMap(b => b.rule_validation).filter(r => !r.valid).slice(0, 3).map((r, i) => (
-                                        <div key={i} className="text-[11px] text-red-400/80 bg-red-500/5 p-3 rounded-xl border border-red-500/10">
-                                            {r.reason}
-                                        </div>
-                                    ))}
-                                    {validation.blocks.flatMap(b => b.rule_validation).filter(r => !r.valid).length > 3 && (
-                                        <p className="text-[10px] text-center text-slate-500">+{validation.blocks.flatMap(b => b.rule_validation).filter(r => !r.valid).length - 3} more issues below</p>
-                                    )}
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
 

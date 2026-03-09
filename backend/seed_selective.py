@@ -2,7 +2,18 @@ import os
 import sqlalchemy
 from sqlalchemy.orm import sessionmaker
 from app.core.database import Base, engine
-from app.models import User, ItemBank, LearningObject, ItemVersion, MediaAsset, TestDefinition, ExamSession
+from app.models import (
+    Course,
+    CourseEnrollment,
+    ExamSession,
+    ItemBank,
+    ItemVersion,
+    LearningObject,
+    MediaAsset,
+    ScheduledExamSession,
+    TestDefinition,
+    User,
+)
 
 # Database URL for direct execution
 POSTGRES_USER = os.environ.get("POSTGRES_USER", "postgres")
@@ -26,8 +37,11 @@ def reset_selective():
         # Order matters due to foreign key constraints
         # 1. Clear exam sessions (depend on test definitions and users)
         db.query(ExamSession).delete()
+        db.query(ScheduledExamSession).delete()
+        db.query(CourseEnrollment).delete()
         db.query(ItemVersion).delete()
         db.query(TestDefinition).delete()
+        db.query(Course).delete()
         db.query(LearningObject).delete()
         db.query(ItemBank).delete()
         db.query(MediaAsset).delete()

@@ -1,7 +1,21 @@
 import os
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.models import User, ItemBank, LearningObject, ItemVersion, ItemStatus, QuestionType, UserRole, TestDefinition, ExamSession
+from app.models import (
+    Course,
+    CourseEnrollment,
+    ExamSession,
+    ItemBank,
+    LearningObject,
+    ItemVersion,
+    ItemStatus,
+    QuestionType,
+    ScheduledExamSession,
+    TestDefinition,
+    User,
+    UserRole,
+)
 from app.core.security import hash_password
 
 # Database URL
@@ -22,8 +36,11 @@ def seed():
         
         # 1. Wipe operational tables (order matters)
         db.query(ExamSession).delete()
+        db.query(ScheduledExamSession).delete()
+        db.query(CourseEnrollment).delete()
         db.query(ItemVersion).delete()
         db.query(TestDefinition).delete()
+        db.query(Course).delete()
         db.query(LearningObject).delete()
         db.query(ItemBank).delete()
         db.commit()
@@ -105,7 +122,69 @@ def seed():
             db.add(v)
             
         db.commit()
-        print("Database seeded for E2E tests (Users preserved).")
+
+        # 5. Create a blueprint, course, enrollment, and scheduled sessions
+        learning_objects = db.query(LearningObject).limit(3).all()
+        blueprint = TestDefinition(
+            title="Scheduled Midterm",
+            description="Course-gated scheduled exam",
+            created_by=constructor.id,
+            blocks=[
+                {
+                    "title": "Main Section",
+                    "rules": [
+                        {"rule_type": "FIXED", "learning_object_id": str(learning_objects[0].id)},
+                        {"rule_type": "FIXED", "learning_object_id": str(learning_objects[1].id)},
+                        {"rule_type": "FIXED", "learning_object_id": str(learning_objects[2].id)},
+                    ],
+                }
+            ],
+            duration_minutes=45,
+            shuffle_questions=False,
+        )
+        db.add(blueprint)
+        db.commit()
+        db.refresh(blueprint)
+
+        course = Course(
+            code="E2E-101",
+            title="E2E Assessment Course",
+            created_by=constructor.id,
+            is_active=True,
+        )
+        db.add(course)
+        db.commit()
+        db.refresh(course)
+
+        db.add(
+            CourseEnrollment(
+                course_id=course.id,
+                student_id=student.id,
+                is_active=True,
+            )
+        )
+
+        now = datetime.now(timezone.utc)
+        db.add(
+            ScheduledExamSession(
+                course_id=course.id,
+                test_definition_id=blueprint.id,
+                created_by=constructor.id,
+                starts_at=now - timedelta(minutes=10),
+                ends_at=now + timedelta(minutes=35),
+            )
+        )
+        db.add(
+            ScheduledExamSession(
+                course_id=course.id,
+                test_definition_id=blueprint.id,
+                created_by=constructor.id,
+                starts_at=now + timedelta(days=1),
+                ends_at=now + timedelta(days=1, minutes=45),
+            )
+        )
+        db.commit()
+        print("Database seeded for E2E tests (users preserved, scheduling enabled).")
         
     except Exception as e:
         db.rollback()

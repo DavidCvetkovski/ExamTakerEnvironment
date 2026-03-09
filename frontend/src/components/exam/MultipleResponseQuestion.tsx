@@ -11,7 +11,7 @@ interface MultipleResponseQuestionProps {
  * Interactive Multiple Response question component.
  * Renders checkboxes and syncs multi-selection to the exam store.
  */
-export default function MultipleResponseQuestion({ item, questionIndex }: MultipleResponseQuestionProps) {
+export default function MultipleResponseQuestion({ item }: MultipleResponseQuestionProps) {
     const { answers, setAnswer } = useExamStore();
     const currentAnswer = answers[item.learning_object_id] as
         | { selected_option_indices: number[] }

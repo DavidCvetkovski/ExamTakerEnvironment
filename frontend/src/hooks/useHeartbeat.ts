@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { api } from '@/lib/api';
 import { useExamStore } from '@/stores/useExamStore';
 
 const HEARTBEAT_INTERVAL_MS = 2000;
@@ -57,16 +58,14 @@ export function useHeartbeat(sessionId: string) {
         const handleBeforeUnload = () => {
             const events = useExamStore.getState().pendingEvents;
             if (events.length > 0) {
-                // Use sendBeacon for reliable delivery on page close
-                const token = document.cookie
-                    .split('; ')
-                    .find((c) => c.startsWith('access_token='))
-                    ?.split('=')[1];
-
                 const payload = JSON.stringify({ events });
                 const blob = new Blob([payload], { type: 'application/json' });
+                const heartbeatUrl = new URL(
+                    `sessions/${sessionId}/heartbeat`,
+                    api.defaults.baseURL ?? window.location.origin
+                ).toString();
                 navigator.sendBeacon(
-                    `http://127.0.0.1:8000/api/sessions/${sessionId}/heartbeat`,
+                    heartbeatUrl,
                     blob
                 );
 

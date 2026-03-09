@@ -81,8 +81,9 @@ async def save_interaction_events(
             detail=f"Session is {session.status}. Cannot accept new events.",
         )
 
-    # Bulk-create all events
+    # Bulk-create all events, slightly staggering timestamps to guarantee deterministic ordering
     now = datetime.now(timezone.utc)
+    from datetime import timedelta
     records = [
         {
             "session_id": str(session_id),
@@ -90,9 +91,9 @@ async def save_interaction_events(
             "item_version_id": str(e["item_version_id"]) if e.get("item_version_id") else None,
             "event_type": e["event_type"],
             "payload": Json(e["payload"]),
-            "created_at": now,
+            "created_at": now + timedelta(milliseconds=i),
         }
-        for e in events
+        for i, e in enumerate(events)
     ]
 
     saved_count = await prisma.interaction_events.create_many(data=records)

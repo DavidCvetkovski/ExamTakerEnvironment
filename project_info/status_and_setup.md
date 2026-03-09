@@ -34,12 +34,10 @@ The project is structured into distinct "Epochs," each representing a major mile
     - **ExamSession:** The "Freeze" mechanism—instantiating a session that preserves item versions even if the bank changes.
     - **Accommodations:** Student-specific time multipliers (e.g., +30% time).
 
-### ✅ Epoch 5: Student Frontier (Exam-Taking)
-- **Status:** Complete.
-- **Implemented:** High-stakes exam UI and persistence.
-    - **Timeline Navigator:** Visual tracking of progress (Answered, Flagged, Current).
-    - **Direct Storage (Heartbeat):** Every student interaction is saved instantly (debounced) to prevent data loss.
-    - **Session Recovery:** Students can reconnect and resume from their last saved state.
+### 🟡 Epoch 5: Student Frontier (Exam-Taking)
+- **Status:** In Progress (Skeleton).
+- **Implemented:** Basic routing and static question rendering.
+- **Missing:** Timeline Navigator, Heartbeat/Direct Storage, Interaction Logging, and Submission logic.
 
 ---
 

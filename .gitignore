@@ -28,3 +28,4 @@ frontend/.vercel/
 
 /generated/prisma
 *.log
+node_modules/

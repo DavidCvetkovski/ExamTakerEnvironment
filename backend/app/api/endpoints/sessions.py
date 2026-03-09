@@ -10,8 +10,10 @@ from app.services.exam_sessions_service import (
     instantiate_session_for_student,
     get_exam_session_for_user,
 )
+from app.services.interactions_service import submit_exam_session
 
 router = APIRouter()
+
 
 @router.post("/", response_model=ExamSessionResponse, status_code=status.HTTP_201_CREATED)
 async def instantiate_session(
@@ -26,6 +28,7 @@ async def instantiate_session(
         current_user=current_user,
     )
 
+
 @router.get("/{session_id}", response_model=ExamSessionResponse)
 async def get_exam_session(
     session_id: UUID,
@@ -36,3 +39,16 @@ async def get_exam_session(
         session_id=session_id,
         current_user=current_user,
     )
+
+
+@router.post("/{session_id}/submit", response_model=ExamSessionResponse)
+async def submit_session(
+    session_id: UUID,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Submit an exam session. Marks it as SUBMITTED and locks it
+    against further heartbeat events. Returns 400 if already submitted,
+    409 if expired.
+    """
+    return await submit_exam_session(session_id, current_user)

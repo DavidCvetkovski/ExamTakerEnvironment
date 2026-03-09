@@ -29,6 +29,7 @@ model exam_sessions {
   expires_at         DateTime         @db.Timestamp(6)
   users              users            @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   test_definitions   test_definitions @relation(fields: [test_definition_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  interaction_events interaction_events[]
 }
 
 model item_banks {
@@ -132,4 +133,21 @@ enum userrole {
   CONSTRUCTOR
   REVIEWER
   STUDENT
+}
+
+model interaction_events {
+  id                 String               @id @default(uuid()) @db.Uuid
+  session_id         String               @db.Uuid
+  learning_object_id String?              @db.Uuid
+  item_version_id    String?              @db.Uuid
+  event_type         interactioneventtype
+  payload            Json
+  created_at         DateTime             @default(now()) @db.Timestamp(6)
+  exam_sessions      exam_sessions        @relation(fields: [session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+enum interactioneventtype {
+  ANSWER_CHANGE
+  FLAG_TOGGLE
+  NAVIGATION
 }

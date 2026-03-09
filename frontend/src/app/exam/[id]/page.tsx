@@ -4,6 +4,16 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useExamStore } from '@/stores/useExamStore';
+import DOMPurify from 'dompurify';
+
+function sanitizeHtml(html: string | null | undefined) {
+  return html
+    ? DOMPurify.sanitize(html, {
+        ALLOWED_TAGS: ['span', 'p'],
+        ALLOWED_ATTR: ['class'],
+      })
+    : '';
+}
 
 export default function ExamPage() {
     const params = useParams();
@@ -95,7 +105,7 @@ export default function ExamPage() {
                                     {/* Question Content */}
                                     <div
                                         className="prose prose-invert max-w-none text-xl leading-relaxed"
-                                        dangerouslySetInnerHTML={{ __html: item.content.text || '' }}
+                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.content.text) }}
                                     />
 
                                     {/* Options Area (Placeholder for Interactivity) */}

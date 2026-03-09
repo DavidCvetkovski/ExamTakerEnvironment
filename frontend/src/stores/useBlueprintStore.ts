@@ -29,22 +29,7 @@ export interface TestDefinition {
     updated_at: string;
 }
 
-interface ValidationRule {
-    rule: string;
-    valid: boolean;
-    reason: string;
-    matching_count?: number;
-}
-
-interface ValidationBlock {
-    title: string;
-    rule_validation: ValidationRule[];
-}
-
-export interface ValidationResponse {
-    valid: boolean;
-    blocks: ValidationBlock[];
-}
+export type BlueprintSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 export interface AvailableItem {
     id: string;
@@ -66,31 +51,35 @@ interface BlueprintState {
     availableItems: AvailableItem[];
     isLoading: boolean;
     error: string | null;
-    validation: ValidationResponse | null;
+    saveStatus: BlueprintSaveStatus;
 
     fetchBlueprints: () => Promise<void>;
     fetchBlueprint: (id: string) => Promise<void>;
     fetchAvailableItems: () => Promise<void>;
     saveBlueprint: (data: Partial<TestDefinition>) => Promise<string>;
-    validateBlueprint: (id: string) => Promise<void>;
     resetCurrent: () => void;
+    resetSaveStatus: () => void;
 }
 
-export const useBlueprintStore = create<BlueprintState>((set, get) => ({
+function getApiErrorMessage(error: unknown, fallback: string): string {
+    return (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail || fallback;
+}
+
+export const useBlueprintStore = create<BlueprintState>((set) => ({
     blueprints: [],
     currentBlueprint: null,
     availableItems: [],
     isLoading: false,
     error: null,
-    validation: null,
+    saveStatus: 'idle',
 
     fetchAvailableItems: async () => {
         set({ isLoading: true, error: null });
         try {
             const response = await api.get<AvailableItem[]>('learning-objects');
             set({ availableItems: response.data, isLoading: false });
-        } catch (err: any) {
-            set({ error: err.response?.data?.detail || 'Failed to fetch items', isLoading: false });
+        } catch (err: unknown) {
+            set({ error: getApiErrorMessage(err, 'Failed to fetch items'), isLoading: false });
         }
     },
 
@@ -99,8 +88,8 @@ export const useBlueprintStore = create<BlueprintState>((set, get) => ({
         try {
             const response = await api.get<TestDefinition[]>('tests/');
             set({ blueprints: response.data, isLoading: false });
-        } catch (err: any) {
-            set({ error: err.response?.data?.detail || 'Failed to fetch blueprints', isLoading: false });
+        } catch (err: unknown) {
+            set({ error: getApiErrorMessage(err, 'Failed to fetch blueprints'), isLoading: false });
         }
     },
 
@@ -109,13 +98,13 @@ export const useBlueprintStore = create<BlueprintState>((set, get) => ({
         try {
             const response = await api.get<TestDefinition>(`tests/${id}`);
             set({ currentBlueprint: response.data, isLoading: false });
-        } catch (err: any) {
-            set({ error: err.response?.data?.detail || 'Failed to fetch blueprint', isLoading: false });
+        } catch (err: unknown) {
+            set({ error: getApiErrorMessage(err, 'Failed to fetch blueprint'), isLoading: false });
         }
     },
 
     saveBlueprint: async (data: Partial<TestDefinition>) => {
-        set({ isLoading: true, error: null });
+        set({ isLoading: true, error: null, saveStatus: 'saving' });
         try {
             let response;
             if (data.id) {
@@ -123,22 +112,12 @@ export const useBlueprintStore = create<BlueprintState>((set, get) => ({
             } else {
                 response = await api.post<TestDefinition>('tests/', data);
             }
-            set({ currentBlueprint: response.data, isLoading: false });
+            set({ currentBlueprint: response.data, isLoading: false, saveStatus: 'saved' });
             return response.data.id;
-        } catch (err: any) {
-            const msg = err.response?.data?.detail || 'Failed to save blueprint';
-            set({ error: msg, isLoading: false });
+        } catch (err: unknown) {
+            const msg = getApiErrorMessage(err, 'Failed to save blueprint');
+            set({ error: msg, isLoading: false, saveStatus: 'error' });
             throw new Error(msg);
-        }
-    },
-
-    validateBlueprint: async (id: string) => {
-        set({ isLoading: true, error: null, validation: null });
-        try {
-            const response = await api.post<ValidationResponse>(`tests/${id}/validate`);
-            set({ validation: response.data, isLoading: false });
-        } catch (err: any) {
-            set({ error: err.response?.data?.detail || 'Failed to validate blueprint', isLoading: false });
         }
     },
 
@@ -151,8 +130,10 @@ export const useBlueprintStore = create<BlueprintState>((set, get) => ({
                 duration_minutes: 60,
                 shuffle_questions: false
             },
-            validation: null,
-            error: null
+            error: null,
+            saveStatus: 'idle'
         });
-    }
+    },
+
+    resetSaveStatus: () => set({ saveStatus: 'idle' }),
 }));

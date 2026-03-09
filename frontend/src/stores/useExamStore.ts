@@ -16,11 +16,14 @@ export interface ExamSession {
     id: string;
     test_definition_id: string;
     student_id: string;
+    scheduled_session_id: string | null;
     items: ExamItem[];
     status: 'STARTED' | 'SUBMITTED' | 'EXPIRED';
+    session_mode: 'ASSIGNED' | 'PRACTICE';
     started_at: string;
     submitted_at: string | null;
     expires_at: string;
+    return_path: string;
 }
 
 export interface InteractionEvent {
@@ -31,6 +34,8 @@ export interface InteractionEvent {
 }
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
+let saveStatusResetTimer: ReturnType<typeof setTimeout> | null = null;
 
 interface ExamState {
     // Session
@@ -53,6 +58,7 @@ interface ExamState {
     // Actions — session lifecycle
     fetchSession: (sessionId: string) => Promise<void>;
     instantiateSession: (testId: string) => Promise<string>;
+    joinScheduledSession: (scheduledSessionId: string) => Promise<string>;
     submitExam: (sessionId: string) => Promise<void>;
 
     // Actions — answer & navigation
@@ -83,7 +89,14 @@ export const useExamStore = create<ExamState>((set, get) => ({
     // ── Session Lifecycle ────────────────────────────────────────────────
 
     fetchSession: async (sessionId: string) => {
-        set({ isLoading: true, error: null });
+        set({
+            isLoading: true,
+            error: null,
+            currentQuestionIndex: 0,
+            answers: {},
+            flags: {},
+            pendingEvents: [],
+        });
         try {
             const response = await api.get(`/sessions/${sessionId}`);
             set({ currentSession: response.data, isLoading: false });
@@ -95,14 +108,28 @@ export const useExamStore = create<ExamState>((set, get) => ({
     },
 
     instantiateSession: async (testId: string) => {
-        set({ isLoading: true, error: null });
+        set({ isLoading: true, error: null, currentQuestionIndex: 0, answers: {}, flags: {}, pendingEvents: [] });
         try {
-            const response = await api.post('/sessions/', { test_definition_id: testId });
+            const response = await api.post('/sessions/practice', { test_definition_id: testId });
             set({ currentSession: response.data, isLoading: false });
             return response.data.id;
         } catch (err: unknown) {
             const msg = (err as { response?: { data?: { detail?: string } } })
-                ?.response?.data?.detail || 'Failed to start exam';
+                ?.response?.data?.detail || 'Failed to start practice exam';
+            set({ error: msg, isLoading: false });
+            throw new Error(msg);
+        }
+    },
+
+    joinScheduledSession: async (scheduledSessionId: string) => {
+        set({ isLoading: true, error: null, currentQuestionIndex: 0, answers: {}, flags: {}, pendingEvents: [] });
+        try {
+            const response = await api.post(`/student/sessions/${scheduledSessionId}/join`);
+            set({ currentSession: response.data, isLoading: false });
+            return response.data.id;
+        } catch (err: unknown) {
+            const msg = (err as { response?: { data?: { detail?: string } } })
+                ?.response?.data?.detail || 'Failed to join scheduled exam';
             set({ error: msg, isLoading: false });
             throw new Error(msg);
         }
@@ -185,6 +212,11 @@ export const useExamStore = create<ExamState>((set, get) => ({
         const events = get().pendingEvents;
         if (events.length === 0) return;
 
+        if (saveStatusResetTimer) {
+            clearTimeout(saveStatusResetTimer);
+            saveStatusResetTimer = null;
+        }
+
         set({ saveStatus: 'saving' });
         try {
             await api.post(`/sessions/${sessionId}/heartbeat`, { events });
@@ -193,7 +225,13 @@ export const useExamStore = create<ExamState>((set, get) => ({
                 saveStatus: 'saved',
                 lastSavedAt: new Date().toISOString(),
             });
-        } catch (err: unknown) {
+            saveStatusResetTimer = setTimeout(() => {
+                const state = get();
+                if (state.saveStatus === 'saved') {
+                    set({ saveStatus: 'idle' });
+                }
+            }, 2500);
+        } catch {
             set({ saveStatus: 'error' });
 
             // Persist to localStorage as offline fallback

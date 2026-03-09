@@ -1,9 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, status
 from uuid import UUID
 from typing import List
 
-from app.core.database import get_db
 from app.core.dependencies import get_current_user, require_role
 from app.models.user import User, UserRole
 from app.schemas.test_definition import TestDefinitionCreate, TestDefinitionResponse
@@ -12,7 +10,6 @@ from app.services.blueprints_service import (
     list_test_definitions as svc_list_test_definitions,
     get_test_definition as svc_get_test_definition,
     update_test_definition as svc_update_test_definition,
-    validate_test_blueprint as svc_validate_test_blueprint,
 )
 
 router = APIRouter()
@@ -50,17 +47,4 @@ async def update_test_definition(
     return await svc_update_test_definition(
         test_id=test_id,
         payload=payload,
-    )
-
-@router.post("/{test_id}/validate")
-async def validate_test_blueprint(
-    test_id: UUID,
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Dry-run selection rules against the DB.
-    Ensures that enough APPROVED items exist for each RANDOM rule.
-    """
-    return await svc_validate_test_blueprint(
-        test_id=test_id,
     )

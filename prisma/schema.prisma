@@ -22,14 +22,65 @@ model exam_sessions {
   id                 String           @id @default(uuid()) @db.Uuid
   test_definition_id String           @db.Uuid
   student_id         String           @db.Uuid
+  scheduled_session_id String?        @db.Uuid
   items              Json
   status             sessionstatus
+  session_mode       examsessionmode  @default(PRACTICE)
   started_at         DateTime         @db.Timestamp(6)
   submitted_at       DateTime?        @db.Timestamp(6)
   expires_at         DateTime         @db.Timestamp(6)
+  scheduled_exam_sessions scheduled_exam_sessions? @relation(fields: [scheduled_session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   users              users            @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   test_definitions   test_definitions @relation(fields: [test_definition_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   interaction_events interaction_events[]
+}
+
+model courses {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  code               String                  @unique @db.VarChar
+  title              String                  @db.VarChar
+  created_by         String?                 @db.Uuid
+  is_active          Boolean                 @default(true)
+  created_at         DateTime?               @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?               @db.Timestamp(6)
+  users              users?                  @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  course_enrollments course_enrollments[]
+  scheduled_exam_sessions scheduled_exam_sessions[]
+}
+
+model course_enrollments {
+  id                 String    @id @default(uuid()) @db.Uuid
+  course_id          String    @db.Uuid
+  student_id         String    @db.Uuid
+  is_active          Boolean   @default(true)
+  enrolled_at        DateTime? @default(now()) @db.Timestamp(6)
+  courses            courses   @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users              users     @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([course_id, student_id])
+  @@index([course_id])
+  @@index([student_id])
+}
+
+model scheduled_exam_sessions {
+  id                 String                @id @default(uuid()) @db.Uuid
+  course_id          String                @db.Uuid
+  test_definition_id String                @db.Uuid
+  created_by         String?               @db.Uuid
+  starts_at          DateTime              @db.Timestamp(6)
+  ends_at            DateTime              @db.Timestamp(6)
+  status             coursesessionstatus   @default(SCHEDULED)
+  duration_minutes_override Int?
+  created_at         DateTime?             @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?             @db.Timestamp(6)
+  courses            courses               @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  test_definitions   test_definitions      @relation(fields: [test_definition_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users              users?                @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  exam_sessions      exam_sessions[]
+
+  @@index([course_id])
+  @@index([test_definition_id])
+  @@index([starts_at])
 }
 
 model item_banks {
@@ -88,6 +139,7 @@ model test_definitions {
   created_at        DateTime?       @default(now()) @db.Timestamp(6)
   updated_at        DateTime?       @db.Timestamp(6)
   exam_sessions     exam_sessions[]
+  scheduled_exam_sessions scheduled_exam_sessions[]
   users             users?          @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
@@ -100,11 +152,14 @@ model users {
   is_active                 Boolean          @default(true)
   provision_time_multiplier Float            @default(1.0)
   created_at                DateTime?          @default(now()) @db.Timestamp(6)
+  course_enrollments        course_enrollments[]
+  courses                   courses[]
   exam_sessions             exam_sessions[]
   item_banks                item_banks[]
   item_versions             item_versions[]
   learning_objects          learning_objects[]
   media_assets              media_assets[]
+  scheduled_exam_sessions   scheduled_exam_sessions[]
   test_definitions          test_definitions[]
 }
 
@@ -126,6 +181,18 @@ enum sessionstatus {
   STARTED
   SUBMITTED
   EXPIRED
+}
+
+enum examsessionmode {
+  ASSIGNED
+  PRACTICE
+}
+
+enum coursesessionstatus {
+  SCHEDULED
+  ACTIVE
+  CLOSED
+  CANCELED
 }
 
 enum userrole {

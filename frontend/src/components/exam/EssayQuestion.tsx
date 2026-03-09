@@ -14,7 +14,7 @@ const DEBOUNCE_MS = 500;
  * Interactive Essay question component.
  * Renders a textarea with word count and debounced save to the exam store.
  */
-export default function EssayQuestion({ item, questionIndex }: EssayQuestionProps) {
+export default function EssayQuestion({ item }: EssayQuestionProps) {
     const { answers, setAnswer } = useExamStore();
     const currentAnswer = answers[item.learning_object_id] as
         | { text: string }

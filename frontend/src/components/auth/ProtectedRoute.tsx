@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuthStore } from '../../stores/useAuthStore';
+import { getHomePathForRole, useAuthStore } from '../../stores/useAuthStore';
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
@@ -24,8 +24,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
             if (!isAuthenticated) {
                 router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
             } else if (allowedRoles && user && !allowedRoles.includes(user.role)) {
-                // User is logged in but lacks the required role
-                router.push('/unauthorized'); // Or some error page
+                router.push(getHomePathForRole(user.role));
             }
         }
     }, [isLoading, isAuthenticated, user, allowedRoles, router, pathname]);

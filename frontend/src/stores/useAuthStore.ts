@@ -23,6 +23,13 @@ interface AuthState {
     initialize: () => Promise<void>;
 }
 
+export function getHomePathForRole(role?: UserPublic['role'] | null): string {
+    if (role === 'STUDENT') {
+        return '/my-exams';
+    }
+    return '/sessions';
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
     user: null,
     accessToken: null,
@@ -92,7 +99,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
             const resp = await api.get('auth/me');
             set({ user: resp.data, isAuthenticated: true });
-        } catch (error) {
+        } catch {
             // If /me fails, let the interceptor handle it or log out
             set({ user: null, isAuthenticated: false, accessToken: null });
         }
@@ -108,7 +115,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ isLoading: true });
         try {
             await get().refreshToken();
-        } catch (error) {
+        } catch {
             set({ isAuthenticated: false, user: null });
         } finally {
             set({ isLoading: false });

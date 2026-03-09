@@ -96,21 +96,18 @@ async def test_create_test_definition(ac: AsyncClient, setup_matrix_data):
     assert data["id"] is not None
 
 @pytest.mark.anyio
-async def test_validate_test_definition(ac: AsyncClient, setup_matrix_data):
+async def test_get_test_definition(ac: AsyncClient, setup_matrix_data):
     token = await login(ac, ADMIN_EMAIL, ADMIN_PASS)
     headers = auth(token)
-    
-    # Create a test first
     lo_id = setup_matrix_data["lo_ids"][0]
+
     payload = {
-        "title": "Validation Test",
+        "title": "Lookup Test",
         "blocks": [
             {
                 "title": "Rules",
                 "rules": [
                     {"rule_type": "FIXED", "learning_object_id": lo_id},
-                    {"rule_type": "RANDOM", "count": 1, "tags": ["math"]}, # Should pass (2 match)
-                    {"rule_type": "RANDOM", "count": 10, "tags": ["math"]} # Should fail
                 ]
             }
         ],
@@ -118,14 +115,9 @@ async def test_validate_test_definition(ac: AsyncClient, setup_matrix_data):
     }
     create_resp = await ac.post("/api/tests/", json=payload, headers=headers)
     test_id = create_resp.json()["id"]
-    
-    # Run validation
-    val_resp = await ac.post(f"/api/tests/{test_id}/validate", headers=headers)
-    assert val_resp.status_code == 200
-    val_data = val_resp.json()
-    
-    assert val_data["valid"] is False # Because of the rule seeking 10 items
-    rules = val_data["blocks"][0]["rule_validation"]
-    assert rules[0]["valid"] is True # Fixed
-    assert rules[1]["valid"] is True # Random 1
-    assert rules[2]["valid"] is False # Random 10
+
+    get_resp = await ac.get(f"/api/tests/{test_id}", headers=headers)
+    assert get_resp.status_code == 200
+    data = get_resp.json()
+    assert data["id"] == test_id
+    assert data["title"] == "Lookup Test"

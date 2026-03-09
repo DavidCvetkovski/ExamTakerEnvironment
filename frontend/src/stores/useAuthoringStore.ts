@@ -8,6 +8,28 @@ interface MCQOption {
     weight: number;
 }
 
+interface EssayOptions {
+    min_words: number;
+    max_words: number;
+}
+
+interface StoredItemVersion {
+    id: string;
+    version_number: number;
+    question_type: 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY';
+    content?: {
+        text?: string;
+        type?: string;
+        content?: Array<Record<string, unknown>>;
+    };
+    options?: {
+        choices?: Array<Partial<MCQOption>>;
+        min_words?: number;
+        max_words?: number;
+    };
+    metadata_tags?: Record<string, unknown>;
+}
+
 interface AuthoringState {
     // Core item state
     learningObjectId: string | null;
@@ -16,14 +38,14 @@ interface AuthoringState {
     saveStatus: 'IDLE' | 'SAVING' | 'SAVED' | 'ERROR';
     questionType: 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY';
     tiptapJson: Record<string, unknown>;
-    options: MCQOption[] | { min_words: number; max_words: number };
+    options: MCQOption[] | EssayOptions;
     metadataTags: Record<string, unknown>;
 
     // Actions
     setLearningObjectId: (id: string) => void;
     setQuestionType: (type: 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY') => void;
     updateTipTap: (json: Record<string, unknown>) => void;
-    updateOptions: (options: MCQOption[] | { min_words: number; max_words: number }) => void;
+    updateOptions: (options: MCQOption[] | EssayOptions) => void;
     updateMetadata: (tags: Record<string, unknown>) => void;
     updateMetadataField: (key: string, value: unknown) => void;
     saveDraft: () => Promise<void>;
@@ -96,7 +118,7 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
         set({ saveStatus: 'SAVING' });
 
         try {
-            let optionsPayload: any;
+            let optionsPayload: Record<string, unknown>;
             if (state.questionType === 'MULTIPLE_CHOICE' || state.questionType === 'MULTIPLE_RESPONSE') {
                 optionsPayload = {
                     question_type: state.questionType,
@@ -132,7 +154,7 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
     fetchLatestVersion: async (loId: string) => {
         set({ saveStatus: 'SAVING', learningObjectId: loId });
         try {
-            const res = await api.get(`learning-objects/${loId}/versions`);
+            const res = await api.get<StoredItemVersion[]>(`learning-objects/${loId}/versions`);
             const versions = res.data;
             if (versions && versions.length > 0) {
                 const latest = versions[0];
@@ -152,21 +174,24 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
                 }
 
                 // Correctly extract options based on type
-                let optionsData: any = latest.options;
+                let optionsData: MCQOption[] | EssayOptions = Array.isArray(latest.options?.choices) ? [] : {
+                    min_words: latest.options?.min_words ?? 50,
+                    max_words: latest.options?.max_words ?? 500
+                };
                 if (latest.question_type === 'MULTIPLE_CHOICE' || latest.question_type === 'MULTIPLE_RESPONSE') {
                     const rawChoices = latest.options?.choices || [];
                     // Ensure every choice has an ID (A, B, C...) for backend schema compliance
-                    optionsData = Array.isArray(rawChoices) ? rawChoices.map((choice: any, index: number) => ({
+                    optionsData = Array.isArray(rawChoices) ? rawChoices.map((choice, index) => ({
                         ...choice,
                         id: choice.id || String.fromCharCode(65 + index),
+                        text: choice.text || '',
+                        is_correct: choice.is_correct ?? false,
                         weight: choice.weight ?? 1.0
                     })) : [];
                 } else if (latest.question_type === 'ESSAY') {
-                    // Extract just the word counts, but exclude question_type from state to avoid spread issues
-                    const { question_type, ...rest } = latest.options || {};
                     optionsData = {
-                        min_words: rest.min_words ?? 50,
-                        max_words: rest.max_words ?? 500
+                        min_words: latest.options?.min_words ?? 50,
+                        max_words: latest.options?.max_words ?? 500
                     };
                 }
 

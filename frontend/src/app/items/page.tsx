@@ -3,12 +3,18 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { useAuthStore } from '@/stores/useAuthStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
+
+function getMetadataString(value: unknown): string | null {
+    return typeof value === 'string' && value.trim() !== '' ? value : null;
+}
+
+function getMetadataNumber(value: unknown): number | undefined {
+    return typeof value === 'number' ? value : undefined;
+}
 
 export default function ItemsLibraryPage() {
     const router = useRouter();
-    const user = useAuthStore(state => state.user);
     const { items, isLoading, error, fetchItems, createItem } = useLibraryStore();
     const [isCreating, setIsCreating] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -18,12 +24,14 @@ export default function ItemsLibraryPage() {
         fetchItems();
     }, [fetchItems]);
 
-    const uniqueSubjects = Array.from(new Set(items.map(i => i.metadata_tags?.topic).filter(Boolean))) as string[];
+    const uniqueSubjects = Array.from(
+        new Set(items.map((item) => getMetadataString(item.metadata_tags?.topic)).filter((value): value is string => value !== null))
+    );
 
     const filteredItems = items.filter(item => {
         const matchesSearch = (item.latest_content_preview || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.id.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesSubject = subjectFilter === 'all' || item.metadata_tags?.topic === subjectFilter;
+        const matchesSubject = subjectFilter === 'all' || getMetadataString(item.metadata_tags?.topic) === subjectFilter;
         return matchesSearch && matchesSubject;
     });
 
@@ -75,7 +83,7 @@ export default function ItemsLibraryPage() {
     };
 
     return (
-        <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN', 'STUDENT']}>
+        <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
             <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4 sm:px-6 lg:px-8">
                 <main className="w-full max-w-6xl space-y-6">
                     {/* Header */}
@@ -168,7 +176,7 @@ export default function ItemsLibraryPage() {
                                     ) : items.length === 0 ? (
                                         <tr>
                                             <td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-500">
-                                                No questions found. Click "Create New Question" to get started.
+                                                No questions found. Click &quot;Create New Question&quot; to get started.
                                             </td>
                                         </tr>
                                     ) : (
@@ -181,16 +189,16 @@ export default function ItemsLibraryPage() {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="text-sm text-gray-900 font-medium">
-                                                        {item.metadata_tags?.topic || <span className="text-gray-400 italic">General</span>}
+                                                        {getMetadataString(item.metadata_tags?.topic) || <span className="text-gray-400 italic">General</span>}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="text-sm text-gray-900 font-medium">
-                                                        {item.metadata_tags?.points ?? 1}
+                                                        {getMetadataNumber(item.metadata_tags?.points) ?? 1}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <DifficultyBadge level={item.metadata_tags?.difficulty} />
+                                                    <DifficultyBadge level={getMetadataNumber(item.metadata_tags?.difficulty)} />
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="text-sm text-gray-600">

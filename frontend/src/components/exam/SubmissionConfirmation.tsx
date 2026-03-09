@@ -1,18 +1,24 @@
 'use client';
 
+'use client';
+
+import Link from 'next/link';
+
 interface SubmissionConfirmationProps {
     sessionId: string;
     submittedAt: string | null;
+    returnPath: string;
 }
 
 /**
  * Post-submission confirmation page shown after the student
  * successfully submits their exam.
  */
-export default function SubmissionConfirmation({ sessionId, submittedAt }: SubmissionConfirmationProps) {
+export default function SubmissionConfirmation({ sessionId, submittedAt, returnPath }: SubmissionConfirmationProps) {
     const formattedTime = submittedAt
         ? new Date(submittedAt.endsWith('Z') ? submittedAt : `${submittedAt}Z`).toLocaleString()
         : 'Just now';
+    const returnLabel = returnPath === '/my-exams' ? 'Back to My Exams' : 'Back to Session Manager';
 
     return (
         <div className="min-h-screen bg-gray-900 text-gray-100 flex items-center justify-center p-8">
@@ -37,7 +43,7 @@ export default function SubmissionConfirmation({ sessionId, submittedAt }: Submi
                 <div className="space-y-3">
                     <h1 className="text-2xl font-bold text-emerald-400">Exam Submitted Successfully</h1>
                     <p className="text-gray-400">
-                        Your answers have been recorded. You may now close this tab.
+                        Your answers have been recorded. Use the button below to return to your home screen.
                     </p>
                 </div>
 
@@ -59,10 +65,17 @@ export default function SubmissionConfirmation({ sessionId, submittedAt }: Submi
                     </div>
                 </div>
 
-                {/* Note */}
-                <p className="text-xs text-gray-500">
-                    Results will be available once your instructor publishes them.
-                </p>
+                <div className="space-y-3">
+                    <Link
+                        href={returnPath}
+                        className="inline-flex w-full items-center justify-center rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500"
+                    >
+                        {returnLabel}
+                    </Link>
+                    <p className="text-xs text-gray-500">
+                        Results will be available once your instructor publishes them.
+                    </p>
+                </div>
             </div>
         </div>
     );

@@ -6,7 +6,6 @@ import TipTapEditor from '@/components/editor/TipTapEditor';
 import MCQOptionsPanel from '@/components/editor/MCQOptionsPanel';
 import EssayOptionsPanel from '@/components/editor/EssayOptionsPanel';
 import { useAuthoringStore } from '@/stores/useAuthoringStore';
-import { useAuthStore } from '@/stores/useAuthStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 export default function AuthorPage() {
@@ -25,8 +24,6 @@ export default function AuthorPage() {
         metadataTags,
         updateMetadataField,
     } = useAuthoringStore();
-
-    const { user, logout } = useAuthStore();
 
     // Always fetch on mount when lo_id param is present, guard against double-render
     useEffect(() => {

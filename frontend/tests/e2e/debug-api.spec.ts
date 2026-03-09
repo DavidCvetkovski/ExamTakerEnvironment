@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { loginAs, seedE2EData } from './helpers';
 
 test('debug: inspect API response for versions', async ({ page }) => {
+    seedE2EData();
+
     // Capture all API responses
     const apiResponses: Record<string, unknown>[] = [];
 
@@ -19,12 +22,8 @@ test('debug: inspect API response for versions', async ({ page }) => {
         }
     });
 
-    // 1. Login as admin
-    await page.goto('/login');
-    await page.fill('input[type="email"]', 'admin_e2e@vu.nl');
-    await page.fill('input[type="password"]', 'adminpass123');
-    await page.click('button[type="submit"]');
-    await expect(page).toHaveURL(/.*\/items/, { timeout: 10000 });
+    await loginAs(page, 'admin');
+    await page.goto('/items');
 
     // 2. Get learning objects list
     await page.waitForTimeout(1000);

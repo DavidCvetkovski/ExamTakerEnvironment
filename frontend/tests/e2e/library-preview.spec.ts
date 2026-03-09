@@ -1,14 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { loginAs, seedE2EData } from './helpers';
 
 test('verify library previews show clean text, not JSON', async ({ page }) => {
-    // 1. Login
-    await page.goto('/login');
-    await page.fill('input[type="email"]', 'admin_e2e@vu.nl');
-    await page.fill('input[type="password"]', 'adminpass123');
-    await page.click('button[type="submit"]');
-
-    // 2. Wait for redirect to library
-    await expect(page).toHaveURL(/.*\/items/);
+    seedE2EData();
+    await loginAs(page, 'admin');
+    await page.goto('/items');
 
     // 3. Check the preview column
     // The user output showed: {'text': 'Math Question 1?'}...

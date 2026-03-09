@@ -112,7 +112,13 @@ async function findExtractedRoot(tempDir: string): Promise<string> {
 
   // If there's exactly one directory, it's likely the extracted root
   if (dirs.length === 1) {
-    return join(tempDir, dirs[0].name);
+    const base = path.resolve(tempDir);
+    const target = path.resolve(base, dirs[0].name);
+    const relative = path.relative(base, target);
+    if (relative === '..' || relative.startsWith('..' + path.sep) || path.isAbsolute(relative)) {
+      return tempDir;
+    }
+    return target;
   }
 
   // Otherwise, assume tempDir itself is the root

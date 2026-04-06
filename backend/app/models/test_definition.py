@@ -32,5 +32,8 @@ class TestDefinition(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    # Grading configuration
+    scoring_config = Column(JSONB, nullable=True, default=dict)
+
     # Relationship to user
     creator = relationship("User")

@@ -192,4 +192,12 @@ async def submit_exam_session(
         },
     )
 
+    # Trigger auto-grading immediately after submission (synchronous, fast)
+    try:
+        from app.services.grading_service import auto_grade_session
+        await auto_grade_session(session_id)
+    except Exception:
+        # Grading failure must not prevent submission acknowledgement
+        pass
+
     return serialize_exam_session(updated_session)

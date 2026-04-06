@@ -2,20 +2,24 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import StudentExamCard from '@/components/student/StudentExamCard';
 import { useExamStore } from '@/stores/useExamStore';
 import { useStudentSessionsStore } from '@/stores/useStudentSessionsStore';
+import { useResultsStore } from '@/stores/useResultsStore';
 
 export default function MyExamsPage() {
     const router = useRouter();
     const { sessions, isLoading, error, fetchSessions } = useStudentSessionsStore();
     const joinScheduledSession = useExamStore((state) => state.joinScheduledSession);
+    const { myResults, myResultsLoading, fetchMyResults } = useResultsStore();
 
     useEffect(() => {
         fetchSessions();
-    }, [fetchSessions]);
+        fetchMyResults();
+    }, [fetchSessions, fetchMyResults]);
 
     const currentSessions = sessions.filter((session) => session.can_join);
     const upcomingSessions = sessions.filter((session) => !session.can_join);
@@ -87,6 +91,59 @@ export default function MyExamsPage() {
                             )}
                         </div>
                     </section>
+                    {/* ── My Results section ── */}
+                    {(myResults.length > 0 || myResultsLoading) && (
+                        <section className="space-y-4">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#1055cc]">Results</p>
+                                <h2 className="mt-2 text-3xl font-black">My Grades</h2>
+                            </div>
+                            {myResultsLoading ? (
+                                <div className="text-sm text-slate-500">Loading results…</div>
+                            ) : (
+                                <div className="grid gap-4 lg:grid-cols-2">
+                                    {myResults.map(result => (
+                                        <Link
+                                            key={result.session_id}
+                                            href={`/my-results/${result.session_id}`}
+                                            className="block rounded-[24px] border border-[#e8dcc7] bg-white/80 p-5 shadow-sm hover:shadow-md hover:border-[#1055cc]/40 transition-all"
+                                        >
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div>
+                                                    <p className="font-bold text-slate-900 text-sm">
+                                                        {result.test_title ?? 'Exam Result'}
+                                                    </p>
+                                                    {result.submitted_at && (
+                                                        <p className="text-xs text-slate-500 mt-0.5">
+                                                            Submitted {new Date(result.submitted_at).toLocaleDateString()}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <p className="text-lg font-black text-slate-900">{result.percentage.toFixed(1)}%</p>
+                                                    <p className="text-xs text-slate-500">
+                                                        {result.total_points} / {result.max_points} pts
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {result.letter_grade && (
+                                                <div className="mt-3 flex items-center gap-2">
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                                                        result.passed
+                                                            ? 'bg-emerald-100 text-emerald-700'
+                                                            : 'bg-rose-100 text-rose-700'
+                                                    }`}>
+                                                        {result.letter_grade}
+                                                    </span>
+                                                    <span className="text-xs text-[#1055cc] font-medium">View Details →</span>
+                                                </div>
+                                            )}
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
+                        </section>
+                    )}
                 </div>
             </div>
         </ProtectedRoute>

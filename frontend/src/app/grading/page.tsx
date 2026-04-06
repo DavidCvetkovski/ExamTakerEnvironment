@@ -38,6 +38,19 @@ function ProgressBar({ done, total }: { done: number; total: number }) {
     );
 }
 
+function formatStudentLabel(email: string | null): string {
+    if (!email) {
+        return 'Student Submission';
+    }
+
+    const localPart = email.split('@')[0] ?? email;
+    return localPart
+        .split(/[._-]+/)
+        .filter(Boolean)
+        .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
+        .join(' ');
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function GradingDashboard() {
@@ -46,6 +59,7 @@ export default function GradingDashboard() {
     const {
         selectedTestId, gradingOverview, overviewLoading,
         blindMode, publishStatus, error,
+        setSelectedTestId,
         fetchGradingOverview, publishResults, unpublishResults,
         exportCsv, toggleBlindMode, clearError,
     } = useGradingStore();
@@ -61,6 +75,18 @@ export default function GradingDashboard() {
     useEffect(() => {
         if (selectedTestId) fetchGradingOverview(selectedTestId);
     }, [selectedTestId, fetchGradingOverview]);
+
+    useEffect(() => {
+        if (selectedTestId || blueprints.length === 0) {
+            return;
+        }
+
+        const defaultBlueprint = blueprints.find(
+            (blueprint) => blueprint.title === 'Shuffle Lab: Numbers in Motion'
+        ) ?? blueprints[0];
+
+        setSelectedTestId(defaultBlueprint.id);
+    }, [blueprints, selectedTestId, setSelectedTestId]);
 
     // Redirect if not instructor
     if (user?.role === 'STUDENT') {
@@ -79,8 +105,8 @@ export default function GradingDashboard() {
         .sort((a, b) => {
             if (sortKey === 'status') return a.grading_status.localeCompare(b.grading_status);
             if (sortKey === 'percentage') return b.percentage - a.percentage;
-            const ae = a.student_email ?? a.student_id;
-            const be = b.student_email ?? b.student_id;
+            const ae = formatStudentLabel(a.student_email);
+            const be = formatStudentLabel(b.student_email);
             return ae.localeCompare(be);
         });
 
@@ -108,8 +134,7 @@ export default function GradingDashboard() {
                         id="test-selector"
                         value={selectedTestId ?? ''}
                         onChange={e => {
-                            useGradingStore.getState().setSelectedTestId(e.target.value);
-                            fetchGradingOverview(e.target.value);
+                            setSelectedTestId(e.target.value);
                         }}
                         className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 min-w-[240px]"
                     >
@@ -133,7 +158,7 @@ export default function GradingDashboard() {
                 {!selectedTestId ? (
                     <div className="flex flex-col items-center justify-center py-24 text-gray-500">
                         <div className="text-5xl mb-4">📋</div>
-                        <p className="text-lg font-medium">Select a test to view grading progress</p>
+                        <p className="text-lg font-medium">Loading grading queue…</p>
                     </div>
                 ) : (
                     <>
@@ -253,23 +278,25 @@ export default function GradingDashboard() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-800">
-                                        {filtered.map((session) => (
+                                        {filtered.map((session, index) => (
                                             <tr
                                                 key={session.session_id}
                                                 className="hover:bg-gray-800/40 transition-colors"
                                             >
                                                 <td className="px-5 py-4">
                                                     {blindMode ? (
-                                                        <span className="text-purple-400 font-mono text-xs">
-                                                            #{session.session_id.slice(-6).toUpperCase()}
+                                                        <span className="text-purple-400 text-xs font-semibold uppercase tracking-[0.18em]">
+                                                            Submission {String(index + 1).padStart(2, '0')}
                                                         </span>
                                                     ) : (
                                                         <div>
-                                                            <p className="text-white font-medium text-xs">
-                                                                {session.student_email ?? session.student_id}
+                                                            <p className="text-white font-medium text-sm">
+                                                                {formatStudentLabel(session.student_email)}
                                                             </p>
-                                                            {session.student_vunet_id && (
-                                                                <p className="text-gray-500 text-xs">{session.student_vunet_id}</p>
+                                                            {session.submitted_at && (
+                                                                <p className="text-gray-500 text-xs">
+                                                                    Submitted {new Date(session.submitted_at).toLocaleString()}
+                                                                </p>
                                                             )}
                                                         </div>
                                                     )}

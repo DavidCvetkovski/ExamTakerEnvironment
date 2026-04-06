@@ -15,7 +15,6 @@ export default function AuthorPage() {
 
     const {
         saveStatus,
-        versionNumber,
         questionType,
         setQuestionType,
         fetchLatestVersion,
@@ -75,15 +74,6 @@ export default function AuthorPage() {
                                         : saveStatus === 'SAVING' ? '⏳ Saving...'
                                             : saveStatus === 'SAVED' ? '✓ Changes saved'
                                                 : '✕ Save Failed'}
-                                </span>
-                            </div>
-
-                            <div className="h-4 w-px bg-[#333]" />
-
-                            <div className="flex items-center gap-2">
-                                <span className="text-[#A1A1AA]">Version:</span>
-                                <span className="text-white font-mono bg-[#1A1A1A] px-2 py-0.5 rounded border border-[#333]">
-                                    v{versionNumber || 1}
                                 </span>
                             </div>
 

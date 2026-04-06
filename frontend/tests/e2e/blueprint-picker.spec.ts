@@ -11,6 +11,8 @@ test.describe('Blueprint Designer UI Rethink', () => {
     });
 
     test('should create a new blueprint using the question picker', async ({ page }) => {
+        const pickerPrompt = 'Math Warm Up: A bakery spends EUR 24 on setup and earns EUR 2 per roll. Break even quantity?';
+
         await page.goto('/blueprint');
 
         // Click New Blueprint
@@ -27,7 +29,7 @@ test.describe('Blueprint Designer UI Rethink', () => {
         await expect(page.getByRole('heading', { name: 'Select Question' })).toBeVisible();
 
         // Select first available item through the inspection flow
-        const firstItem = page.locator('div').filter({ hasText: /Question \d+\?/ }).first();
+        const firstItem = page.locator('div').filter({ hasText: pickerPrompt }).first();
         await expect(firstItem).toBeVisible();
         await firstItem.click();
         await page.getByRole('button', { name: 'Select This Question' }).click();

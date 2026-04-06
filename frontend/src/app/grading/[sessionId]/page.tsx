@@ -256,12 +256,11 @@ export default function SessionGradingPage() {
                     </button>
 
                     <div className="flex-1">
-                        <p className="text-xs text-gray-500">
-                            {blindMode ? (
-                                <span className="text-purple-400 font-mono">#{sessionId?.slice(-6).toUpperCase()}</span>
-                            ) : (
-                                <span>Session: <span className="text-gray-300 font-mono text-xs">{sessionId}</span></span>
-                            )}
+                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gray-500">
+                            {blindMode ? 'Blind Review Mode' : 'Grading Review'}
+                        </p>
+                        <p className="mt-1 text-sm text-gray-300">
+                            {sessionResult?.test_title ?? 'Submitted exam response'}
                         </p>
                     </div>
 
@@ -343,13 +342,6 @@ export default function SessionGradingPage() {
                                     </p>
                                 </div>
                             </div>
-
-                            {/* Question text from learning_object_id cross-reference is not available
-                                in this view — we show the LO ID as reference */}
-                            <div className="text-xs text-gray-600 font-mono">
-                                LO: {grade.learning_object_id}
-                            </div>
-
                             {grade.question_content && (
                                 <div
                                     className="prose prose-invert max-w-none rounded-lg border border-gray-800 bg-gray-950/60 px-4 py-3 text-base leading-relaxed"

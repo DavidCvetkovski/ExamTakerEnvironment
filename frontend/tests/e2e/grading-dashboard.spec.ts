@@ -14,10 +14,9 @@ test.describe('Grading Dashboard & Student Results E2E', () => {
         
         // Check core UI elements
         await expect(page.getByRole('heading', { name: 'Grading Dashboard' })).toBeVisible();
-        await expect(page.locator('text=Select a test to view grading progress')).toBeVisible();
-
-        // Check assigned tests list populates (assuming seed_e2e creates some submitted exams)
         await expect(page.locator('#test-selector')).toBeVisible();
+        await expect(page.getByRole('table')).toBeVisible();
+        await expect(page.getByRole('cell', { name: 'Alex Student' })).toBeVisible();
     });
 
     test('Student can view results in My Exams if published', async ({ page }) => {

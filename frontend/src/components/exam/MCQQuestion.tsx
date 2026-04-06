@@ -1,6 +1,7 @@
 'use client';
 
 import { useExamStore, ExamItem } from '@/stores/useExamStore';
+import { getExamChoiceContent } from '@/lib/examContent';
 
 interface MCQQuestionProps {
     item: ExamItem;
@@ -17,14 +18,18 @@ export default function MCQQuestion({ item, questionIndex }: MCQQuestionProps) {
         | { selected_option_index: number }
         | undefined;
 
-    const choices = (item.options as { choices?: { text: string }[] })?.choices ?? [];
+    const choices = getExamChoiceContent(item.options);
 
     const handleSelect = (optionIndex: number) => {
+        const choice = choices[optionIndex];
         setAnswer(
             item.learning_object_id,
             item.item_version_id,
             'MULTIPLE_CHOICE',
-            { selected_option_index: optionIndex }
+            {
+                selected_option_index: optionIndex,
+                ...(choice?.id ? { selected_option_id: choice.id } : {}),
+            }
         );
     };
 

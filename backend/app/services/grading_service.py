@@ -62,6 +62,50 @@ def _get_correct_options(options: Any) -> List[int]:
     ]
 
 
+def _normalize_student_answer(student_answer: Any, options: Any) -> Dict[str, Any]:
+    """
+    Prefer stable option IDs when available and derive the snapshot-local indices from them.
+    This keeps grading correct even if the answer payload contains stale indices.
+    """
+    if not isinstance(student_answer, dict):
+        return {}
+
+    normalized = dict(student_answer)
+    parsed = _parse_json(options)
+
+    if isinstance(parsed, list):
+        choices = parsed
+    elif isinstance(parsed, dict):
+        if isinstance(parsed.get("choices"), list):
+            choices = parsed["choices"]
+        elif isinstance(parsed.get("options"), list):
+            choices = parsed["options"]
+        else:
+            choices = []
+    else:
+        choices = []
+
+    choice_id_to_index = {
+        option.get("id"): index
+        for index, option in enumerate(choices)
+        if isinstance(option, dict) and option.get("id")
+    }
+
+    selected_option_id = normalized.get("selected_option_id")
+    if isinstance(selected_option_id, str) and selected_option_id in choice_id_to_index:
+        normalized["selected_option_index"] = choice_id_to_index[selected_option_id]
+
+    selected_option_ids = normalized.get("selected_option_ids")
+    if isinstance(selected_option_ids, list):
+        normalized["selected_option_indices"] = [
+            choice_id_to_index[option_id]
+            for option_id in selected_option_ids
+            if isinstance(option_id, str) and option_id in choice_id_to_index
+        ]
+
+    return normalized
+
+
 def _get_scoring_config(test_definition: Any) -> Dict[str, Any]:
     """Safely deserialise the scoring_config JSONB column."""
     raw = getattr(test_definition, "scoring_config", None)
@@ -227,7 +271,7 @@ async def auto_grade_session(session_id: UUID) -> Dict[str, Any]:
         iv_id = str(item.get("item_version_id", ""))
         question_type = item.get("question_type", "")
         options = item.get("options", {})
-        student_answer = latest_answers.get(lo_id, {})
+        student_answer = _normalize_student_answer(latest_answers.get(lo_id, {}), options)
 
         correct_indices = _get_correct_options(options)
 

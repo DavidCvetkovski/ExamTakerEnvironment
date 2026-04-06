@@ -45,6 +45,16 @@ def parse_test_blocks(raw_blocks: Any) -> List[Dict[str, Any]]:
     return raw_blocks or []
 
 
+def parse_json_field(raw_value: Any) -> Any:
+    """Decode persisted JSON that may already be parsed."""
+    if isinstance(raw_value, str):
+        try:
+            return json.loads(raw_value)
+        except json.JSONDecodeError:
+            return {}
+    return raw_value
+
+
 def metadata_has_tags(metadata: Any, tags: List[str]) -> bool:
     """Check whether the item metadata satisfies at least one requested tag."""
     if not tags:
@@ -71,10 +81,34 @@ def build_item_snapshot(item_version: Any) -> Dict[str, Any]:
     }
 
 
+def maybe_shuffle_snapshot_options(snapshot: Dict[str, Any], shuffle_options: bool) -> Dict[str, Any]:
+    """Randomize objective-question option order inside the frozen snapshot when enabled."""
+    if not shuffle_options:
+        return snapshot
+
+    if snapshot.get("question_type") not in {"MULTIPLE_CHOICE", "MULTIPLE_RESPONSE"}:
+        return snapshot
+
+    options = parse_json_field(snapshot.get("options"))
+    if isinstance(options, dict) and isinstance(options.get("choices"), list):
+        shuffled = {**options, "choices": list(options["choices"])}
+        random.shuffle(shuffled["choices"])
+        return {**snapshot, "options": shuffled}
+
+    if isinstance(options, list):
+        shuffled = list(options)
+        random.shuffle(shuffled)
+        return {**snapshot, "options": shuffled}
+
+    return snapshot
+
+
 async def select_items_for_test_definition(test_definition: Any) -> List[Dict[str, Any]]:
     """Resolve blueprint rules into the frozen list of exam items."""
     selected_items: List[Dict[str, Any]] = []
     blocks = parse_test_blocks(test_definition.blocks)
+    scoring_config = parse_json_field(getattr(test_definition, "scoring_config", None)) or {}
+    shuffle_options = bool(scoring_config.get("shuffle_options", False))
 
     for block in blocks:
         for rule in block["rules"]:
@@ -98,7 +132,7 @@ async def select_items_for_test_definition(test_definition: Any) -> List[Dict[st
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"Fixed rule failed: LO {learning_object_id} has no available version.",
                     )
-                selected_items.append(build_item_snapshot(latest_item))
+                selected_items.append(maybe_shuffle_snapshot_options(build_item_snapshot(latest_item), shuffle_options))
                 continue
 
             tags = rule.get("tags", [])
@@ -135,7 +169,7 @@ async def select_items_for_test_definition(test_definition: Any) -> List[Dict[st
                 )
 
             for chosen in random.sample(candidates, count):
-                selected_items.append(build_item_snapshot(chosen))
+                selected_items.append(maybe_shuffle_snapshot_options(build_item_snapshot(chosen), shuffle_options))
 
     return selected_items
 

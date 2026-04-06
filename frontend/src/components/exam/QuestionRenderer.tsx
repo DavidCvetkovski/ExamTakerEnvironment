@@ -2,6 +2,7 @@
 
 import DOMPurify from 'dompurify';
 import { useExamStore, ExamItem } from '@/stores/useExamStore';
+import { toExamContentHtml } from '@/lib/examContent';
 import MCQQuestion from './MCQQuestion';
 import MultipleResponseQuestion from './MultipleResponseQuestion';
 import EssayQuestion from './EssayQuestion';
@@ -15,7 +16,7 @@ interface QuestionRendererProps {
 function sanitizeHtml(html: string | null | undefined): string {
     return html
         ? DOMPurify.sanitize(html, {
-            ALLOWED_TAGS: ['span', 'p', 'strong', 'em', 'code', 'pre', 'ul', 'ol', 'li', 'h2', 'h3', 'br', 'img'],
+            ALLOWED_TAGS: ['span', 'p', 'strong', 'em', 'code', 'pre', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'blockquote', 'br', 'hr', 'img'],
             ALLOWED_ATTR: ['class', 'src', 'alt'],
         })
         : '';
@@ -33,7 +34,7 @@ export default function QuestionRenderer({ item, questionIndex, totalQuestions }
         toggleFlag(item.learning_object_id, item.item_version_id);
     };
 
-    const contentHtml = (item.content as { text?: string })?.text ?? '';
+    const contentHtml = toExamContentHtml(item.content);
 
     return (
         <section className="bg-gray-800 border border-gray-700 rounded-2xl overflow-hidden shadow-sm">

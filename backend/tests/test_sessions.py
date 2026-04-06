@@ -1,5 +1,6 @@
 import pytest
 from httpx import AsyncClient
+from unittest.mock import patch
 from app.core.prisma_db import prisma
 from app.core.security import hash_password
 from app.models.user import UserRole
@@ -197,3 +198,66 @@ async def test_student_cannot_use_legacy_practice_endpoint(ac: AsyncClient, setu
         headers=auth(token),
     )
     assert resp.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_shuffle_options_randomizes_frozen_snapshot_order(ac: AsyncClient, cleanup_database):
+    admin = await prisma.users.create(
+        data={
+            "email": "shuffle_options_admin@vu.nl",
+            "hashed_password": hash_password("pass"),
+            "role": UserRole.ADMIN,
+        }
+    )
+
+    bank = await prisma.item_banks.create(
+        data={"name": "Shuffle Options Bank", "created_by": admin.id}
+    )
+
+    lo = await prisma.learning_objects.create(
+        data={"bank_id": bank.id, "created_by": admin.id}
+    )
+
+    await prisma.item_versions.create(
+        data={
+            "learning_object_id": lo.id,
+            "version_number": 1,
+            "status": ItemStatus.APPROVED,
+            "question_type": QuestionType.MULTIPLE_CHOICE,
+            "content": prisma_lib.Json({"text": "Shuffle me"}),
+            "options": prisma_lib.Json({
+                "question_type": "MULTIPLE_CHOICE",
+                "choices": [
+                    {"id": "A", "text": "First", "is_correct": False, "weight": 1.0},
+                    {"id": "B", "text": "Second", "is_correct": True, "weight": 1.0},
+                    {"id": "C", "text": "Third", "is_correct": False, "weight": 1.0},
+                ],
+            }),
+            "created_by": admin.id,
+        }
+    )
+
+    test_definition = await prisma.test_definitions.create(
+        data={
+            "title": "Shuffle Options Test",
+            "created_by": admin.id,
+            "blocks": prisma_lib.Json([{
+                "title": "Section 1",
+                "rules": [{"rule_type": "FIXED", "learning_object_id": lo.id}],
+            }]),
+            "duration_minutes": 30,
+            "scoring_config": prisma_lib.Json({"shuffle_options": True}),
+        }
+    )
+
+    token = await login(ac, "shuffle_options_admin@vu.nl", "pass")
+    with patch("app.services.exam_sessions_service.random.shuffle", lambda choices: choices.reverse()):
+        resp = await ac.post(
+            "/api/sessions/practice",
+            json={"test_definition_id": test_definition.id},
+            headers=auth(token),
+        )
+
+    assert resp.status_code == 201
+    choices = resp.json()["items"][0]["options"]["choices"]
+    assert [choice["text"] for choice in choices] == ["Third", "Second", "First"]

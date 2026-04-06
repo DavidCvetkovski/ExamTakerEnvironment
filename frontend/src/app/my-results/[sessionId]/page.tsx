@@ -1,10 +1,12 @@
 'use client';
 
+import DOMPurify from 'dompurify';
 import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useResultsStore, QuestionResultDetail } from '@/stores/useResultsStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { getExamChoiceContent, toExamContentHtml, toExamContentText } from '@/lib/examContent';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -12,31 +14,55 @@ function extractEssayText(answer: Record<string, unknown>): string {
     return (answer?.essay_text ?? answer?.text ?? '') as string;
 }
 
+function sanitizeHtml(html: string | null | undefined): string {
+    return html
+        ? DOMPurify.sanitize(html, {
+            ALLOWED_TAGS: ['span', 'p', 'strong', 'em', 'code', 'pre', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'blockquote', 'br', 'hr'],
+            ALLOWED_ATTR: ['class'],
+        })
+        : '';
+}
+
+function getQuestionHeading(content: QuestionResultDetail['question_content'], index: number): string {
+    const prompt = toExamContentText(content);
+    if (!prompt) {
+        return `Question ${index + 1}`;
+    }
+
+    return prompt.length > 96 ? `${prompt.slice(0, 93).trimEnd()}...` : prompt;
+}
+
 function MCQAnswerDisplay({ detail }: { detail: QuestionResultDetail }) {
+    const options = getExamChoiceContent(detail.question_options);
     const opts = (detail.correct_answer as Record<string, number[]> | null)?.correct_indices ?? [];
     const studentIdx = detail.student_answer?.selected_option_index as number | undefined;
     const studentIdxs = detail.student_answer?.selected_option_indices as number[] | undefined;
-
     const allSelected = studentIdx !== undefined ? [studentIdx] : (studentIdxs ?? []);
 
     return (
-        <div className="space-y-2 mt-3">
+        <div className="space-y-4 mt-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <div className="rounded-2xl border border-[#e8dcc7] bg-white/60 p-4">
                     <p className="text-xs font-semibold uppercase tracking-widest text-[#8a6c3e] mb-2">Your Answer</p>
                     {allSelected.length > 0 ? (
-                        allSelected.map((idx) => (
-                            <span
-                                key={idx}
-                                className={`inline-block px-3 py-1 rounded-full text-sm font-medium mr-2 ${
-                                    opts.includes(idx)
-                                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                        : 'bg-rose-100 text-rose-800 border border-rose-300'
-                                }`}
-                            >
-                                Option {idx + 1}
-                            </span>
-                        ))
+                        <div className="space-y-2">
+                            {allSelected.map((idx) => (
+                                <div
+                                    key={idx}
+                                    className={`rounded-xl border px-3 py-2 text-sm ${
+                                        opts.includes(idx)
+                                            ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+                                            : 'border-rose-300 bg-rose-50 text-rose-900'
+                                    }`}
+                                >
+                                    <span className="mr-2 font-semibold">{String.fromCharCode(65 + idx)}.</span>
+                                    <span
+                                        className="inline-block align-middle prose prose-sm max-w-none prose-p:my-0 prose-li:my-0 prose-pre:my-1"
+                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(options[idx]?.html ?? options[idx]?.text ?? `Option ${idx + 1}`) }}
+                                    />
+                                </div>
+                            ))}
+                        </div>
                     ) : (
                         <span className="text-slate-400 text-sm italic">No answer submitted</span>
                     )}
@@ -45,16 +71,54 @@ function MCQAnswerDisplay({ detail }: { detail: QuestionResultDetail }) {
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4">
                     <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700 mb-2">Correct Answer</p>
                     {opts.length > 0 ? (
-                        opts.map((idx) => (
-                            <span key={idx} className="inline-block px-3 py-1 rounded-full text-sm font-medium mr-2 bg-emerald-100 text-emerald-800 border border-emerald-300">
-                                Option {idx + 1}
-                            </span>
-                        ))
+                        <div className="space-y-2">
+                            {opts.map((idx) => (
+                                <div key={idx} className="rounded-xl border border-emerald-300 bg-emerald-100/70 px-3 py-2 text-sm text-emerald-900">
+                                    <span className="mr-2 font-semibold">{String.fromCharCode(65 + idx)}.</span>
+                                    <span
+                                        className="inline-block align-middle prose prose-sm max-w-none prose-p:my-0 prose-li:my-0 prose-pre:my-1"
+                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(options[idx]?.html ?? options[idx]?.text ?? `Option ${idx + 1}`) }}
+                                    />
+                                </div>
+                            ))}
+                        </div>
                     ) : (
                         <span className="text-slate-400 text-sm italic">—</span>
                     )}
                 </div>
             </div>
+
+            {options.length > 0 && (
+                <div className="rounded-2xl border border-[#e8dcc7] bg-[#fffaf4] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-[#8a6c3e] mb-3">Available Options</p>
+                    <div className="space-y-2">
+                        {options.map((option, idx) => {
+                            const isSelected = allSelected.includes(idx);
+                            const isCorrect = opts.includes(idx);
+                            return (
+                                <div
+                                    key={`${idx}-${option.text}`}
+                                    className={`rounded-xl border px-3 py-2 text-sm ${
+                                        isSelected && isCorrect
+                                            ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+                                            : isSelected
+                                                ? 'border-rose-300 bg-rose-50 text-rose-900'
+                                                : isCorrect
+                                                    ? 'border-emerald-200 bg-white text-emerald-900'
+                                                    : 'border-[#e8dcc7] bg-white/80 text-slate-700'
+                                    }`}
+                                >
+                                    <span className="mr-2 font-semibold">{String.fromCharCode(65 + idx)}.</span>
+                                    <span
+                                        className="inline-block align-middle prose prose-sm max-w-none prose-p:my-0 prose-li:my-0 prose-pre:my-1"
+                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(option.html) }}
+                                    />
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -86,9 +150,9 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
                         {isPending ? '?' : isCorrect ? '✓' : isEssay ? '#' : '✗'}
                     </div>
                     <div>
-                        <p className="font-bold text-slate-900 text-sm">Question {index + 1}</p>
+                        <p className="font-bold text-slate-900 text-sm">{getQuestionHeading(detail.question_content, index)}</p>
                         <p className="text-xs text-slate-400 capitalize">
-                            {isEssay ? 'Open answer' : detail.question_type?.replace('_', ' ').toLowerCase()}
+                            Question {index + 1} · {isEssay ? 'Open answer' : detail.question_type?.replace('_', ' ').toLowerCase()}
                         </p>
                     </div>
                 </div>
@@ -100,6 +164,13 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
                     <p className="text-xs text-slate-400">points</p>
                 </div>
             </div>
+
+            {detail.question_content && (
+                <div
+                    className="prose max-w-none rounded-2xl border border-[#e8dcc7] bg-[#fffaf4] px-4 py-3 text-slate-700"
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(toExamContentHtml(detail.question_content)) }}
+                />
+            )}
 
             {/* Answer display */}
             {isEssay ? (

@@ -6,12 +6,15 @@ from app.models import (
     Course,
     CourseEnrollment,
     ExamSession,
+    InteractionEvent,
     ItemBank,
     LearningObject,
     ItemVersion,
     ItemStatus,
+    QuestionGrade,
     QuestionType,
     ScheduledExamSession,
+    SessionResult,
     TestDefinition,
     User,
     UserRole,
@@ -35,6 +38,9 @@ def seed():
         print("Starting E2E seed (selective wipe)...")
         
         # 1. Wipe operational tables (order matters)
+        db.query(InteractionEvent).delete()
+        db.query(QuestionGrade).delete()
+        db.query(SessionResult).delete()
         db.query(ExamSession).delete()
         db.query(ScheduledExamSession).delete()
         db.query(CourseEnrollment).delete()
@@ -104,12 +110,28 @@ def seed():
             db.commit()
             db.refresh(lo)
 
+            prompt = f"{meta['topic']} Question {i+1}?"
+            if i == 0:
+                content_payload = {"raw_html": f"<p>{prompt}</p>"}
+            elif i == 1:
+                content_payload = {
+                    "type": "doc",
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [{"type": "text", "text": prompt}],
+                        }
+                    ],
+                }
+            else:
+                content_payload = {"text": prompt}
+
             v = ItemVersion(
                 learning_object_id=lo.id,
                 version_number=1,
                 status=ItemStatus.APPROVED,
                 question_type=QuestionType.MULTIPLE_CHOICE,
-                content={"text": f"{meta['topic']} Question {i+1}?"},
+                content=content_payload,
                 options={"choices": [{"id": "A", "text": "Correct Answer", "is_correct": True}, {"id": "B", "text": "Wrong Answer", "is_correct": False}]},
                 metadata_tags={
                     "subject": meta["subject"],

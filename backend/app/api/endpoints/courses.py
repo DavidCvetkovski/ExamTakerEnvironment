@@ -27,7 +27,7 @@ router = APIRouter(prefix="/courses", tags=["courses"])
 @router.post("/", response_model=CourseResponse, status_code=status.HTTP_201_CREATED)
 async def create_course_endpoint(
     payload: CourseCreate,
-    current_user: User = Depends(require_role(UserRole.CONSTRUCTOR, UserRole.ADMIN)),
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
 ):
     """Create a new course."""
     return await create_course(payload, str(current_user.id))

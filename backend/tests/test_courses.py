@@ -7,6 +7,7 @@ from app.models.user import UserRole
 
 
 ADMIN_EMAIL, ADMIN_PASS = "admin_courses@vu.nl", "pass"
+CONSTRUCTOR_EMAIL, CONSTRUCTOR_PASS = "constructor_courses@vu.nl", "pass"
 STUDENT_EMAIL, STUDENT_PASS = "student_courses@vu.nl", "pass"
 
 
@@ -17,6 +18,13 @@ async def setup_courses_data(cleanup_database):
             "email": ADMIN_EMAIL,
             "hashed_password": hash_password(ADMIN_PASS),
             "role": UserRole.ADMIN,
+        }
+    )
+    await prisma.users.create(
+        data={
+            "email": CONSTRUCTOR_EMAIL,
+            "hashed_password": hash_password(CONSTRUCTOR_PASS),
+            "role": UserRole.CONSTRUCTOR,
         }
     )
     student = await prisma.users.create(
@@ -65,6 +73,19 @@ async def test_create_course_and_enroll_student(ac: AsyncClient, setup_courses_d
     )
     assert list_resp.status_code == 200
     assert len(list_resp.json()) == 1
+
+
+@pytest.mark.anyio
+async def test_constructor_cannot_create_course(ac: AsyncClient, setup_courses_data):
+    token = await login(ac, CONSTRUCTOR_EMAIL, CONSTRUCTOR_PASS)
+
+    response = await ac.post(
+        "/api/courses/",
+        json={"code": "BIO102", "title": "Biology 102"},
+        headers=auth(token),
+    )
+
+    assert response.status_code == 403
 
 
 @pytest.mark.anyio

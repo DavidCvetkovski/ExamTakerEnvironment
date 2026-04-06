@@ -10,6 +10,7 @@ Covers:
 """
 import pytest
 from app.services.grading_service import (
+    _get_correct_options,
     grade_mcq_single,
     grade_multiple_response,
     apply_grade_boundaries,
@@ -20,6 +21,8 @@ from app.models.user import UserRole
 from app.models.item_version import ItemStatus, QuestionType
 from datetime import datetime, timedelta, timezone
 import prisma as prisma_lib
+
+pytestmark = pytest.mark.anyio
 
 # ─── Unit tests: scoring functions ───────────────────────────────────────────
 
@@ -162,6 +165,26 @@ class TestApplyGradeBoundaries:
         grade, passed = apply_grade_boundaries(80.0, [])
         assert grade == "Fail"
         assert passed is False
+
+
+class TestCorrectOptionExtraction:
+    async def test_accepts_choices_object_shape(self):
+        correct = _get_correct_options({
+            "question_type": "MULTIPLE_CHOICE",
+            "choices": [
+                {"text": "A", "is_correct": False},
+                {"text": "B", "is_correct": True},
+                {"text": "C", "is_correct": False},
+            ],
+        })
+        assert correct == [1]
+
+    async def test_accepts_legacy_list_shape(self):
+        correct = _get_correct_options([
+            {"text": "A", "is_correct": False},
+            {"text": "B", "is_correct": True},
+        ])
+        assert correct == [1]
 
 
 # ─── Integration tests: auto_grade_session ───────────────────────────────────
@@ -343,6 +366,46 @@ async def test_auto_grade_mcq_correct_answer(grading_setup):
     assert sr.grading_status == "AUTO_GRADED"
     assert sr.letter_grade == "Pass"
     assert sr.passed is True
+
+
+@pytest.mark.anyio
+async def test_auto_grade_mcq_correct_answer_from_choices_object_snapshot(grading_setup):
+    """The live authored snapshot shape uses options.choices, which must still auto-grade correctly."""
+    from app.services.grading_service import auto_grade_session
+    from uuid import UUID
+    s = grading_setup
+
+    items = [{
+        "learning_object_id": s["mcq_lo"].id,
+        "item_version_id": s["mcq_iv"].id,
+        "question_type": "MULTIPLE_CHOICE",
+        "content": {"raw_html": "<p>What is 2+2?</p>"},
+        "options": {
+            "question_type": "MULTIPLE_CHOICE",
+            "choices": [
+                {"id": "A", "text": "3", "is_correct": False, "weight": 1.0},
+                {"id": "B", "text": "4", "is_correct": True, "weight": 1.0},
+                {"id": "C", "text": "5", "is_correct": False, "weight": 1.0},
+            ],
+        },
+    }]
+
+    session_id = await _create_submitted_session(
+        s["mcq_test"].id,
+        s["student"].id,
+        items,
+        [{"lo_id": s["mcq_lo"].id, "payload": {"selected_option_index": 1}}],
+    )
+
+    result = await auto_grade_session(UUID(session_id))
+
+    assert result["total_points"] == 1.0
+    assert result["grading_status"] == "AUTO_GRADED"
+
+    grade = await prisma.question_grades.find_first(where={"session_id": session_id})
+    assert grade is not None
+    assert grade.points_awarded == 1.0
+    assert grade.is_correct is True
 
 
 @pytest.mark.anyio

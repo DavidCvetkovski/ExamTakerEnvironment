@@ -1,63 +1,38 @@
 'use client';
 
+import DOMPurify from 'dompurify';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useGradingStore, QuestionGrade, ManualGradePayload } from '@/stores/useGradingStore';
 import { useAuthStore } from '@/stores/useAuthStore';
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface FrozenItem {
-    learning_object_id: string;
-    item_version_id: string;
-    question_type: string;
-    content?: Record<string, unknown>;
-    options?: Array<{ text: string; is_correct?: boolean }>;
-}
+import { getExamChoiceContent, toExamContentHtml, toExamContentText } from '@/lib/examContent';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function extractText(content: Record<string, unknown> | unknown): string {
-    if (!content || typeof content !== 'object') return '';
-    const c = content as Record<string, unknown>;
-    const doc = c.doc ?? c;
-    if (doc && typeof doc === 'object') {
-        const nodes = (doc as Record<string, unknown>).content as unknown[];
-        if (Array.isArray(nodes)) {
-            return nodes
-                .map((n) => {
-                    if (!n || typeof n !== 'object') return '';
-                    const node = n as Record<string, unknown>;
-                    const inner = node.content as unknown[];
-                    if (Array.isArray(inner)) {
-                        return inner
-                            .map((t) => {
-                                if (typeof t === 'object' && t !== null) {
-                                    return ((t as Record<string, unknown>).text as string) ?? '';
-                                }
-                                return '';
-                            })
-                            .join('');
-                    }
-                    return '';
-                })
-                .join('\n');
-        }
+function sanitizeHtml(html: string | null | undefined): string {
+    return html
+        ? DOMPurify.sanitize(html, {
+            ALLOWED_TAGS: ['span', 'p', 'strong', 'em', 'code', 'pre', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'blockquote', 'br', 'hr'],
+            ALLOWED_ATTR: ['class'],
+        })
+        : '';
+}
+
+function getQuestionHeading(content: QuestionGrade['question_content'], index: number): string {
+    const prompt = toExamContentText(content);
+    if (!prompt) {
+        return `Question ${index + 1}`;
     }
-    return JSON.stringify(content);
+
+    return prompt.length > 96 ? `${prompt.slice(0, 93).trimEnd()}...` : prompt;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function AutoGradeResult({
-    grade,
-    item,
-}: {
-    grade: QuestionGrade;
-    item?: FrozenItem;
-}) {
+function AutoGradeResult({ grade }: { grade: QuestionGrade }) {
     const studentAnswer = grade.student_answer;
-    const options = item?.options ?? [];
+    const options = getExamChoiceContent(grade.question_options);
+    const correctIndices = ((grade.correct_answer as Record<string, number[]> | null)?.correct_indices ?? []);
 
     const getSelectedLabel = (answer: Record<string, unknown>): string => {
         if ('selected_option_index' in answer) {
@@ -70,6 +45,10 @@ function AutoGradeResult({
         }
         return JSON.stringify(answer);
     };
+
+    const studentIdx = studentAnswer?.selected_option_index as number | undefined;
+    const studentIdxs = studentAnswer?.selected_option_indices as number[] | undefined;
+    const selectedIndices = studentIdx !== undefined ? [studentIdx] : (studentIdxs ?? []);
 
     return (
         <div className="space-y-3">
@@ -95,6 +74,38 @@ function AutoGradeResult({
                             {options[idx]?.text ?? `Option ${idx + 1}`}
                         </span>
                     ))}
+                </div>
+            )}
+
+            {options.length > 0 && (
+                <div className="rounded-lg p-3 bg-gray-800/50 border border-gray-700">
+                    <p className="text-xs font-semibold text-gray-400 mb-2">AVAILABLE OPTIONS</p>
+                    <div className="space-y-2">
+                        {options.map((option, idx) => {
+                            const isSelected = selectedIndices.includes(idx);
+                            const isCorrect = correctIndices.includes(idx);
+                            return (
+                                <div
+                                    key={`${idx}-${option.text}`}
+                                    className={`rounded-md border px-3 py-2 text-sm ${
+                                        isSelected && isCorrect
+                                            ? 'border-emerald-700 bg-emerald-950/30 text-emerald-200'
+                                            : isSelected
+                                                ? 'border-red-700 bg-red-950/30 text-red-200'
+                                                : isCorrect
+                                                    ? 'border-emerald-900/60 bg-gray-900 text-emerald-300'
+                                                    : 'border-gray-700 bg-gray-900/60 text-gray-300'
+                                    }`}
+                                >
+                                    <span className="font-semibold mr-2">{String.fromCharCode(65 + idx)}.</span>
+                                    <span
+                                        className="inline-block align-middle prose prose-invert prose-p:my-0 prose-li:my-0 prose-pre:my-1 max-w-none"
+                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(option.html) }}
+                                    />
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             )}
 
@@ -221,18 +232,9 @@ export default function SessionGradingPage() {
         fetchSessionGrades, submitManualGrade, clearError,
     } = useGradingStore();
 
-    // Session's frozen items (for rendering option text)
-    const [frozenItems, setFrozenItems] = useState<FrozenItem[]>([]);
-
     useEffect(() => {
         if (sessionId) fetchSessionGrades(sessionId);
     }, [sessionId, fetchSessionGrades]);
-
-    // Extract frozen item lookup from session result metadata
-    // (items aren't returned by the grades endpoint, so we derive option labels
-    //  from the correct_answer / student_answer payloads where available)
-    const itemByLoId: Record<string, FrozenItem> = {};
-    frozenItems.forEach(i => { itemByLoId[i.learning_object_id] = i; });
 
     if (user?.role === 'STUDENT') {
         router.replace('/my-exams');
@@ -328,11 +330,9 @@ export default function SessionGradingPage() {
                                         {isGraded ? '✓' : idx + 1}
                                     </span>
                                     <div>
-                                        <p className="text-white font-semibold text-sm">
-                                            Question {idx + 1}
-                                        </p>
+                                        <p className="text-white font-semibold text-sm">{getQuestionHeading(grade.question_content, idx)}</p>
                                         <p className="text-gray-500 text-xs capitalize">
-                                            {isEssay ? 'Essay — manual grading required' : 'Auto-graded'}
+                                            Question {idx + 1} · {isEssay ? 'Essay - manual grading required' : 'Auto-graded'}
                                         </p>
                                     </div>
                                 </div>
@@ -350,6 +350,13 @@ export default function SessionGradingPage() {
                                 LO: {grade.learning_object_id}
                             </div>
 
+                            {grade.question_content && (
+                                <div
+                                    className="prose prose-invert max-w-none rounded-lg border border-gray-800 bg-gray-950/60 px-4 py-3 text-base leading-relaxed"
+                                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(toExamContentHtml(grade.question_content)) }}
+                                />
+                            )}
+
                             {/* Grading body */}
                             {isEssay ? (
                                 <EssayGradingPanel
@@ -358,10 +365,7 @@ export default function SessionGradingPage() {
                                     saving={submittingGradeId === grade.id}
                                 />
                             ) : (
-                                <AutoGradeResult
-                                    grade={grade}
-                                    item={itemByLoId[grade.learning_object_id]}
-                                />
+                                <AutoGradeResult grade={grade} />
                             )}
                         </div>
                     );

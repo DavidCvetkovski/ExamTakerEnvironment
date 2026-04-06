@@ -6,8 +6,8 @@ import { api } from '@/lib/api';
 export interface ExamItem {
     learning_object_id: string;
     item_version_id: string;
-    content: Record<string, unknown>;
-    options: Record<string, unknown>;
+    content: unknown;
+    options: unknown;
     question_type: string;
     version_number: number;
 }

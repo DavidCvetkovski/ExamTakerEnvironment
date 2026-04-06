@@ -7,12 +7,14 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import CourseEnrollmentDrawer from '@/components/sessions/CourseEnrollmentDrawer';
 import ScheduledSessionsTable from '@/components/sessions/ScheduledSessionsTable';
 import SessionCreateForm from '@/components/sessions/SessionCreateForm';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import { useCourseStore } from '@/stores/useCourseStore';
 import { useSessionManagerStore } from '@/stores/useSessionManagerStore';
 
 export default function SessionsPage() {
     const router = useRouter();
+    const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
     const { blueprints, fetchBlueprints } = useBlueprintStore();
     const {
         courses,
@@ -40,11 +42,19 @@ export default function SessionsPage() {
     const [drawerCourseId, setDrawerCourseId] = useState<string | null>(null);
 
     useEffect(() => {
+        if (authLoading || !isAuthenticated || !user) {
+            return;
+        }
+
+        if (user.role !== 'ADMIN' && user.role !== 'CONSTRUCTOR') {
+            return;
+        }
+
         fetchBlueprints();
         fetchCourses();
         fetchStudentCandidates();
         fetchScheduledSessions();
-    }, [fetchBlueprints, fetchCourses, fetchScheduledSessions, fetchStudentCandidates]);
+    }, [authLoading, fetchBlueprints, fetchCourses, fetchScheduledSessions, fetchStudentCandidates, isAuthenticated, user]);
 
     const selectedCourse = courses.find((course) => course.id === drawerCourseId) || null;
 
@@ -56,6 +66,7 @@ export default function SessionsPage() {
                         courses={courses}
                         blueprints={blueprints}
                         isSubmitting={coursesLoading || sessionsLoading}
+                        isAdmin={user?.role === 'ADMIN'}
                         onCreateCourse={createCourse}
                         onSubmit={createScheduledSession}
                     />

@@ -1,6 +1,7 @@
 'use client';
 
 import { useExamStore, ExamItem } from '@/stores/useExamStore';
+import { getExamChoiceContent } from '@/lib/examContent';
 
 interface MultipleResponseQuestionProps {
     item: ExamItem;
@@ -18,18 +19,24 @@ export default function MultipleResponseQuestion({ item }: MultipleResponseQuest
         | undefined;
 
     const selectedIndices = currentAnswer?.selected_option_indices ?? [];
-    const choices = (item.options as { choices?: { text: string }[] })?.choices ?? [];
+    const choices = getExamChoiceContent(item.options);
 
     const handleToggle = (optionIndex: number) => {
         const newIndices = selectedIndices.includes(optionIndex)
             ? selectedIndices.filter((i) => i !== optionIndex)
             : [...selectedIndices, optionIndex].sort((a, b) => a - b);
+        const selectedIds = newIndices
+            .map((index) => choices[index]?.id)
+            .filter((id): id is string => Boolean(id));
 
         setAnswer(
             item.learning_object_id,
             item.item_version_id,
             'MULTIPLE_RESPONSE',
-            { selected_option_indices: newIndices }
+            {
+                selected_option_indices: newIndices,
+                ...(selectedIds.length > 0 ? { selected_option_ids: selectedIds } : {}),
+            }
         );
     };
 

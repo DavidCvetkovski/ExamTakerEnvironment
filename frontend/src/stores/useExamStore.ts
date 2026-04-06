@@ -36,6 +36,7 @@ export interface InteractionEvent {
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 let saveStatusResetTimer: ReturnType<typeof setTimeout> | null = null;
+let activeFlushPromise: Promise<void> | null = null;
 
 interface ExamState {
     // Session
@@ -209,41 +210,59 @@ export const useExamStore = create<ExamState>((set, get) => ({
     },
 
     flushEvents: async (sessionId: string) => {
-        const events = get().pendingEvents;
-        if (events.length === 0) return;
-
-        if (saveStatusResetTimer) {
-            clearTimeout(saveStatusResetTimer);
-            saveStatusResetTimer = null;
+        if (activeFlushPromise) {
+            await activeFlushPromise;
+            return;
         }
 
-        set({ saveStatus: 'saving' });
-        try {
-            await api.post(`/sessions/${sessionId}/heartbeat`, { events });
-            set({
-                pendingEvents: [],
-                saveStatus: 'saved',
-                lastSavedAt: new Date().toISOString(),
-            });
-            saveStatusResetTimer = setTimeout(() => {
-                const state = get();
-                if (state.saveStatus === 'saved') {
-                    set({ saveStatus: 'idle' });
+        if (get().pendingEvents.length === 0) return;
+
+        activeFlushPromise = (async () => {
+            while (true) {
+                const events = get().pendingEvents;
+                if (events.length === 0) {
+                    return;
                 }
-            }, 2500);
-        } catch {
-            set({ saveStatus: 'error' });
 
-            // Persist to localStorage as offline fallback
-            try {
-                const key = `openvision_heartbeat_queue_${sessionId}`;
-                const existing = localStorage.getItem(key);
-                const queued = existing ? JSON.parse(existing) : [];
-                localStorage.setItem(key, JSON.stringify([...queued, ...events]));
-            } catch {
-                // localStorage unavailable — events stay in memory for retry
+                if (saveStatusResetTimer) {
+                    clearTimeout(saveStatusResetTimer);
+                    saveStatusResetTimer = null;
+                }
+
+                set({ saveStatus: 'saving' });
+                try {
+                    await api.post(`/sessions/${sessionId}/heartbeat`, { events });
+                    set((state) => ({
+                        pendingEvents: state.pendingEvents.filter((event) => !events.includes(event)),
+                        saveStatus: 'saved',
+                        lastSavedAt: new Date().toISOString(),
+                    }));
+                    saveStatusResetTimer = setTimeout(() => {
+                        const state = get();
+                        if (state.saveStatus === 'saved') {
+                            set({ saveStatus: 'idle' });
+                        }
+                    }, 2500);
+                } catch {
+                    set({ saveStatus: 'error' });
+
+                    // Persist to localStorage as offline fallback
+                    try {
+                        const key = `openvision_heartbeat_queue_${sessionId}`;
+                        const existing = localStorage.getItem(key);
+                        const queued = existing ? JSON.parse(existing) : [];
+                        localStorage.setItem(key, JSON.stringify([...queued, ...events]));
+                    } catch {
+                        // localStorage unavailable — events stay in memory for retry
+                    }
+                    return;
+                }
             }
-        }
+        })().finally(() => {
+            activeFlushPromise = null;
+        });
+
+        await activeFlushPromise;
     },
 
     loadSavedAnswers: async (sessionId: string) => {

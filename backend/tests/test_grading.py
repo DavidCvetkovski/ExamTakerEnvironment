@@ -11,6 +11,7 @@ Covers:
 import pytest
 from app.services.grading_service import (
     _get_correct_options,
+    _normalize_student_answer,
     grade_mcq_single,
     grade_multiple_response,
     apply_grade_boundaries,
@@ -185,6 +186,25 @@ class TestCorrectOptionExtraction:
             {"text": "B", "is_correct": True},
         ])
         assert correct == [1]
+
+
+class TestStudentAnswerNormalization:
+    async def test_selected_option_id_overrides_stale_index(self):
+        normalized = _normalize_student_answer(
+            {
+                "selected_option_index": 0,
+                "selected_option_id": "B",
+            },
+            {
+                "question_type": "MULTIPLE_CHOICE",
+                "choices": [
+                    {"id": "A", "text": "Wrong", "is_correct": False},
+                    {"id": "B", "text": "Correct", "is_correct": True},
+                ],
+            },
+        )
+
+        assert normalized["selected_option_index"] == 1
 
 
 # ─── Integration tests: auto_grade_session ───────────────────────────────────
@@ -401,6 +421,51 @@ async def test_auto_grade_mcq_correct_answer_from_choices_object_snapshot(gradin
 
     assert result["total_points"] == 1.0
     assert result["grading_status"] == "AUTO_GRADED"
+
+    grade = await prisma.question_grades.find_first(where={"session_id": session_id})
+    assert grade is not None
+    assert grade.points_awarded == 1.0
+    assert grade.is_correct is True
+
+
+@pytest.mark.anyio
+async def test_auto_grade_mcq_prefers_selected_option_id_when_index_is_stale(grading_setup):
+    """Shuffled snapshots must grade by stable option ID when the payload carries both ID and a stale index."""
+    from app.services.grading_service import auto_grade_session
+    from uuid import UUID
+    s = grading_setup
+
+    items = [{
+        "learning_object_id": s["mcq_lo"].id,
+        "item_version_id": s["mcq_iv"].id,
+        "question_type": "MULTIPLE_CHOICE",
+        "content": {"text": "What is 2+2?"},
+        "options": {
+            "question_type": "MULTIPLE_CHOICE",
+            "choices": [
+                {"id": "A", "text": "3", "is_correct": False, "weight": 1.0},
+                {"id": "C", "text": "5", "is_correct": False, "weight": 1.0},
+                {"id": "B", "text": "4", "is_correct": True, "weight": 1.0},
+            ],
+        },
+    }]
+
+    session_id = await _create_submitted_session(
+        s["mcq_test"].id,
+        s["student"].id,
+        items,
+        [{
+            "lo_id": s["mcq_lo"].id,
+            "payload": {
+                "selected_option_index": 0,
+                "selected_option_id": "B",
+            },
+        }],
+    )
+
+    result = await auto_grade_session(UUID(session_id))
+
+    assert result["total_points"] == 1.0
 
     grade = await prisma.question_grades.find_first(where={"session_id": session_id})
     assert grade is not None

@@ -214,6 +214,7 @@ export function toExamContentText(content: unknown): string {
 }
 
 export interface ExamChoiceContent {
+    id?: string;
     html: string;
     text: string;
 }
@@ -241,12 +242,16 @@ function getRawChoices(options: unknown): unknown[] {
 export function getExamChoiceContent(options: unknown): ExamChoiceContent[] {
     return getRawChoices(options)
         .map((choice) => {
+            const id = choice && typeof choice === 'object' && typeof (choice as { id?: unknown }).id === 'string'
+                ? (choice as { id: string }).id
+                : undefined;
             const html = toExamContentHtml(choice);
             const text = toExamContentText(choice);
             if (!html.trim() && !text.trim()) {
                 return null;
             }
             return {
+                id,
                 html: html.trim() || escapeHtml(text),
                 text: text.trim() || htmlToText(html),
             };

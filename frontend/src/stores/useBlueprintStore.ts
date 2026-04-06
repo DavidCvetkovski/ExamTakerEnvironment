@@ -30,6 +30,7 @@ export interface ScoringConfig {
     multiple_response_strategy: 'ALL_OR_NOTHING' | 'PARTIAL_CREDIT';
     grade_boundaries: GradeBoundary[];
     essay_points: Record<string, number>; // learning_object_id -> max points
+    shuffle_options: boolean;
 }
 
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
@@ -42,6 +43,7 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
         { min_percentage: 0, grade: 'Fail' },
     ],
     essay_points: {},
+    shuffle_options: false,
 };
 
 export interface TestDefinition {

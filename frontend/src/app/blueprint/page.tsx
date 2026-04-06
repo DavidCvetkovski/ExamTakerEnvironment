@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useBlueprintStore, SelectionRule, TestDefinition } from '@/stores/useBlueprintStore';
+import { DEFAULT_SCORING_CONFIG, useBlueprintStore, SelectionRule, TestDefinition } from '@/stores/useBlueprintStore';
 import { useExamStore } from '@/stores/useExamStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -148,6 +148,8 @@ export default function BlueprintPage() {
         const item = availableItems.find(i => i.id === id);
         return item ? item.latest_content_preview : 'Select a question...';
     };
+
+    const scoringConfig = currentBlueprint?.scoring_config ?? DEFAULT_SCORING_CONFIG;
 
     // --- Stats Calculation ---
     const stats = (() => {
@@ -303,6 +305,20 @@ export default function BlueprintPage() {
                                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${currentBlueprint?.shuffle_questions ? 'translate-x-6' : 'translate-x-1'}`} />
                                         </button>
                                         <span className="text-sm font-semibold text-slate-300">Shuffle Questions</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={() => saveState({
+                                                scoring_config: {
+                                                    ...scoringConfig,
+                                                    shuffle_options: !scoringConfig.shuffle_options,
+                                                },
+                                            })}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${scoringConfig.shuffle_options ? 'bg-indigo-600' : 'bg-slate-700'}`}
+                                        >
+                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${scoringConfig.shuffle_options ? 'translate-x-6' : 'translate-x-1'}`} />
+                                        </button>
+                                        <span className="text-sm font-semibold text-slate-300">Shuffle Answer Order</span>
                                     </div>
                                 </div>
                             </div>

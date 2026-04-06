@@ -41,10 +41,25 @@ def _get_correct_options(options: Any) -> List[int]:
     Return indices of all options whose is_correct flag is True.
     options is either a JSON string or a list of dicts with an ``is_correct`` key.
     """
-    opts_list = _parse_json(options)
-    if not isinstance(opts_list, list):
-        opts_list = opts_list.get("options", [])
-    return [i for i, opt in enumerate(opts_list) if opt.get("is_correct", False)]
+    parsed = _parse_json(options)
+
+    if isinstance(parsed, list):
+        choices = parsed
+    elif isinstance(parsed, dict):
+        if isinstance(parsed.get("choices"), list):
+            choices = parsed["choices"]
+        elif isinstance(parsed.get("options"), list):
+            choices = parsed["options"]
+        else:
+            choices = []
+    else:
+        choices = []
+
+    return [
+        index
+        for index, option in enumerate(choices)
+        if isinstance(option, dict) and option.get("is_correct", False)
+    ]
 
 
 def _get_scoring_config(test_definition: Any) -> Dict[str, Any]:

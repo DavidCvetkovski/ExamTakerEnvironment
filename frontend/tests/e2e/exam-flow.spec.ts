@@ -14,6 +14,10 @@ test.describe('Exam Lifecycle E2E', () => {
 
         await page.getByRole('button', { name: 'Practice' }).first().click();
         await expect(page).toHaveURL(/\/exam\/.+/);
+        await expect(page.getByText('Algebra Question 1?', { exact: true })).toBeVisible();
+
+        await page.getByRole('button', { name: 'Next', exact: true }).click();
+        await expect(page.getByText('Calculus Question 2?', { exact: true })).toBeVisible();
 
         await page.getByRole('button', { name: 'Submit Exam' }).click();
         await page.getByRole('button', { name: 'Confirm Submission' }).click();

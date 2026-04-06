@@ -29,7 +29,8 @@ export interface QuestionResultDetail {
     learning_object_id: string;
     item_version_id: string;
     question_type: string;
-    question_content: Record<string, unknown> | null;
+    question_content: unknown | null;
+    question_options: unknown | null;
     student_answer: Record<string, unknown>;
     correct_answer: Record<string, unknown> | null;
     points_awarded: number;

@@ -19,6 +19,7 @@ async def create_test_definition(
             "blocks": Json(blocks_data),
             "duration_minutes": payload.duration_minutes,
             "shuffle_questions": payload.shuffle_questions,
+            "scoring_config": Json(payload.scoring_config),
         }
     )
     return new_test
@@ -48,6 +49,7 @@ async def update_test_definition(
             "blocks": Json(blocks_data),
             "duration_minutes": payload.duration_minutes,
             "shuffle_questions": payload.shuffle_questions,
+            "scoring_config": Json(payload.scoring_config),
         }
     )
     return updated

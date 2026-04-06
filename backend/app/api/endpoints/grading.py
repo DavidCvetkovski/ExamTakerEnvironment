@@ -56,16 +56,37 @@ async def get_session_grades(
     Returns per-question scores, answers, auto-graded flags, and feedback.
     """
     from app.core.prisma_db import prisma
+    session = await prisma.exam_sessions.find_unique(where={"id": str(session_id)})
     grades = await prisma.question_grades.find_many(
         where={"session_id": str(session_id)},
         order={"created_at": "asc"},
     )
+
+    items_raw = session.items if session else []
+    if isinstance(items_raw, str):
+        import json
+        try:
+            items_raw = json.loads(items_raw)
+        except json.JSONDecodeError:
+            items_raw = []
+    if not isinstance(items_raw, list):
+        items_raw = []
+
+    items_by_learning_object = {
+        str(item.get("learning_object_id")): item
+        for item in items_raw
+        if isinstance(item, dict) and item.get("learning_object_id")
+    }
+
     return [
         {
             "id": g.id,
             "session_id": g.session_id,
             "learning_object_id": g.learning_object_id,
             "item_version_id": g.item_version_id,
+            "question_type": items_by_learning_object.get(str(g.learning_object_id), {}).get("question_type"),
+            "question_content": items_by_learning_object.get(str(g.learning_object_id), {}).get("content"),
+            "question_options": items_by_learning_object.get(str(g.learning_object_id), {}).get("options"),
             "points_awarded": g.points_awarded,
             "points_possible": g.points_possible,
             "is_correct": g.is_correct,

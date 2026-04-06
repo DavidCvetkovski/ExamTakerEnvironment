@@ -23,6 +23,7 @@ test.describe('Student my exams', () => {
 
         await examButtons.nth(0).click();
         await expect(page).toHaveURL(/\/exam\/.+/);
+        await expect(page.getByText('Algebra Question 1?', { exact: true })).toBeVisible();
 
         await page.getByRole('button', { name: 'Submit Exam' }).click();
         await page.getByRole('button', { name: 'Confirm Submission' }).click();

@@ -30,6 +30,9 @@ export interface QuestionGrade {
     session_id: string;
     learning_object_id: string;
     item_version_id: string;
+    question_type: string | null;
+    question_content: unknown | null;
+    question_options: unknown | null;
     points_awarded: number;
     points_possible: number;
     is_correct: boolean | null;

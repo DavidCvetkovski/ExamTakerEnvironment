@@ -84,7 +84,10 @@ async def test_create_test_definition(ac: AsyncClient, setup_matrix_data):
                 ]
             }
         ],
-        "duration_minutes": 120
+        "duration_minutes": 120,
+        "scoring_config": {
+            "shuffle_options": True
+        }
     }
     
     resp = await ac.post("/api/tests/", json=payload, headers=headers)
@@ -94,6 +97,7 @@ async def test_create_test_definition(ac: AsyncClient, setup_matrix_data):
     assert len(data["blocks"]) == 1
     assert data["blocks"][0]["title"] == "Section A"
     assert data["id"] is not None
+    assert data["scoring_config"]["shuffle_options"] is True
 
 @pytest.mark.anyio
 async def test_get_test_definition(ac: AsyncClient, setup_matrix_data):
@@ -111,7 +115,10 @@ async def test_get_test_definition(ac: AsyncClient, setup_matrix_data):
                 ]
             }
         ],
-        "duration_minutes": 60
+        "duration_minutes": 60,
+        "scoring_config": {
+            "shuffle_options": True
+        }
     }
     create_resp = await ac.post("/api/tests/", json=payload, headers=headers)
     test_id = create_resp.json()["id"]
@@ -121,3 +128,4 @@ async def test_get_test_definition(ac: AsyncClient, setup_matrix_data):
     data = get_resp.json()
     assert data["id"] == test_id
     assert data["title"] == "Lookup Test"
+    assert data["scoring_config"]["shuffle_options"] is True

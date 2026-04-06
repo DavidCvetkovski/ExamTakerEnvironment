@@ -99,12 +99,14 @@ async def full_grading_setup(cleanup_database):
             "learning_object_id": mcq_lo.id,
             "item_version_id": mcq_iv.id,
             "question_type": "MULTIPLE_CHOICE",
+            "content": {"raw_html": "<p>Q1</p>"},
             "options": [{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
         },
         {
             "learning_object_id": essay_lo.id,
             "item_version_id": essay_iv.id,
             "question_type": "ESSAY",
+            "content": {"text": "Explain X"},
         },
     ]
     session = await prisma.exam_sessions.create(data={
@@ -170,6 +172,10 @@ async def test_get_session_grades_instructor(ac: AsyncClient, full_grading_setup
     grade_ids = [g["id"] for g in data]
     assert s["essay_grade_id"] in grade_ids
     assert s["mcq_grade_id"] in grade_ids
+    mcq_grade = next(g for g in data if g["id"] == s["mcq_grade_id"])
+    assert mcq_grade["question_type"] == "MULTIPLE_CHOICE"
+    assert mcq_grade["question_content"]["raw_html"] == "<p>Q1</p>"
+    assert mcq_grade["question_options"][0]["text"] == "A"
 
 
 @pytest.mark.anyio
@@ -303,6 +309,9 @@ async def test_full_publish_unpublish_flow(ac: AsyncClient, full_grading_setup):
     assert detail["session_id"] == s["session"].id
     assert "question_results" in detail
     assert len(detail["question_results"]) == 2
+    mcq_detail = next(q for q in detail["question_results"] if q["question_type"] == "MULTIPLE_CHOICE")
+    assert mcq_detail["question_content"]["raw_html"] == "<p>Q1</p>"
+    assert mcq_detail["question_options"][0]["text"] == "A"
 
     # Unpublish
     unpub_resp = await ac.post(

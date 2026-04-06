@@ -129,7 +129,6 @@ export default function ExamPage() {
     if (currentSession.status === 'SUBMITTED') {
         return (
             <SubmissionConfirmation
-                sessionId={currentSession.id}
                 submittedAt={currentSession.submitted_at}
                 returnPath={currentSession.return_path}
             />

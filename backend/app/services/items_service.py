@@ -2,6 +2,7 @@ from typing import List, Optional
 from uuid import UUID
 from fastapi import HTTPException, status
 import json
+import re
 
 from app.core.prisma_db import prisma
 from prisma import Json
@@ -33,6 +34,9 @@ def extract_text_from_tiptap_json(content: dict) -> str:
             # 2. Simple container (like seed data {"text": "..."})
             elif "text" in node and not isinstance(node["text"], (dict, list)):
                 text_parts.append(str(node["text"]))
+            # 3. Stored HTML payload from seeded/editor content
+            elif isinstance(node.get("raw_html"), str):
+                text_parts.append(re.sub(r"<[^>]+>", " ", node["raw_html"]))
             
             # Recurse into children
             for key in ["content", "choices"]: # choices for MCQ options fallback
@@ -44,7 +48,22 @@ def extract_text_from_tiptap_json(content: dict) -> str:
                 _recurse(item)
                 
     _recurse(content)
-    return " ".join(text_parts).strip()
+    return " ".join(" ".join(text_parts).split()).strip()
+
+
+SUBJECT_SORT_ORDER = {
+    "Mathematics": 0,
+    "Science": 1,
+    "Humanities": 2,
+    "Computing": 3,
+}
+
+
+def get_metadata_string(metadata: Optional[dict], key: str) -> str:
+    if not isinstance(metadata, dict):
+        return ""
+    value = metadata.get(key)
+    return value if isinstance(value, str) else ""
 
 async def list_learning_objects() -> List[LearningObjectListResponse]:
     """Return a list of all Learning Objects with their latest version metadata."""
@@ -88,7 +107,14 @@ async def list_learning_objects() -> List[LearningObjectListResponse]:
                 latest_content_preview=preview,
                 metadata_tags=latest.metadata_tags
             ))
-            
+
+    results.sort(
+        key=lambda item: (
+            SUBJECT_SORT_ORDER.get(get_metadata_string(item.metadata_tags, "topic"), 99),
+            get_metadata_string(item.metadata_tags, "focus").lower(),
+            item.latest_content_preview.lower(),
+        )
+    )
     return results
 
 async def create_learning_object(current_user_id: str) -> dict:

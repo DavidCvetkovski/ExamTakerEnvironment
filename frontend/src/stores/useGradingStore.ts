@@ -49,6 +49,7 @@ export interface SessionResult {
     id: string;
     session_id: string;
     test_definition_id: string;
+    test_title?: string | null;
     student_id: string;
     total_points: number;
     max_points: number;

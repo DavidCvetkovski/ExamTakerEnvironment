@@ -2,6 +2,12 @@ import { expect, test } from '@playwright/test';
 
 import { loginAs, seedE2EData } from './helpers';
 
+const currentBlueprint = 'Shuffle Lab: Numbers in Motion';
+const activeMixedBlueprint = 'Mixed Mode: Policy, Data and Writing';
+const upcomingScienceBlueprint = 'Science Check: Forces and Reactions';
+const upcomingSamplerBlueprint = 'Smart Draw: Cross Subject Sampler';
+const firstMathPrompt = 'Math Warm Up: A bakery spends EUR 24 on setup and earns EUR 2 per roll. Break even quantity?';
+
 test.describe('Student my exams', () => {
     test.beforeAll(() => {
         seedE2EData();
@@ -16,14 +22,15 @@ test.describe('Student my exams', () => {
         await expect(page.getByText('Session Manager')).toHaveCount(0);
         await expect(page.getByText('Test Blueprints')).toHaveCount(0);
 
-        const examButtons = page.getByRole('button', { name: /Join|Resume/ });
-        await expect(examButtons).toHaveCount(2);
-        await expect(examButtons.nth(0)).toBeEnabled();
-        await expect(examButtons.nth(1)).toBeDisabled();
+        await expect(page.getByText(currentBlueprint)).toBeVisible();
+        await expect(page.getByText(activeMixedBlueprint)).toBeVisible();
+        await expect(page.getByText(upcomingScienceBlueprint)).toBeVisible();
+        await expect(page.getByText(upcomingSamplerBlueprint)).toBeVisible();
 
-        await examButtons.nth(0).click();
+        const currentCard = page.locator('article').filter({ hasText: currentBlueprint }).first();
+        await currentCard.getByRole('button', { name: /Join|Resume/ }).click();
         await expect(page).toHaveURL(/\/exam\/.+/);
-        await expect(page.getByText('Algebra Question 1?', { exact: true })).toBeVisible();
+        await expect(page.getByText(firstMathPrompt, { exact: true })).toBeVisible();
 
         await page.getByRole('button', { name: 'Submit Exam' }).click();
         await page.getByRole('button', { name: 'Confirm Submission' }).click();

@@ -251,12 +251,6 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                                             <div style={{ color: '#fff', fontSize: '1rem' }}>{inspectedItem.metadata_tags.topic}</div>
                                         </div>
                                     )}
-                                    {inspectedItem.metadata_tags?.difficulty && (
-                                        <div>
-                                            <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>Difficulty</div>
-                                            <div style={{ color: '#fbbf24', fontSize: '1rem', fontWeight: 600 }}>Level {inspectedItem.metadata_tags.difficulty}</div>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         </div>

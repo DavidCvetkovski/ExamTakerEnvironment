@@ -1,11 +1,8 @@
 'use client';
 
-'use client';
-
 import Link from 'next/link';
 
 interface SubmissionConfirmationProps {
-    sessionId: string;
     submittedAt: string | null;
     returnPath: string;
 }
@@ -14,7 +11,7 @@ interface SubmissionConfirmationProps {
  * Post-submission confirmation page shown after the student
  * successfully submits their exam.
  */
-export default function SubmissionConfirmation({ sessionId, submittedAt, returnPath }: SubmissionConfirmationProps) {
+export default function SubmissionConfirmation({ submittedAt, returnPath }: SubmissionConfirmationProps) {
     const formattedTime = submittedAt
         ? new Date(submittedAt.endsWith('Z') ? submittedAt : `${submittedAt}Z`).toLocaleString()
         : 'Just now';
@@ -49,10 +46,6 @@ export default function SubmissionConfirmation({ sessionId, submittedAt, returnP
 
                 {/* Details */}
                 <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 space-y-3 text-left">
-                    <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Session ID</span>
-                        <span className="text-gray-300 font-mono text-xs">{sessionId.slice(0, 8)}...</span>
-                    </div>
                     <div className="flex justify-between text-sm">
                         <span className="text-gray-400">Submitted at</span>
                         <span className="text-gray-300">{formattedTime}</span>

@@ -115,7 +115,8 @@ async def get_session_result(
     from app.core.prisma_db import prisma
 
     result = await prisma.session_results.find_unique(
-        where={"session_id": str(session_id)}
+        where={"session_id": str(session_id)},
+        include={"test_definitions": True},
     )
     if not result:
         raise HTTPException(status_code=404, detail="Result not yet available.")
@@ -135,6 +136,7 @@ async def get_session_result(
         "id": result.id,
         "session_id": result.session_id,
         "test_definition_id": result.test_definition_id,
+        "test_title": result.test_definitions.title if result.test_definitions else None,
         "student_id": result.student_id,
         "total_points": result.total_points,
         "max_points": result.max_points,

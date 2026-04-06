@@ -10,10 +10,11 @@ test.describe('Session manager', () => {
     test('admin can create a course and schedule a future session', async ({ page }) => {
         const courseCode = `AUTO-${Date.now()}`;
         const courseTitle = 'Automation Systems';
+        const demoBlueprint = 'Shuffle Lab: Numbers in Motion';
 
         await loginAs(page, 'admin');
         await expect(page.getByRole('heading', { name: 'Schedule an Exam Window' })).toBeVisible();
-        await expect(page.getByRole('combobox', { name: /^Blueprint$/ })).toContainText('Scheduled Midterm');
+        await expect(page.getByRole('combobox', { name: /^Blueprint$/ })).toContainText(demoBlueprint);
 
         await page.getByLabel('Course code').fill(courseCode);
         await page.getByLabel('Course title').fill(courseTitle);
@@ -21,7 +22,7 @@ test.describe('Session manager', () => {
 
         await expect(page.getByRole('combobox', { name: /^Course$/ })).toContainText(`${courseCode} - ${courseTitle}`);
         await page.getByRole('combobox', { name: /^Course$/ }).selectOption({ label: `${courseCode} - ${courseTitle}` });
-        await page.getByRole('combobox', { name: /^Blueprint$/ }).selectOption({ label: 'Scheduled Midterm' });
+        await page.getByRole('combobox', { name: /^Blueprint$/ }).selectOption({ label: demoBlueprint });
 
         const startsAt = page.getByLabel('Start date and time');
         const futureQuarterHour = await page.evaluate((value) => {
@@ -36,7 +37,7 @@ test.describe('Session manager', () => {
         await page.getByRole('button', { name: 'Schedule Session' }).click();
 
         const row = page.locator('tr').filter({ hasText: courseCode });
-        await expect(row).toContainText('Scheduled Midterm');
+        await expect(row).toContainText(demoBlueprint);
         await expect(row).toContainText(courseTitle);
     });
 

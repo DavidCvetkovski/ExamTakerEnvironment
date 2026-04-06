@@ -44,9 +44,6 @@ export default function QuestionRenderer({ item, questionIndex, totalQuestions }
                     <span className="text-sm font-semibold text-gray-400 uppercase tracking-widest">
                         Question {questionIndex + 1} of {totalQuestions}
                     </span>
-                    <span className="text-xs bg-gray-600 px-2 py-0.5 rounded text-gray-300">
-                        v{item.version_number}
-                    </span>
                 </div>
                 <button
                     onClick={handleToggleFlag}

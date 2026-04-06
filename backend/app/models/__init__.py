@@ -9,3 +9,5 @@ from .scheduled_exam_session import ScheduledExamSession, CourseSessionStatus
 from .test_definition import TestDefinition
 from .exam_session import ExamSession, SessionStatus, ExamSessionMode
 from .interaction_event import InteractionEvent, InteractionEventType
+from .question_grade import QuestionGrade, GradingStatus
+from .session_result import SessionResult

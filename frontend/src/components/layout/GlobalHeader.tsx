@@ -20,6 +20,7 @@ export default function GlobalHeader() {
             { name: 'Test Blueprints', href: '/blueprint' },
             { name: 'Question Library', href: '/items' },
             { name: 'Authoring Workbench', href: '/author' },
+            { name: 'Grading', href: '/grading' },
         ];
 
     const isStudentShell = user?.role === 'STUDENT';

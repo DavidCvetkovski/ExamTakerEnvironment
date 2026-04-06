@@ -18,6 +18,32 @@ export interface TestBlock {
     rules: SelectionRule[];
 }
 
+export interface GradeBoundary {
+    min_percentage: number;
+    grade: string;
+}
+
+export interface ScoringConfig {
+    pass_percentage: number;
+    negative_marking: boolean;
+    negative_marking_penalty: number;
+    multiple_response_strategy: 'ALL_OR_NOTHING' | 'PARTIAL_CREDIT';
+    grade_boundaries: GradeBoundary[];
+    essay_points: Record<string, number>; // learning_object_id -> max points
+}
+
+export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
+    pass_percentage: 55,
+    negative_marking: false,
+    negative_marking_penalty: 0.25,
+    multiple_response_strategy: 'PARTIAL_CREDIT',
+    grade_boundaries: [
+        { min_percentage: 55, grade: 'Pass' },
+        { min_percentage: 0, grade: 'Fail' },
+    ],
+    essay_points: {},
+};
+
 export interface TestDefinition {
     id: string;
     title: string;
@@ -25,6 +51,7 @@ export interface TestDefinition {
     blocks: TestBlock[];
     duration_minutes: number;
     shuffle_questions: boolean;
+    scoring_config?: ScoringConfig;
     created_at: string;
     updated_at: string;
 }
@@ -128,7 +155,8 @@ export const useBlueprintStore = create<BlueprintState>((set) => ({
                 description: '',
                 blocks: [{ title: 'Section 1', rules: [] }],
                 duration_minutes: 60,
-                shuffle_questions: false
+                shuffle_questions: false,
+                scoring_config: { ...DEFAULT_SCORING_CONFIG },
             },
             error: null,
             saveStatus: 'idle'

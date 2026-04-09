@@ -41,7 +41,7 @@ export default function ExamPage() {
         }
     }, [sessionId, fetchSession, loadSavedAnswers]);
 
-    // Timer logic
+    // Timer logic — auto-submits when time expires so the session is graded
     useEffect(() => {
         if (!currentSession) return;
 
@@ -55,8 +55,13 @@ export default function ExamPage() {
             const diff = end - now;
 
             if (diff <= 0) {
-                setTimeLeft('EXPIRED');
                 clearInterval(interval);
+                // Show expired state immediately, then auto-submit.
+                // If the submit succeeds, the page transitions to SubmissionConfirmation.
+                // If it fails (e.g. backend already expired the session), the expired
+                // banner stays and the store's error field surfaces the reason.
+                setTimeLeft('EXPIRED');
+                submitExam(sessionId);
             } else {
                 const hours = Math.floor(diff / 1000 / 60 / 60);
                 const minutes = Math.floor((diff / 1000 / 60) % 60);
@@ -70,7 +75,7 @@ export default function ExamPage() {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [currentSession]);
+    }, [currentSession, sessionId, submitExam]);
 
     // Keyboard navigation
     useEffect(() => {

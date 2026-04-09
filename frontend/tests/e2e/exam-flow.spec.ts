@@ -34,6 +34,63 @@ test.describe('Exam Lifecycle E2E', () => {
         await expect(page).toHaveURL(/\/sessions(?:\?.*)?$/);
     });
 
+    test('exam timer expiry auto-submits the session instead of leaving it ungraded', async ({ page }) => {
+        // Regression test for: timer expiry left sessions in STARTED/EXPIRED status so
+        // they never appeared in the grading dashboard. The fix calls submitExam() when
+        // the countdown hits zero instead of just disabling the UI.
+
+        await loginAs(page, 'constructor');
+        await page.goto('/sessions', { timeout: 30000 });
+        await expect(page.getByRole('heading', { name: 'Exam Windows by Course' })).toBeVisible();
+
+        // Start a practice session
+        const practiceRow = page.locator('tr')
+            .filter({ hasText: mathCourseCode })
+            .filter({ hasText: mathBlueprint })
+            .first();
+        await practiceRow.getByRole('button', { name: 'Practice' }).click();
+        await expect(page).toHaveURL(/\/exam\/.+/);
+
+        const sessionId = page.url().split('/exam/')[1];
+        await expect(page.getByText(firstMathPrompt, { exact: true })).toBeVisible();
+
+        // Patch only the GET /sessions/{id} response to return expires_at ~1.5 s from now.
+        // POST /sessions/{id}/submit is NOT intercepted so it hits the real backend, which
+        // still has the original 6-minute window → the auto-submit call succeeds.
+        await page.route(
+            (url) => url.pathname.endsWith(`/sessions/${sessionId}`),
+            async (route) => {
+                if (route.request().method() !== 'GET') {
+                    await route.continue();
+                    return;
+                }
+                const response = await route.fetch();
+                const body = await response.json();
+                await route.fulfill({
+                    response,
+                    json: { ...body, expires_at: new Date(Date.now() + 1500).toISOString() },
+                });
+            }
+        );
+
+        // Reload so the exam timer initialises with the patched expires_at (~1.5 s window)
+        await page.reload();
+        await expect(page.getByText(firstMathPrompt, { exact: true })).toBeVisible();
+
+        // Core assertion: the timer fires after ~1.5 s and calls submitExam automatically.
+        // Without the fix this shows "Time Expired" and the session stays STARTED/EXPIRED
+        // (invisible to graders). With the fix it shows the submission confirmation page.
+        await expect(page.getByText('Exam Submitted Successfully')).toBeVisible({ timeout: 8000 });
+
+        // Grading integration: the auto-submitted session must appear in the dashboard.
+        await page.goto('/grading');
+        await expect(page.getByRole('heading', { name: 'Grading Dashboard' })).toBeVisible();
+        await expect(page.getByRole('table')).toBeVisible({ timeout: 10000 });
+        await expect(
+            page.locator('tbody tr').filter({ hasText: 'Constructor E2E' }).first()
+        ).toBeVisible({ timeout: 5000 });
+    });
+
     test('latest answer still wins when autosave is already in flight', async ({ page }) => {
         const heartbeatPayloads: string[] = [];
         let releaseFirstHeartbeat: (() => void) | null = null;

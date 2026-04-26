@@ -8,6 +8,16 @@ set -e
 
 echo "🚀 Starting OpenVision Development Environment..."
 
+# --- 0. Local Tool Detection (Antigravity Patch) ---
+# If local tools were installed by the AI agent, prioritize them.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -d "$SCRIPT_DIR/.node_local/bin" ]; then
+    export PATH="$SCRIPT_DIR/.node_local/bin:$PATH"
+fi
+if [ -d "$SCRIPT_DIR/.python_local/bin" ]; then
+    export PATH="$SCRIPT_DIR/.python_local/bin:$PATH"
+fi
+
 # --- 0. Prerequisite Checks ---
 check_cmd() {
     if ! command -v "$1" &> /dev/null; then

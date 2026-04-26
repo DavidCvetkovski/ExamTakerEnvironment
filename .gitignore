@@ -13,6 +13,10 @@ backend/.pytest_cache/
 backend/.coverage
 backend/htmlcov/
 
+# Local AI-installed tools (not committed)
+.node_local/
+.python_local/
+
 # Node / Frontend
 frontend/node_modules/
 frontend/.next/
@@ -28,4 +32,5 @@ frontend/.vercel/
 
 /generated/prisma
 *.log
+backend/backend.log
 node_modules/

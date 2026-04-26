@@ -6,7 +6,6 @@ import TipTapEditor from '@/components/editor/TipTapEditor';
 import MCQOptionsPanel from '@/components/editor/MCQOptionsPanel';
 import EssayOptionsPanel from '@/components/editor/EssayOptionsPanel';
 import { useAuthoringStore } from '@/stores/useAuthoringStore';
-import { useAuthStore } from '@/stores/useAuthStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 export default function AuthorPage() {
@@ -16,7 +15,6 @@ export default function AuthorPage() {
 
     const {
         saveStatus,
-        versionNumber,
         questionType,
         setQuestionType,
         fetchLatestVersion,
@@ -25,8 +23,6 @@ export default function AuthorPage() {
         metadataTags,
         updateMetadataField,
     } = useAuthoringStore();
-
-    const { user, logout } = useAuthStore();
 
     // Always fetch on mount when lo_id param is present, guard against double-render
     useEffect(() => {
@@ -78,15 +74,6 @@ export default function AuthorPage() {
                                         : saveStatus === 'SAVING' ? '⏳ Saving...'
                                             : saveStatus === 'SAVED' ? '✓ Changes saved'
                                                 : '✕ Save Failed'}
-                                </span>
-                            </div>
-
-                            <div className="h-4 w-px bg-[#333]" />
-
-                            <div className="flex items-center gap-2">
-                                <span className="text-[#A1A1AA]">Version:</span>
-                                <span className="text-white font-mono bg-[#1A1A1A] px-2 py-0.5 rounded border border-[#333]">
-                                    v{versionNumber || 1}
                                 </span>
                             </div>
 

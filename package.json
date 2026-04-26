@@ -1,0 +1,10 @@
+{
+    "name": "openvision-root",
+    "private": true,
+    "devDependencies": {
+        "prisma": "^5.17.0"
+    },
+    "dependencies": {
+        "@prisma/client": "^5.17.0"
+    }
+}

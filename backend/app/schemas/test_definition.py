@@ -30,6 +30,7 @@ class TestDefinitionBase(BaseModel):
     blocks: List[TestBlock]
     duration_minutes: int = Field(default=60, gt=0)
     shuffle_questions: bool = False
+    scoring_config: Dict[str, Any] = Field(default_factory=dict)
 
 class TestDefinitionCreate(TestDefinitionBase):
     pass

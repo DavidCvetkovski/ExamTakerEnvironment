@@ -1,137 +1,251 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useExamStore } from '@/stores/useExamStore';
-import DOMPurify from 'dompurify';
-
-function sanitizeHtml(html: string | null | undefined) {
-  return html
-    ? DOMPurify.sanitize(html, {
-        ALLOWED_TAGS: ['span', 'p'],
-        ALLOWED_ATTR: ['class'],
-      })
-    : '';
-}
+import { useHeartbeat } from '@/hooks/useHeartbeat';
+import QuestionRenderer from '@/components/exam/QuestionRenderer';
+import TimelineNavigator from '@/components/exam/TimelineNavigator';
+import SaveIndicator from '@/components/exam/SaveIndicator';
+import ReviewSummary from '@/components/exam/ReviewSummary';
+import SubmissionConfirmation from '@/components/exam/SubmissionConfirmation';
 
 export default function ExamPage() {
     const params = useParams();
-    const router = useRouter();
     const sessionId = params.id as string;
-    const { currentSession, isLoading, error, fetchSession } = useExamStore();
-    const [timeLeft, setTimeLeft] = useState<string>('');
+    const {
+        currentSession,
+        isLoading,
+        error,
+        currentQuestionIndex,
+        fetchSession,
+        loadSavedAnswers,
+        navigateTo,
+        submitExam,
+    } = useExamStore();
 
+    const [timeLeft, setTimeLeft] = useState<string>('');
+    const [showReview, setShowReview] = useState(false);
+
+    // Initialize heartbeat auto-save
+    useHeartbeat(sessionId);
+
+    // Fetch session and recover saved answers on mount
     useEffect(() => {
         if (sessionId) {
-            fetchSession(sessionId);
+            fetchSession(sessionId).then(() => {
+                loadSavedAnswers(sessionId);
+            });
         }
-    }, [sessionId, fetchSession]);
+    }, [sessionId, fetchSession, loadSavedAnswers]);
 
-    // Timer logic
+    // Timer logic — auto-submits when time expires so the session is graded
     useEffect(() => {
         if (!currentSession) return;
 
         const interval = setInterval(() => {
             const now = new Date().getTime();
-            // Safely parse naive datetime strings as UTC
-            const tzExpiresAt = currentSession.expires_at.endsWith('Z') || currentSession.expires_at.includes('+')
-                ? currentSession.expires_at
-                : `${currentSession.expires_at}Z`;
+            const tzExpiresAt =
+                currentSession.expires_at.endsWith('Z') || currentSession.expires_at.includes('+')
+                    ? currentSession.expires_at
+                    : `${currentSession.expires_at}Z`;
             const end = new Date(tzExpiresAt).getTime();
             const diff = end - now;
 
             if (diff <= 0) {
-                setTimeLeft('EXPIRED');
                 clearInterval(interval);
+                // Show expired state immediately, then auto-submit.
+                // If the submit succeeds, the page transitions to SubmissionConfirmation.
+                // If it fails (e.g. backend already expired the session), the expired
+                // banner stays and the store's error field surfaces the reason.
+                setTimeLeft('EXPIRED');
+                submitExam(sessionId);
             } else {
-                const minutes = Math.floor(diff / 1000 / 60);
+                const hours = Math.floor(diff / 1000 / 60 / 60);
+                const minutes = Math.floor((diff / 1000 / 60) % 60);
                 const seconds = Math.floor((diff / 1000) % 60);
-                setTimeLeft(`${minutes}m ${seconds}s`);
+                setTimeLeft(
+                    hours > 0
+                        ? `${hours}h ${minutes}m ${seconds}s`
+                        : `${minutes}m ${seconds}s`
+                );
             }
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [currentSession]);
+    }, [currentSession, sessionId, submitExam]);
 
-    if (isLoading) return <div className="p-10 text-center">Loading exam session...</div>;
-    if (error) return <div className="p-10 text-red-500 text-center">{error}</div>;
+    // Keyboard navigation
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (!currentSession) return;
+            if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return;
+
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                navigateTo(currentQuestionIndex + 1);
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                navigateTo(currentQuestionIndex - 1);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [currentSession, currentQuestionIndex, navigateTo]);
+
+    // Handle submission
+    const handleSubmit = async () => {
+        try {
+            await submitExam(sessionId);
+            setShowReview(false);
+        } catch {
+            // Error is set in the store
+        }
+    };
+
+    // Loading & Error states
+    if (isLoading && !currentSession) {
+        return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+                <div className="text-center space-y-4">
+                    <div className="w-8 h-8 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="text-gray-400">Loading exam session...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-8 max-w-md text-center">
+                    <p className="text-red-400 font-semibold">{error}</p>
+                </div>
+            </div>
+        );
+    }
+
     if (!currentSession) return null;
+
+    // Show confirmation page if already submitted
+    if (currentSession.status === 'SUBMITTED') {
+        return (
+            <SubmissionConfirmation
+                submittedAt={currentSession.submitted_at}
+                returnPath={currentSession.return_path}
+            />
+        );
+    }
+
+    const currentItem = currentSession.items[currentQuestionIndex];
+    const totalQuestions = currentSession.items.length;
+    const isExpired = timeLeft === 'EXPIRED' || currentSession.status === 'EXPIRED';
 
     return (
         <ProtectedRoute allowedRoles={['STUDENT', 'CONSTRUCTOR', 'ADMIN']}>
-            <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col">
+            <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col pb-16">
                 {/* Header / Timer Bar */}
                 <header className="sticky top-0 z-10 bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center shadow-lg">
                     <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-xl">OV</div>
+                        <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-xl">
+                            OV
+                        </div>
                         <h1 className="text-lg font-bold">Exam Session</h1>
+                        <SaveIndicator />
                     </div>
 
                     <div className="flex items-center gap-8">
                         <div className="text-right">
                             <p className="text-xs text-gray-400 uppercase tracking-wider">Time Remaining</p>
-                            <p className={`text-xl font-mono font-bold ${timeLeft === 'EXPIRED' ? 'text-red-500' : 'text-indigo-400'}`}>
+                            <p
+                                className={`text-xl font-mono font-bold ${isExpired
+                                        ? 'text-red-500'
+                                        : timeLeft.startsWith('0m') || timeLeft.startsWith('1m') || timeLeft.startsWith('2m')
+                                            ? 'text-amber-400 animate-pulse'
+                                            : 'text-indigo-400'
+                                    }`}
+                            >
                                 {timeLeft}
                             </p>
                         </div>
                         <button
-                            className="bg-indigo-600 hover:bg-indigo-500 px-6 py-2 rounded-lg font-semibold transition-colors shadow-md"
-                            onClick={() => alert("Submission logic in Stage 5")}
+                            className="bg-indigo-600 hover:bg-indigo-500 px-6 py-2 rounded-lg font-semibold transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={() => setShowReview(true)}
+                            disabled={isExpired}
                         >
                             Submit Exam
                         </button>
                     </div>
                 </header>
 
-                <main className="flex-1 max-w-4xl w-full mx-auto p-8 space-y-12">
-                    <div className="bg-gray-800 border border-gray-700 p-8 rounded-2xl">
-                        <h2 className="text-2xl font-bold mb-2">Instructions</h2>
-                        <p className="text-gray-400">
-                            The following questions have been selected and frozen for this session.
-                            Your work is automatically saved... (not actually implemented yet).
-                        </p>
-                    </div>
+                {/* Main Question Area */}
+                <main className="flex-1 max-w-4xl w-full mx-auto p-8">
+                    {isExpired ? (
+                        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-8 text-center">
+                            <h2 className="text-xl font-bold text-red-400">Time Expired</h2>
+                            <p className="text-gray-400 mt-2">
+                                Your exam time has ended. All saved answers have been recorded.
+                            </p>
+                            <Link
+                                href={currentSession.return_path}
+                                className="mt-6 inline-flex rounded-xl border border-gray-600 px-4 py-2 text-sm font-semibold text-gray-200 transition hover:bg-gray-800"
+                            >
+                                Back to Home
+                            </Link>
+                        </div>
+                    ) : currentItem ? (
+                        <div className="space-y-6">
+                            <QuestionRenderer
+                                item={currentItem}
+                                questionIndex={currentQuestionIndex}
+                                totalQuestions={totalQuestions}
+                            />
 
-                    <div className="space-y-12 pb-20">
-                        {currentSession.items.map((item, idx) => (
-                            <section key={item.item_version_id} className="bg-gray-800 border border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:border-gray-600 transition-colors">
-                                <div className="bg-gray-700/50 px-6 py-3 border-b border-gray-700 flex justify-between items-center">
-                                    <span className="text-sm font-semibold text-gray-400 uppercase tracking-widest">Question {idx + 1}</span>
-                                    <span className="text-xs bg-gray-600 px-2 py-0.5 rounded text-gray-300">v{item.version_number}</span>
-                                </div>
+                            {/* Navigation Buttons */}
+                            <div className="flex justify-between items-center pt-4">
+                                <button
+                                    onClick={() => navigateTo(currentQuestionIndex - 1)}
+                                    disabled={currentQuestionIndex === 0}
+                                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 transition-colors font-medium disabled:opacity-30 disabled:cursor-not-allowed"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                                        <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
+                                    </svg>
+                                    Previous
+                                </button>
 
-                                <div className="p-8 space-y-6">
-                                    {/* Question Content */}
-                                    <div
-                                        className="prose prose-invert max-w-none text-xl leading-relaxed"
-                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.content.text) }}
-                                    />
+                                <span className="text-sm text-gray-500">
+                                    {currentQuestionIndex + 1} / {totalQuestions}
+                                </span>
 
-                                    {/* Options Area (Placeholder for Interactivity) */}
-                                    <div className="space-y-3 pt-6">
-                                        {item.question_type === 'MULTIPLE_CHOICE' && item.options.choices?.map((choice: any, cIdx: number) => (
-                                            <label
-                                                key={cIdx}
-                                                className="flex items-center gap-4 p-4 rounded-xl border border-gray-700 bg-gray-900/50 hover:bg-gray-700/30 cursor-pointer transition-colors"
-                                            >
-                                                <input type="radio" name={`q-${idx}`} className="w-5 h-5 text-indigo-600 bg-gray-700 border-gray-600 focus:ring-indigo-600" />
-                                                <span className="text-gray-200">{choice.text}</span>
-                                            </label>
-                                        ))}
-                                        {item.question_type === 'ESSAY' && (
-                                            <textarea
-                                                className="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 focus:ring-2 focus:ring-indigo-500 focus:outline-none placeholder-gray-600"
-                                                placeholder="Type your response here..."
-                                                rows={6}
-                                            />
-                                        )}
-                                    </div>
-                                </div>
-                            </section>
-                        ))}
-                    </div>
+                                <button
+                                    onClick={() => navigateTo(currentQuestionIndex + 1)}
+                                    disabled={currentQuestionIndex === totalQuestions - 1}
+                                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                >
+                                    Next
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                                        <path fillRule="evenodd" d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z" clipRule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    ) : null}
                 </main>
+
+                {/* Timeline Navigator */}
+                <TimelineNavigator />
+
+                {/* Review Modal */}
+                {showReview && (
+                    <ReviewSummary
+                        onConfirm={handleSubmit}
+                        onCancel={() => setShowReview(false)}
+                    />
+                )}
             </div>
         </ProtectedRoute>
     );

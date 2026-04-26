@@ -1,12 +1,21 @@
 'use client';
 
+import type { AxiosError } from 'axios';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '../../stores/useAuthStore';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { getHomePathForRole, useAuthStore } from '../../stores/useAuthStore';
+
+function getSafeRedirectPath(redirect: string | null): string | null {
+    if (!redirect || !redirect.startsWith('/') || redirect.startsWith('//')) {
+        return null;
+    }
+    return redirect;
+}
 
 export default function LoginPage() {
     const router = useRouter();
-    const { login, isAuthenticated, isLoading, initialize } = useAuthStore();
+    const searchParams = useSearchParams();
+    const { login, isAuthenticated, isLoading, initialize, user } = useAuthStore();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -19,9 +28,10 @@ export default function LoginPage() {
 
     useEffect(() => {
         if (isAuthenticated) {
-            router.push('/items'); // Redirect to library dashboard if already logged in
+            const redirect = getSafeRedirectPath(searchParams.get('redirect'));
+            router.push(redirect || getHomePathForRole(user?.role));
         }
-    }, [isAuthenticated, router]);
+    }, [isAuthenticated, router, searchParams, user?.role]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -29,13 +39,14 @@ export default function LoginPage() {
         try {
             await login(email, password);
             // Let the useEffect handle the redirect
-        } catch (err: any) {
-            if (!err.response) {
+        } catch (err: unknown) {
+            const axiosError = err as AxiosError<{ detail?: string }>;
+            if (!axiosError.response) {
                 setError('Cannot connect to the backend server. Please verify that the database and API are running.');
-            } else if (err.response.status === 500) {
+            } else if (axiosError.response.status === 500) {
                 setError('Internal server error. The database might be offline or misconfigured.');
             } else {
-                setError(err.response.data?.detail || 'Login failed. Please check your credentials and try again.');
+                setError(axiosError.response.data?.detail || 'Login failed. Please check your credentials and try again.');
             }
         }
     };
@@ -55,10 +66,9 @@ export default function LoginPage() {
                 <div className="bg-[#1A1A1A] border border-[#333] p-4 text-xs space-y-2">
                     <p className="text-blue-400 font-bold uppercase tracking-wider text-[10px]">Test Credentials</p>
                     <div className="grid grid-cols-1 gap-1 text-[#A1A1AA]">
-                        <p><span className="w-20 inline-block">Admin:</span> <code className="text-white">admin_e2e@vu.nl</code></p>
-                        <p><span className="w-20 inline-block">Constructor:</span> <code className="text-white">constructor_e2e@vu.nl</code></p>
-                        <p><span className="w-20 inline-block">Student:</span> <code className="text-white">student_e2e@vu.nl</code></p>
-                        <p className="mt-1 pt-1 border-t border-[#333]"><span className="w-20 inline-block font-bold">Password:</span> <code className="text-white">*pass123</code></p>
+                        <p><span className="w-24 inline-block">Admin:</span> <code className="text-white">admin_e2e@vu.nl / adminpass123</code></p>
+                        <p><span className="w-24 inline-block">Constructor:</span> <code className="text-white">constructor_e2e@vu.nl / conpass123</code></p>
+                        <p><span className="w-24 inline-block">Student:</span> <code className="text-white">student_e2e@vu.nl / studentpass123</code></p>
                     </div>
                 </div>
 

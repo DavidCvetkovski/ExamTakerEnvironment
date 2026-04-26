@@ -3,9 +3,10 @@ Seed script: Creates test users (ADMIN, CONSTRUCTOR, REVIEWER), an ItemBank,
 and a LearningObject. Prints the LearningObject UUID for the frontend to use.
 """
 import os
+from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.models import User, ItemBank, LearningObject
+from app.models import Course, CourseEnrollment, ItemBank, LearningObject, ScheduledExamSession, TestDefinition, User
 from app.models.user import UserRole
 from app.core.security import hash_password
 
@@ -66,6 +67,44 @@ def seed():
     db.add(lo)
     db.commit()
     db.refresh(lo)
+
+    course = Course(
+        code="SEED-101",
+        title="Seed Course",
+        created_by=created_users[UserRole.CONSTRUCTOR].id,
+    )
+    db.add(course)
+    db.commit()
+    db.refresh(course)
+
+    enrollment = CourseEnrollment(
+        course_id=course.id,
+        student_id=created_users[UserRole.STUDENT].id,
+        is_active=True,
+    )
+    db.add(enrollment)
+
+    blueprint = TestDefinition(
+        title="Seed Blueprint",
+        description="Seed scheduled exam blueprint",
+        created_by=created_users[UserRole.CONSTRUCTOR].id,
+        blocks=[{"title": "Section 1", "rules": []}],
+        duration_minutes=60,
+        shuffle_questions=False,
+    )
+    db.add(blueprint)
+    db.commit()
+    db.refresh(blueprint)
+
+    scheduled = ScheduledExamSession(
+        course_id=course.id,
+        test_definition_id=blueprint.id,
+        created_by=created_users[UserRole.CONSTRUCTOR].id,
+        starts_at=datetime.utcnow() + timedelta(days=1),
+        ends_at=datetime.utcnow() + timedelta(days=1, minutes=60),
+    )
+    db.add(scheduled)
+    db.commit()
 
     print(f"\n✅ Seed complete.")
     print(f"   LearningObject ID: {lo.id}")

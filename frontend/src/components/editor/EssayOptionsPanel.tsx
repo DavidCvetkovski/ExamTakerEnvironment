@@ -21,7 +21,7 @@ export default function EssayOptionsPanel() {
     <div className="essay-options-container">
       <div className="essay-options-header">
         <h3 className="essay-options-title">📝 Essay Requirements</h3>
-        <p className="essay-options-subtitle">Set word count limits for the student's response.</p>
+        <p className="essay-options-subtitle">Set word count limits for the student&apos;s response.</p>
       </div>
 
       <div className="essay-inputs-grid">

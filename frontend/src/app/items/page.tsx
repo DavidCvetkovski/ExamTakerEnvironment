@@ -3,12 +3,18 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { useAuthStore } from '@/stores/useAuthStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
+
+function getMetadataString(value: unknown): string | null {
+    return typeof value === 'string' && value.trim() !== '' ? value : null;
+}
+
+function getMetadataNumber(value: unknown): number | undefined {
+    return typeof value === 'number' ? value : undefined;
+}
 
 export default function ItemsLibraryPage() {
     const router = useRouter();
-    const user = useAuthStore(state => state.user);
     const { items, isLoading, error, fetchItems, createItem } = useLibraryStore();
     const [isCreating, setIsCreating] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -18,12 +24,14 @@ export default function ItemsLibraryPage() {
         fetchItems();
     }, [fetchItems]);
 
-    const uniqueSubjects = Array.from(new Set(items.map(i => i.metadata_tags?.topic).filter(Boolean))) as string[];
+    const uniqueSubjects = Array.from(
+        new Set(items.map((item) => getMetadataString(item.metadata_tags?.topic)).filter((value): value is string => value !== null))
+    );
 
     const filteredItems = items.filter(item => {
         const matchesSearch = (item.latest_content_preview || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.id.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesSubject = subjectFilter === 'all' || item.metadata_tags?.topic === subjectFilter;
+        const matchesSubject = subjectFilter === 'all' || getMetadataString(item.metadata_tags?.topic) === subjectFilter;
         return matchesSearch && matchesSubject;
     });
 
@@ -54,28 +62,8 @@ export default function ItemsLibraryPage() {
         );
     };
 
-    const DifficultyBadge = ({ level }: { level?: number }) => {
-        if (!level) return <span className="text-gray-400 text-xs italic">N/A</span>;
-
-        const colors = [
-            'bg-emerald-50 text-emerald-700 border-emerald-200', // 1
-            'bg-blue-50 text-blue-700 border-blue-200',       // 2
-            'bg-indigo-50 text-indigo-700 border-indigo-200',   // 3
-            'bg-amber-50 text-amber-700 border-amber-200',     // 4
-            'bg-rose-50 text-rose-700 border-rose-200',       // 5
-        ];
-
-        const color = colors[Math.min(level - 1, 4)] || colors[0];
-
-        return (
-            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${color} uppercase tracking-tight`}>
-                Lvl {level}
-            </span>
-        );
-    };
-
     return (
-        <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN', 'STUDENT']}>
+        <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
             <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4 sm:px-6 lg:px-8">
                 <main className="w-full max-w-6xl space-y-6">
                     {/* Header */}
@@ -148,9 +136,7 @@ export default function ItemsLibraryPage() {
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preview</th>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Points</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Difficulty</th>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Version</th>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                                         <th scope="col" className="relative px-6 py-3">
@@ -161,14 +147,14 @@ export default function ItemsLibraryPage() {
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {isLoading && items.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="px-6 py-10 text-center text-sm text-gray-500">
+                                            <td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-500">
                                                 Loading library items...
                                             </td>
                                         </tr>
                                     ) : items.length === 0 ? (
                                         <tr>
                                             <td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-500">
-                                                No questions found. Click "Create New Question" to get started.
+                                                No questions found. Click &quot;Create New Question&quot; to get started.
                                             </td>
                                         </tr>
                                     ) : (
@@ -181,28 +167,17 @@ export default function ItemsLibraryPage() {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="text-sm text-gray-900 font-medium">
-                                                        {item.metadata_tags?.topic || <span className="text-gray-400 italic">General</span>}
+                                                        {getMetadataString(item.metadata_tags?.topic) || <span className="text-gray-400 italic">General</span>}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="text-sm text-gray-900 font-medium">
-                                                        {item.metadata_tags?.points ?? 1}
+                                                        {getMetadataNumber(item.metadata_tags?.points) ?? 1}
                                                     </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <DifficultyBadge level={item.metadata_tags?.difficulty} />
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="text-sm text-gray-600">
                                                         {item.latest_question_type === 'MULTIPLE_CHOICE' ? 'Single Choice' : item.latest_question_type === 'MULTIPLE_RESPONSE' ? 'Multiple Choice' : 'Essay'}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-600 flex items-center gap-1.5">
-                                                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                                        </svg>
-                                                        v{item.latest_version_number}
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">

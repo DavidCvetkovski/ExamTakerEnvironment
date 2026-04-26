@@ -20,6 +20,44 @@ You operate within a 3-layer architecture that separates concerns to maximize re
 
 **Why this works:** If you do everything yourself in one giant file, errors compound. The solution is to push complexity into deterministic, modular code. That way, you just focus on decision-making and orchestrating the system.
 
+## Core Engineering Principles
+
+> These principles are **non-negotiable** and apply to every line of code written in this project. They are shared across all AI agents (see also `claude.md`).
+
+**1. Security First**
+- Never trust client input. Validate and sanitize all user-provided data on the backend.
+- Use parameterized queries (via SQLAlchemy/Prisma) — never interpolate raw strings into SQL.
+- Enforce authorization checks on **every** endpoint: verify the authenticated user has the role *and* ownership to access the resource.
+- Store secrets in `.env` only. Never hardcode API keys, database credentials, or JWT secrets.
+- Hash passwords with `bcrypt` or `argon2`. Never store plaintext passwords.
+- Run the Aikido security gate before every merge to `main` (see `directives/epoch_git_strategy.md`).
+- Apply the principle of least privilege: each role should only have access to the endpoints and data it needs.
+
+**2. Maintainability & Clean Code**
+- Separate concerns: route handlers should **not** contain business logic. Delegate to service modules.
+- Use descriptive names. A function called `get_items` is better than `fetch_data`. A variable called `selected_learning_objects` is better than `items`.
+- Keep functions short and focused. If a function exceeds 40 lines, consider splitting it.
+- Write docstrings for all public functions and API endpoints.
+- Type everything: Pydantic models on the backend, TypeScript interfaces on the frontend. Avoid `any`.
+
+**3. Modularity**
+- Each feature should be self-contained in its own module (model + schema + service + endpoint + tests).
+- Avoid circular imports. Use dependency injection patterns.
+- Frontend: one Zustand store per domain (auth, exam, authoring, library, blueprint). Keep stores lean — complex logic belongs in hooks or utility functions.
+- Backend: one service file per domain. Endpoints call services. Services call the database.
+
+**4. Scalability**
+- Design database schemas for read-heavy workloads (add indexes on foreign keys and commonly queried fields).
+- Use JSONB for flexible, denormalized data (like frozen exam snapshots) but keep relational integrity where it matters (foreign keys, status enums).
+- Prefer bulk operations over N+1 loops (e.g., batch-insert interaction events, not one-at-a-time).
+- Design APIs for pagination from day one. Never return unbounded lists.
+
+**5. Industry Standards**
+- Follow REST conventions: `GET` for reads, `POST` for creates, `PATCH` for updates, `DELETE` for deletes. Use proper HTTP status codes.
+- Use Conventional Commits for all git messages (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`).
+- Write tests alongside features, not after. Minimum: one happy-path test and one error-case test per endpoint.
+- Use environment-based configuration (`.env`) with sane defaults for local dev.
+
 ## Operating Principles
 
 **1. Check for existing tools/code first**
@@ -41,6 +79,9 @@ Every piece of work — new feature, bug fix, refactor, or Epoch — must be rep
 - **When work is done:** Mark the Linear issue as `Done`. Update status in the directive doc too.
 - **New discoveries or scope changes:** Add them as new Linear issues immediately so nothing gets lost.
 Linear is always kept in sync with the current branch and directive state. If it's not in Linear, it doesn't exist.
+
+**5. Plan before you code**
+Never start implementing a feature without an approved blueprint in `directives/`. Read the relevant epoch blueprint, understand the data flow, and confirm the approach before writing code. Premature implementation creates rework.
 
 ## Self-annealing loop
 
@@ -71,4 +112,4 @@ Errors are learning opportunities. When something breaks:
 
 You sit between human intent (the Master Plan/directives) and deterministic execution (building the codebase). Read instructions, make architectural decisions, write robust full-stack code, handle errors in the Docker environment, and continuously improve the system.
 
-Be pragmatic. Be reliable. Self-anneal.
+Be pragmatic. Be reliable. Self-anneal. Prioritize security.

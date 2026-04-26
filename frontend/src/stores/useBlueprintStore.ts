@@ -18,6 +18,34 @@ export interface TestBlock {
     rules: SelectionRule[];
 }
 
+export interface GradeBoundary {
+    min_percentage: number;
+    grade: string;
+}
+
+export interface ScoringConfig {
+    pass_percentage: number;
+    negative_marking: boolean;
+    negative_marking_penalty: number;
+    multiple_response_strategy: 'ALL_OR_NOTHING' | 'PARTIAL_CREDIT';
+    grade_boundaries: GradeBoundary[];
+    essay_points: Record<string, number>; // learning_object_id -> max points
+    shuffle_options: boolean;
+}
+
+export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
+    pass_percentage: 55,
+    negative_marking: false,
+    negative_marking_penalty: 0.25,
+    multiple_response_strategy: 'PARTIAL_CREDIT',
+    grade_boundaries: [
+        { min_percentage: 55, grade: 'Pass' },
+        { min_percentage: 0, grade: 'Fail' },
+    ],
+    essay_points: {},
+    shuffle_options: false,
+};
+
 export interface TestDefinition {
     id: string;
     title: string;
@@ -25,26 +53,12 @@ export interface TestDefinition {
     blocks: TestBlock[];
     duration_minutes: number;
     shuffle_questions: boolean;
+    scoring_config?: ScoringConfig;
     created_at: string;
     updated_at: string;
 }
 
-interface ValidationRule {
-    rule: string;
-    valid: boolean;
-    reason: string;
-    matching_count?: number;
-}
-
-interface ValidationBlock {
-    title: string;
-    rule_validation: ValidationRule[];
-}
-
-export interface ValidationResponse {
-    valid: boolean;
-    blocks: ValidationBlock[];
-}
+export type BlueprintSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 export interface AvailableItem {
     id: string;
@@ -66,31 +80,35 @@ interface BlueprintState {
     availableItems: AvailableItem[];
     isLoading: boolean;
     error: string | null;
-    validation: ValidationResponse | null;
+    saveStatus: BlueprintSaveStatus;
 
     fetchBlueprints: () => Promise<void>;
     fetchBlueprint: (id: string) => Promise<void>;
     fetchAvailableItems: () => Promise<void>;
     saveBlueprint: (data: Partial<TestDefinition>) => Promise<string>;
-    validateBlueprint: (id: string) => Promise<void>;
     resetCurrent: () => void;
+    resetSaveStatus: () => void;
 }
 
-export const useBlueprintStore = create<BlueprintState>((set, get) => ({
+function getApiErrorMessage(error: unknown, fallback: string): string {
+    return (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail || fallback;
+}
+
+export const useBlueprintStore = create<BlueprintState>((set) => ({
     blueprints: [],
     currentBlueprint: null,
     availableItems: [],
     isLoading: false,
     error: null,
-    validation: null,
+    saveStatus: 'idle',
 
     fetchAvailableItems: async () => {
         set({ isLoading: true, error: null });
         try {
             const response = await api.get<AvailableItem[]>('learning-objects');
             set({ availableItems: response.data, isLoading: false });
-        } catch (err: any) {
-            set({ error: err.response?.data?.detail || 'Failed to fetch items', isLoading: false });
+        } catch (err: unknown) {
+            set({ error: getApiErrorMessage(err, 'Failed to fetch items'), isLoading: false });
         }
     },
 
@@ -99,8 +117,8 @@ export const useBlueprintStore = create<BlueprintState>((set, get) => ({
         try {
             const response = await api.get<TestDefinition[]>('tests/');
             set({ blueprints: response.data, isLoading: false });
-        } catch (err: any) {
-            set({ error: err.response?.data?.detail || 'Failed to fetch blueprints', isLoading: false });
+        } catch (err: unknown) {
+            set({ error: getApiErrorMessage(err, 'Failed to fetch blueprints'), isLoading: false });
         }
     },
 
@@ -109,13 +127,13 @@ export const useBlueprintStore = create<BlueprintState>((set, get) => ({
         try {
             const response = await api.get<TestDefinition>(`tests/${id}`);
             set({ currentBlueprint: response.data, isLoading: false });
-        } catch (err: any) {
-            set({ error: err.response?.data?.detail || 'Failed to fetch blueprint', isLoading: false });
+        } catch (err: unknown) {
+            set({ error: getApiErrorMessage(err, 'Failed to fetch blueprint'), isLoading: false });
         }
     },
 
     saveBlueprint: async (data: Partial<TestDefinition>) => {
-        set({ isLoading: true, error: null });
+        set({ isLoading: true, error: null, saveStatus: 'saving' });
         try {
             let response;
             if (data.id) {
@@ -123,22 +141,12 @@ export const useBlueprintStore = create<BlueprintState>((set, get) => ({
             } else {
                 response = await api.post<TestDefinition>('tests/', data);
             }
-            set({ currentBlueprint: response.data, isLoading: false });
+            set({ currentBlueprint: response.data, isLoading: false, saveStatus: 'saved' });
             return response.data.id;
-        } catch (err: any) {
-            const msg = err.response?.data?.detail || 'Failed to save blueprint';
-            set({ error: msg, isLoading: false });
+        } catch (err: unknown) {
+            const msg = getApiErrorMessage(err, 'Failed to save blueprint');
+            set({ error: msg, isLoading: false, saveStatus: 'error' });
             throw new Error(msg);
-        }
-    },
-
-    validateBlueprint: async (id: string) => {
-        set({ isLoading: true, error: null, validation: null });
-        try {
-            const response = await api.post<ValidationResponse>(`tests/${id}/validate`);
-            set({ validation: response.data, isLoading: false });
-        } catch (err: any) {
-            set({ error: err.response?.data?.detail || 'Failed to validate blueprint', isLoading: false });
         }
     },
 
@@ -149,10 +157,13 @@ export const useBlueprintStore = create<BlueprintState>((set, get) => ({
                 description: '',
                 blocks: [{ title: 'Section 1', rules: [] }],
                 duration_minutes: 60,
-                shuffle_questions: false
+                shuffle_questions: false,
+                scoring_config: { ...DEFAULT_SCORING_CONFIG },
             },
-            validation: null,
-            error: null
+            error: null,
+            saveStatus: 'idle'
         });
-    }
+    },
+
+    resetSaveStatus: () => set({ saveStatus: 'idle' }),
 }));

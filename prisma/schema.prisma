@@ -5,8 +5,8 @@ generator client {
 
 generator py_client {
   provider             = "prisma-client-py"
+  recursive_type_depth = "5"
   interface            = "asyncio"
-  recursive_type_depth = 5
 }
 
 datasource db {
@@ -19,16 +19,75 @@ model alembic_version {
 }
 
 model exam_sessions {
-  id                 String           @id @default(uuid()) @db.Uuid
-  test_definition_id String           @db.Uuid
-  student_id         String           @db.Uuid
-  items              Json
-  status             sessionstatus
-  started_at         DateTime         @db.Timestamp(6)
-  submitted_at       DateTime?        @db.Timestamp(6)
-  expires_at         DateTime         @db.Timestamp(6)
-  users              users            @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  test_definitions   test_definitions @relation(fields: [test_definition_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id                      String                   @id @default(uuid()) @db.Uuid
+  test_definition_id      String                   @db.Uuid
+  student_id              String                   @db.Uuid
+  items                   Json
+  status                  sessionstatus
+  started_at              DateTime                 @db.Timestamp(6)
+  submitted_at            DateTime?                @db.Timestamp(6)
+  expires_at              DateTime                 @db.Timestamp(6)
+  scheduled_session_id    String?                  @db.Uuid
+  session_mode            examsessionmode          @default(PRACTICE)
+  scheduled_exam_sessions scheduled_exam_sessions? @relation(fields: [scheduled_session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users                   users                    @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  test_definitions        test_definitions         @relation(fields: [test_definition_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  interaction_events      interaction_events[]
+  question_grades         question_grades[]
+  session_result          session_results?
+
+  @@index([scheduled_session_id], map: "ix_exam_sessions_scheduled_session_id")
+}
+
+model courses {
+  id                      String                    @id @default(uuid()) @db.Uuid
+  code                    String                    @unique(map: "ix_courses_code") @db.VarChar
+  title                   String                    @db.VarChar
+  created_by              String?                   @db.Uuid
+  is_active               Boolean                   @default(true)
+  created_at              DateTime                  @default(now()) @db.Timestamp(6)
+  updated_at              DateTime?                 @db.Timestamp(6)
+  course_enrollments      course_enrollments[]
+  users                   users?                    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  scheduled_exam_sessions scheduled_exam_sessions[]
+
+  @@index([created_by], map: "ix_courses_created_by")
+}
+
+model course_enrollments {
+  id          String   @id @default(uuid()) @db.Uuid
+  course_id   String   @db.Uuid
+  student_id  String   @db.Uuid
+  is_active   Boolean  @default(true)
+  enrolled_at DateTime @default(now()) @db.Timestamp(6)
+  courses     courses  @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users       users    @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([course_id, student_id], map: "uq_course_enrollment_course_student")
+  @@index([course_id], map: "ix_course_enrollments_course_id")
+  @@index([student_id], map: "ix_course_enrollments_student_id")
+}
+
+model scheduled_exam_sessions {
+  id                        String              @id @default(uuid()) @db.Uuid
+  course_id                 String              @db.Uuid
+  test_definition_id        String              @db.Uuid
+  created_by                String?             @db.Uuid
+  starts_at                 DateTime            @db.Timestamp(6)
+  ends_at                   DateTime            @db.Timestamp(6)
+  status                    coursesessionstatus @default(SCHEDULED)
+  duration_minutes_override Int?
+  created_at                DateTime            @default(now()) @db.Timestamp(6)
+  updated_at                DateTime?           @db.Timestamp(6)
+  exam_sessions             exam_sessions[]
+  courses                   courses             @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users                     users?              @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  test_definitions          test_definitions    @relation(fields: [test_definition_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([course_id], map: "ix_scheduled_exam_sessions_course_id")
+  @@index([created_by], map: "ix_scheduled_exam_sessions_created_by")
+  @@index([starts_at], map: "ix_scheduled_exam_sessions_starts_at")
+  @@index([test_definition_id], map: "ix_scheduled_exam_sessions_test_definition_id")
 }
 
 model item_banks {
@@ -77,34 +136,105 @@ model media_assets {
 }
 
 model test_definitions {
-  id                String          @id @default(uuid()) @db.Uuid
-  title             String          @db.VarChar
-  description       String?
-  created_by        String?         @db.Uuid
-  blocks            Json
-  duration_minutes  Int
-  shuffle_questions Boolean?
-  created_at        DateTime?       @default(now()) @db.Timestamp(6)
-  updated_at        DateTime?       @db.Timestamp(6)
-  exam_sessions     exam_sessions[]
-  users             users?          @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id                      String                    @id @default(uuid()) @db.Uuid
+  title                   String                    @db.VarChar
+  description             String?
+  created_by              String?                   @db.Uuid
+  blocks                  Json
+  duration_minutes        Int
+  shuffle_questions       Boolean?
+  created_at              DateTime?                 @default(now()) @db.Timestamp(6)
+  updated_at              DateTime?                 @db.Timestamp(6)
+  scoring_config          Json?
+  exam_sessions           exam_sessions[]
+  scheduled_exam_sessions scheduled_exam_sessions[]
+  session_results         session_results[]
+  users                   users?                    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model users {
-  id                        String             @id @default(uuid()) @db.Uuid
-  email                     String             @unique(map: "ix_users_email") @db.VarChar
-  vunet_id                  String?            @unique(map: "ix_users_vunet_id") @db.VarChar
-  hashed_password           String             @db.VarChar
+  id                        String                    @id @default(uuid()) @db.Uuid
+  email                     String                    @unique(map: "ix_users_email") @db.VarChar
+  vunet_id                  String?                   @unique(map: "ix_users_vunet_id") @db.VarChar
+  hashed_password           String                    @db.VarChar
   role                      userrole
-  is_active                 Boolean          @default(true)
-  provision_time_multiplier Float            @default(1.0)
-  created_at                DateTime?          @default(now()) @db.Timestamp(6)
+  is_active                 Boolean                   @default(true)
+  provision_time_multiplier Float                     @default(1.0)
+  created_at                DateTime?                 @default(now()) @db.Timestamp(6)
+  course_enrollments        course_enrollments[]
+  courses                   courses[]
   exam_sessions             exam_sessions[]
   item_banks                item_banks[]
   item_versions             item_versions[]
   learning_objects          learning_objects[]
   media_assets              media_assets[]
+  question_grades           question_grades[]
+  scheduled_exam_sessions   scheduled_exam_sessions[]
+  published_results         session_results[]         @relation("PublishedResults")
+  student_results           session_results[]         @relation("StudentResults")
   test_definitions          test_definitions[]
+}
+
+model interaction_events {
+  id                 String               @id @default(uuid()) @db.Uuid
+  session_id         String               @db.Uuid
+  learning_object_id String?              @db.Uuid
+  item_version_id    String?              @db.Uuid
+  event_type         interactioneventtype
+  payload            Json
+  created_at         DateTime             @default(now()) @db.Timestamp(6)
+  exam_sessions      exam_sessions        @relation(fields: [session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([session_id], map: "ix_interaction_events_session_id")
+}
+
+model question_grades {
+  id                 String        @id @default(uuid()) @db.Uuid
+  session_id         String        @db.Uuid
+  learning_object_id String        @db.Uuid
+  item_version_id    String        @db.Uuid
+  points_awarded     Float
+  points_possible    Float
+  is_correct         Boolean?
+  graded_by          String?       @db.Uuid
+  is_auto_graded     Boolean
+  feedback           String?
+  rubric_data        Json?
+  student_answer     Json
+  correct_answer     Json?
+  created_at         DateTime      @db.Timestamp(6)
+  updated_at         DateTime?     @db.Timestamp(6)
+  users              users?        @relation(fields: [graded_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  exam_sessions      exam_sessions @relation(fields: [session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([session_id], map: "ix_question_grades_session_id")
+}
+
+model session_results {
+  id                 String           @id @default(uuid()) @db.Uuid
+  session_id         String           @unique(map: "ix_session_results_session_id") @db.Uuid
+  test_definition_id String           @db.Uuid
+  student_id         String           @db.Uuid
+  total_points       Float
+  max_points         Float
+  percentage         Float
+  grading_status     gradingstatus
+  questions_graded   Int
+  questions_total    Int
+  letter_grade       String?          @db.VarChar
+  passed             Boolean?
+  is_published       Boolean
+  published_at       DateTime?        @db.Timestamp(6)
+  published_by       String?          @db.Uuid
+  created_at         DateTime         @db.Timestamp(6)
+  updated_at         DateTime?        @db.Timestamp(6)
+  publishers         users?           @relation("PublishedResults", fields: [published_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  exam_sessions      exam_sessions    @relation(fields: [session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  students           users            @relation("StudentResults", fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  test_definitions   test_definitions @relation(fields: [test_definition_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([student_id], map: "ix_session_results_student_id")
+  @@index([test_definition_id], map: "ix_session_results_test_definition_id")
 }
 
 enum itemstatus {
@@ -127,9 +257,34 @@ enum sessionstatus {
   EXPIRED
 }
 
+enum examsessionmode {
+  ASSIGNED
+  PRACTICE
+}
+
+enum coursesessionstatus {
+  SCHEDULED
+  ACTIVE
+  CLOSED
+  CANCELED
+}
+
 enum userrole {
   ADMIN
   CONSTRUCTOR
   REVIEWER
   STUDENT
+}
+
+enum interactioneventtype {
+  ANSWER_CHANGE
+  FLAG_TOGGLE
+  NAVIGATION
+}
+
+enum gradingstatus {
+  UNGRADED
+  AUTO_GRADED
+  PARTIALLY_GRADED
+  FULLY_GRADED
 }

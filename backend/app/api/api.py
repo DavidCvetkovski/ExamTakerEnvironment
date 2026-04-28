@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from app.api.endpoints import (
+    analytics,
     auth,
     courses,
     grading,
@@ -21,3 +22,4 @@ api_router.include_router(interactions.router, prefix="/sessions", tags=["intera
 api_router.include_router(scheduled_sessions.router)
 api_router.include_router(student_sessions.router)
 api_router.include_router(grading.router, prefix="/grading", tags=["grading"])
+api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])

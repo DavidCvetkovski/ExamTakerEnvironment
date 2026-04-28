@@ -1,7 +1,8 @@
 """
 Pydantic schemas for psychometric analytics responses (Epoch 7).
 """
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -28,8 +29,11 @@ class ItemVersionStats(BaseModel):
     p_value: Optional[float]
     d_value: Optional[float]
     n_responses: int
+    mean_score: Optional[float] = None
+    points_possible: Optional[float] = None
     distractors: List[DistractorStat]
     flags: List[ItemFlag]
+    computed_at: Optional[datetime] = None
 
 
 class TestItemAnalyticsResponse(BaseModel):
@@ -46,6 +50,7 @@ class VersionHistoryEntry(BaseModel):
     d_value: Optional[float]
     n_responses: int
     flags: List[ItemFlag]
+    computed_at: Optional[datetime] = None
 
 
 class ItemVersionHistoryResponse(BaseModel):
@@ -84,4 +89,30 @@ class TestStatsResponse(BaseModel):
     cronbach_alpha: Optional[float]   # internal consistency (KR-20 for binary)
     sem: Optional[float]              # Standard Error of Measurement (in %-points)
     n_items: int
+    cut_score: Optional[float] = None
+    computed_at: Optional[datetime] = None
+    is_stale: bool = False
     cut_score_analysis: List[CutScoreEntry]
+
+
+class TestAnalyticsBundleResponse(BaseModel):
+    test: TestStatsResponse
+    items: List[ItemVersionStats]
+    flagged_items_count: int
+
+
+class ItemHistoryEntry(BaseModel):
+    item_version_id: str
+    version_number: Optional[int]
+    test_definition_id: str
+    test_title: str
+    p_value: Optional[float]
+    d_value: Optional[float]
+    n_responses: int
+    computed_at: Optional[datetime] = None
+    flags: List[ItemFlag]
+
+
+class ItemHistoryResponse(BaseModel):
+    learning_object_id: str
+    entries: List[ItemHistoryEntry]

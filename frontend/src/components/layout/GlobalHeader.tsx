@@ -21,6 +21,7 @@ export default function GlobalHeader() {
             { name: 'Question Library', href: '/items' },
             { name: 'Authoring Workbench', href: '/author' },
             { name: 'Grading', href: '/grading' },
+            { name: 'Analytics', href: '/analytics' },
         ];
 
     const isStudentShell = user?.role === 'STUDENT';

@@ -141,7 +141,7 @@ async def compute_test_item_stats(test_definition_id: str) -> Dict:
     partially graded tests (e.g. essays still pending) still return MCQ stats.
     """
     all_results = await prisma.session_results.find_many(
-        where={"test_definition_id": test_definition_id}
+        where={"test_definition_id": test_definition_id, "is_published": True}
     )
     graded_results = [r for r in all_results if r.grading_status != "UNGRADED"]
 
@@ -204,8 +204,19 @@ async def compute_test_item_stats(test_definition_id: str) -> Dict:
             "p_value": p_value,
             "d_value": d_value,
             "n_responses": len(grades),
+            "mean_score": round(sum(g.points_awarded for g in grades) / len(grades), 4) if grades else None,
+            "points_possible": grades[0].points_possible if grades else None,
             "distractors": distractors,
             "flags": flags,
+            "computed_at": max(
+                (
+                    g.updated_at
+                    or g.created_at
+                    for g in grades
+                    if (g.updated_at or g.created_at) is not None
+                ),
+                default=None,
+            ),
         })
 
     items_stats.sort(key=lambda x: x["learning_object_id"])
@@ -236,7 +247,7 @@ async def compute_item_version_history(learning_object_id: str) -> Dict:
 
     session_ids = list({g.session_id for g in all_grades})
     session_results = await prisma.session_results.find_many(
-        where={"session_id": {"in": session_ids}}
+        where={"session_id": {"in": session_ids}, "is_published": True}
     )
     score_map = {r.session_id: r.percentage for r in session_results}
     test_def_map = {r.session_id: r.test_definition_id for r in session_results}
@@ -273,6 +284,15 @@ async def compute_item_version_history(learning_object_id: str) -> Dict:
             "d_value": d_value,
             "n_responses": len(grades),
             "flags": _build_flags(p_value, d_value),
+            "computed_at": max(
+                (
+                    g.updated_at
+                    or g.created_at
+                    for g in grades
+                    if (g.updated_at or g.created_at) is not None
+                ),
+                default=None,
+            ),
         })
 
     versions.sort(key=lambda x: (x["version_number"] or 0))
@@ -391,9 +411,19 @@ async def compute_test_stats(
         cut_scores = _DEFAULT_CUT_SCORES
 
     all_results = await prisma.session_results.find_many(
-        where={"test_definition_id": test_definition_id}
+        where={"test_definition_id": test_definition_id, "is_published": True}
     )
     graded_results = [r for r in all_results if r.grading_status != "UNGRADED"]
+
+    test_definition = await prisma.test_definitions.find_unique(
+        where={"id": test_definition_id}
+    )
+    scoring_config = _parse_json(test_definition.scoring_config) if test_definition else {}
+    cut_score = scoring_config.get("pass_percentage")
+    try:
+        cut_score = float(cut_score) if cut_score is not None else None
+    except (TypeError, ValueError):
+        cut_score = None
 
     if not graded_results:
         return {
@@ -411,6 +441,9 @@ async def compute_test_stats(
             "cronbach_alpha": None,
             "sem": None,
             "n_items": 0,
+            "cut_score": cut_score,
+            "computed_at": None,
+            "is_stale": False,
             "cut_score_analysis": [],
         }
 
@@ -470,6 +503,18 @@ async def compute_test_stats(
         "cronbach_alpha": alpha,
         "sem": sem,
         "n_items": n_items,
+        "cut_score": cut_score,
+        "computed_at": max(
+            (
+                r.published_at
+                or r.updated_at
+                or r.created_at
+                for r in graded_results
+                if (r.published_at or r.updated_at or r.created_at) is not None
+            ),
+            default=None,
+        ),
+        "is_stale": False,
         "cut_score_analysis": _cut_score_analysis(percentages, cut_scores),
     }
 
@@ -642,3 +687,136 @@ async def export_test_analytics_report(test_definition_id: str) -> str:
         ])
 
     return output.getvalue()
+
+
+async def get_latest_test_analytics_bundle(
+    test_definition_id: str,
+    cut_scores: Optional[List[float]] = None,
+) -> Optional[Dict]:
+    """Return a live analytics bundle based on the latest published graded results."""
+    import asyncio
+
+    test_stats, item_stats = await asyncio.gather(
+        compute_test_stats(test_definition_id, cut_scores=cut_scores),
+        compute_test_item_stats(test_definition_id),
+    )
+    if test_stats["total_sessions"] == 0:
+        return None
+
+    return {
+        "test": test_stats,
+        "items": item_stats["items"],
+        "flagged_items_count": sum(1 for item in item_stats["items"] if item["flags"]),
+    }
+
+
+async def recompute_test_analytics_bundle(
+    test_definition_id: str,
+    cut_scores: Optional[List[float]] = None,
+) -> Dict:
+    """Recompute and return the live analytics bundle."""
+    bundle = await get_latest_test_analytics_bundle(
+        test_definition_id,
+        cut_scores=cut_scores,
+    )
+    if bundle is None:
+        test_stats = await compute_test_stats(test_definition_id, cut_scores=cut_scores)
+        if test_stats["total_sessions"] == 0:
+            raise ValueError("No published analytics data available for this test.")
+    return bundle or {"test": test_stats, "items": [], "flagged_items_count": 0}
+
+
+async def list_flagged_items_for_test(test_definition_id: str) -> List[Dict]:
+    """Return the flagged items list for a test as a flat array."""
+    result = await compute_test_item_stats(test_definition_id)
+    return [item for item in result["items"] if item["flags"]]
+
+
+async def get_cut_score_scenarios(
+    test_definition_id: str,
+    cut_scores: List[float],
+) -> List[Dict]:
+    """Return pass-rate scenarios for the supplied cut scores."""
+    test_stats = await compute_test_stats(test_definition_id, cut_scores=cut_scores)
+    return test_stats["cut_score_analysis"]
+
+
+async def get_item_history_entries(learning_object_id: str) -> Dict:
+    """
+    Return one history entry per item-version / test-definition pairing, sorted oldest to newest.
+    The live branch does not persist analytics snapshots yet, so computed_at is derived from the
+    latest grade timestamp in the group.
+    """
+    all_grades = await prisma.question_grades.find_many(
+        where={"learning_object_id": learning_object_id}
+    )
+    if not all_grades:
+        return {"learning_object_id": learning_object_id, "entries": []}
+
+    session_ids = list({g.session_id for g in all_grades})
+    session_results = await prisma.session_results.find_many(
+        where={"session_id": {"in": session_ids}, "is_published": True}
+    )
+    if not session_results:
+        return {"learning_object_id": learning_object_id, "entries": []}
+
+    score_map = {r.session_id: r.percentage for r in session_results}
+    test_def_map = {r.session_id: r.test_definition_id for r in session_results}
+    published_session_ids = set(score_map.keys())
+    published_grades = [g for g in all_grades if g.session_id in published_session_ids]
+    if not published_grades:
+        return {"learning_object_id": learning_object_id, "entries": []}
+
+    iv_ids = list({g.item_version_id for g in published_grades})
+    item_versions = await prisma.item_versions.find_many(where={"id": {"in": iv_ids}})
+    iv_map = {iv.id: iv for iv in item_versions}
+
+    test_def_ids = list({test_def_map[g.session_id] for g in published_grades if g.session_id in test_def_map})
+    test_defs = await prisma.test_definitions.find_many(where={"id": {"in": test_def_ids}})
+    test_title_map = {td.id: td.title for td in test_defs}
+
+    grouped: Dict[Tuple[str, str], List[Any]] = defaultdict(list)
+    for grade in published_grades:
+        test_definition_id = test_def_map.get(grade.session_id)
+        if test_definition_id:
+            grouped[(grade.item_version_id, test_definition_id)].append(grade)
+
+    entries: List[Dict[str, Any]] = []
+    for (item_version_id, test_definition_id), grades in grouped.items():
+        iv = iv_map.get(item_version_id)
+        objective_grades = [g for g in grades if g.is_correct is not None]
+        p_value = None
+        d_value = None
+        if objective_grades:
+            n_correct = sum(1 for g in objective_grades if g.is_correct)
+            p_value = round(n_correct / len(objective_grades), 4)
+            correct_flags = [bool(g.is_correct) for g in objective_grades]
+            scores = [score_map.get(g.session_id, 0.0) for g in objective_grades]
+            d_value = _point_biserial(correct_flags, scores)
+
+        entries.append({
+            "item_version_id": item_version_id,
+            "version_number": iv.version_number if iv else None,
+            "test_definition_id": test_definition_id,
+            "test_title": test_title_map.get(test_definition_id, "Untitled Test"),
+            "p_value": p_value,
+            "d_value": d_value,
+            "n_responses": len(grades),
+            "computed_at": max(
+                (
+                    g.updated_at
+                    or g.created_at
+                    for g in grades
+                    if (g.updated_at or g.created_at) is not None
+                ),
+                default=None,
+            ),
+            "flags": _build_flags(p_value, d_value),
+        })
+
+    entries.sort(key=lambda entry: (
+        entry["computed_at"].isoformat() if entry["computed_at"] else "",
+        entry["version_number"] or 0,
+        entry["test_title"],
+    ))
+    return {"learning_object_id": learning_object_id, "entries": entries}

@@ -216,3 +216,101 @@ async def test_stage4_endpoints_return_expected_shapes(ac, monkeypatch, analytic
     assert isinstance(flagged_resp.json(), list)
     assert history_resp.json()["entries"][0]["test_title"] == "Epoch 7 Demo"
     assert scenarios_resp.json()[0]["cut_score"] == 55.0
+
+
+# ── PDF export endpoint ────────────────────────────────────────────────────────
+
+@pytest.mark.anyio
+async def test_pdf_export_student_gets_403(ac, analytics_ids):
+    """Students must not be able to download analytics PDFs."""
+    app.dependency_overrides[get_current_user] = _auth_override(
+        SimpleNamespace(id=analytics_ids["owner_id"], role=UserRole.STUDENT.value)
+    )
+    resp = await ac.get(f"/api/analytics/tests/{analytics_ids['test_id']}/export.pdf")
+    assert resp.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_pdf_export_ownership_gate(ac, monkeypatch, analytics_ids):
+    """A constructor who doesn't own the test must receive 403."""
+    async def deny_access(*args, **kwargs):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="You do not have access to this test's analytics.")
+
+    monkeypatch.setattr(analytics_endpoints, "_require_test_access", deny_access)
+    app.dependency_overrides[get_current_user] = _auth_override(
+        SimpleNamespace(id=analytics_ids["other_id"], role=UserRole.CONSTRUCTOR.value)
+    )
+    resp = await ac.get(f"/api/analytics/tests/{analytics_ids['test_id']}/export.pdf")
+    assert resp.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_pdf_export_returns_pdf_bytes(ac, monkeypatch, analytics_ids):
+    """Happy path: CONSTRUCTOR receives a non-empty PDF response."""
+    async def fake_render_pdf(test_definition_id: str) -> bytes:
+        # Minimal valid PDF stub
+        return b"%PDF-1.4 stub content for testing"
+
+    monkeypatch.setattr(analytics_endpoints, "_require_test_access", _allow_access)
+    app.dependency_overrides[get_current_user] = _auth_override(
+        SimpleNamespace(id=analytics_ids["owner_id"], role=UserRole.CONSTRUCTOR.value)
+    )
+
+    import app.api.endpoints.analytics as _mod
+    import app.services.analytics_pdf_service as _pdf_svc
+    monkeypatch.setattr(_pdf_svc, "render_pdf", fake_render_pdf)
+
+    resp = await ac.get(f"/api/analytics/tests/{analytics_ids['test_id']}/export.pdf")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "application/pdf"
+    assert "attachment" in resp.headers.get("content-disposition", "")
+    assert len(resp.content) > 0
+
+
+@pytest.mark.anyio
+async def test_item_stats_endpoint_student_403(ac, analytics_ids):
+    app.dependency_overrides[get_current_user] = _auth_override(
+        SimpleNamespace(id=analytics_ids["owner_id"], role=UserRole.STUDENT.value)
+    )
+    resp = await ac.get(f"/api/analytics/tests/{analytics_ids['test_id']}/item-stats")
+    assert resp.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_test_stats_endpoint_student_403(ac, analytics_ids):
+    app.dependency_overrides[get_current_user] = _auth_override(
+        SimpleNamespace(id=analytics_ids["owner_id"], role=UserRole.STUDENT.value)
+    )
+    resp = await ac.get(f"/api/analytics/tests/{analytics_ids['test_id']}/stats")
+    assert resp.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_csv_report_endpoint_student_403(ac, analytics_ids):
+    app.dependency_overrides[get_current_user] = _auth_override(
+        SimpleNamespace(id=analytics_ids["owner_id"], role=UserRole.STUDENT.value)
+    )
+    resp = await ac.get(f"/api/analytics/tests/{analytics_ids['test_id']}/report")
+    assert resp.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_csv_report_returns_csv_content_type(ac, monkeypatch, analytics_ids):
+    """CSV export endpoint should return text/csv with expected headers."""
+    async def fake_csv(*args, **kwargs):
+        return "# Test Analytics Report\nSection,Metric,Value\n"
+
+    monkeypatch.setattr(analytics_endpoints, "_require_test_access", _allow_access)
+    monkeypatch.setattr(
+        analytics_endpoints.psychometrics_service,
+        "export_test_analytics_report",
+        fake_csv,
+    )
+    app.dependency_overrides[get_current_user] = _auth_override(
+        SimpleNamespace(id=analytics_ids["owner_id"], role=UserRole.CONSTRUCTOR.value)
+    )
+    resp = await ac.get(f"/api/analytics/tests/{analytics_ids['test_id']}/report")
+    assert resp.status_code == 200
+    assert "text/csv" in resp.headers["content-type"]
+    assert "attachment" in resp.headers.get("content-disposition", "")

@@ -71,6 +71,17 @@ export default function TestAnalyticsDashboardPage() {
         items.find((item) => item.id === learningObjectId)?.latest_content_preview
         ?? `Item ${learningObjectId.slice(0, 8)}`;
 
+    const handleDownloadPdf = async () => {
+        const { api: apiInstance } = await import('@/lib/api');
+        const res = await apiInstance.get(`analytics/tests/${testId}/export.pdf`, { responseType: 'blob' });
+        const url = URL.createObjectURL(new Blob([res.data as BlobPart], { type: 'application/pdf' }));
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `analytics_${testId}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
             <div className="min-h-screen bg-gray-950 text-gray-100">
@@ -93,12 +104,21 @@ export default function TestAnalyticsDashboardPage() {
                                         : 'Loading analytics snapshot...'}
                                 </p>
                             </div>
-                            <button
-                                onClick={() => void recompute(testId)}
-                                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
-                            >
-                                Recompute
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => { void handleDownloadPdf(); }}
+                                    disabled={!bundle}
+                                    className="rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-200 hover:bg-gray-700 disabled:opacity-40"
+                                >
+                                    ↓ Download PDF
+                                </button>
+                                <button
+                                    onClick={() => void recompute(testId)}
+                                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
+                                >
+                                    Recompute
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

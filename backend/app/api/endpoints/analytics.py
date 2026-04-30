@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 
 from app.core.prisma_db import prisma
 from app.core.dependencies import get_current_user
@@ -311,5 +311,32 @@ async def export_test_analytics_report(
         media_type="text/csv",
         headers={
             "Content-Disposition": f"attachment; filename=analytics_{test_definition_id}.csv"
+        },
+    )
+
+
+@router.get(
+    "/tests/{test_definition_id}/export.pdf",
+    summary="Download analytics report as PDF",
+)
+async def export_pdf_report(
+    test_definition_id: UUID,
+    current_user=Depends(_require_analytics_user),
+) -> Response:
+    """
+    Generate and download a one-page PDF analytics report for a test.
+
+    Includes summary statistics, score distribution histogram, and flagged items.
+    Suitable for exam-board submission. Requires CONSTRUCTOR or ADMIN role.
+    """
+    await _require_test_access(str(test_definition_id), current_user)
+    from app.services.analytics_pdf_service import render_pdf
+
+    pdf_bytes = await render_pdf(str(test_definition_id))
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="analytics_{test_definition_id}.pdf"'
         },
     )

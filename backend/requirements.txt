@@ -5,7 +5,7 @@ anyio==4.12.1
 bcrypt==4.0.1
 certifi==2026.2.25
 cffi==2.0.0
-click>=8.1.7
+click==8.3.1
 cryptography==46.0.5
 dnspython==2.8.0
 ecdsa==0.19.1
@@ -56,3 +56,5 @@ uvloop==0.22.1
 watchfiles==1.1.1
 websockets==16.0
 prisma==0.15.0
+reportlab>=4.0
+matplotlib>=3.8

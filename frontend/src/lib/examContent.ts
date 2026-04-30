@@ -240,21 +240,15 @@ function getRawChoices(options: unknown): unknown[] {
 }
 
 export function getExamChoiceContent(options: unknown): ExamChoiceContent[] {
-    return getRawChoices(options)
-        .map((choice) => {
-            const id = choice && typeof choice === 'object' && typeof (choice as { id?: unknown }).id === 'string'
-                ? (choice as { id: string }).id
-                : undefined;
-            const html = toExamContentHtml(choice);
-            const text = toExamContentText(choice);
-            if (!html.trim() && !text.trim()) {
-                return null;
-            }
-            return {
-                id,
-                html: html.trim() || escapeHtml(text),
-                text: text.trim() || htmlToText(html),
-            };
-        })
-        .filter((choice): choice is ExamChoiceContent => Boolean(choice));
+    const results: ExamChoiceContent[] = [];
+    for (const choice of getRawChoices(options)) {
+        const id = choice && typeof choice === 'object' && typeof (choice as { id?: unknown }).id === 'string'
+            ? (choice as { id: string }).id
+            : undefined;
+        const html = toExamContentHtml(choice);
+        const text = toExamContentText(choice);
+        if (!html.trim() && !text.trim()) continue;
+        results.push({ id, html: html.trim() || escapeHtml(text), text: text.trim() || htmlToText(html) });
+    }
+    return results;
 }

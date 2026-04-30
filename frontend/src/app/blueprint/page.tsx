@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { DEFAULT_SCORING_CONFIG, useBlueprintStore, SelectionRule, TestDefinition } from '@/stores/useBlueprintStore';
 import { useExamStore } from '@/stores/useExamStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -11,6 +11,14 @@ import BlueprintSaveIndicator from '@/components/blueprint/BlueprintSaveIndicato
 type BlueprintDraft = Partial<TestDefinition>;
 
 export default function BlueprintPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-gray-950" />}>
+            <BlueprintPageInner />
+        </Suspense>
+    );
+}
+
+function BlueprintPageInner() {
     const {
         blueprints,
         currentBlueprint,

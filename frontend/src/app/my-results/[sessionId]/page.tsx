@@ -165,7 +165,7 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
                 </div>
             </div>
 
-            {detail.question_content && (
+            {detail.question_content != null && (
                 <div
                     className="prose max-w-none rounded-2xl border border-[#e8dcc7] bg-[#fffaf4] px-4 py-3 text-slate-700"
                     dangerouslySetInnerHTML={{ __html: sanitizeHtml(toExamContentHtml(detail.question_content)) }}

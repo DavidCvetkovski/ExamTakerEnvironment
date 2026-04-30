@@ -1,7 +1,7 @@
 'use client';
 
 import type { AxiosError } from 'axios';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getHomePathForRole, useAuthStore } from '../../stores/useAuthStore';
 
@@ -13,6 +13,14 @@ function getSafeRedirectPath(redirect: string | null): string | null {
 }
 
 export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-[#1A1A1A]" />}>
+            <LoginPageInner />
+        </Suspense>
+    );
+}
+
+function LoginPageInner() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { login, isAuthenticated, isLoading, initialize, user } = useAuthStore();

@@ -1,27 +1,209 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-shell-bg: #1a1a1a;
+  --color-shell-surface: #242424;
+  --color-shell-surface-deep: #111827;
+  --color-shell-input: #0b1220;
+  --color-shell-input-alt: #08111d;
+  --color-shell-border: #333333;
+  --color-shell-border-deep: #223149;
+  --color-shell-muted: #a1a1aa;
+  --color-shell-muted-dim: #555555;
+  --color-shell-panel-a: #0d1321;
+  --color-shell-panel-b: #08101b;
+  --color-shell-panel-c: #0c1628;
+  --color-shell-panel-d: #050b13;
+  --color-shell-panel-e: #040914;
+
+  --color-student-bg: #fffaf0;
+  --color-student-bg-alt: #fffaf4;
+  --color-student-surface: #fffdf9;
+  --color-student-wash: #f8f3ea;
+  --color-student-border: #e8dcc7;
+  --color-student-border-alt: #d8c7aa;
+  --color-student-accent: #8a6c3e;
+  --color-student-primary: #1055cc;
+  --color-student-primary-dark: #0d47ae;
+  --color-student-hover-wash: #e9f0ff;
+  --color-student-hover-light: #eef4ff;
+  --color-student-disabled-bg: #c7d6f5;
+  --color-student-disabled-text: #5e77aa;
+  --color-student-success-bg: #dff2e5;
+  --color-student-success-text: #156341;
+  --color-student-neutral-badge: #eef0f7;
+  --color-student-logout: #b2471f;
+  --color-student-logout-dark: #8f3411;
+  --color-student-logout-wash: #fff0e6;
+
+  --color-editor-bg: #1a1a2e;
+  --color-editor-toolbar: #16213e;
+  --color-editor-border: #333333;
+  --color-editor-btn-border: #444444;
+  --color-editor-btn-hover: #2a2a4a;
+  --color-editor-accent: #667eea;
+  --color-editor-text: #e0e0e0;
+  --color-editor-correct: #4ade80;
+  --color-editor-placeholder: #555555;
+  --color-editor-remove: #f87171;
+  --color-editor-essay-surface: #1a1a1a;
+  --color-editor-essay-input: #242424;
+  --color-editor-focus: #3b82f6;
+
+  --color-background: var(--color-shell-bg);
+  --color-foreground: #ffffff;
+}
+
+[data-theme="warm"] {
+  --color-shell-bg: #fffaf0;
+  --color-shell-surface: #fffdf9;
+  --color-shell-surface-deep: #fffdf9;
+  --color-shell-input: #fffaf4;
+  --color-shell-input-alt: #f8f3ea;
+  --color-shell-border: #e8dcc7;
+  --color-shell-border-deep: #d8c7aa;
+  --color-shell-muted: #8a6c3e;
+  --color-shell-muted-dim: #5e77aa;
+  --color-shell-panel-a: #fffdf9;
+  --color-shell-panel-b: #fffaf4;
+  --color-shell-panel-c: #f8f3ea;
+  --color-shell-panel-d: #fffaf0;
+  --color-shell-panel-e: #fffdf9;
+
+  --color-student-bg: #fffaf0;
+  --color-student-bg-alt: #fffaf4;
+  --color-student-surface: #fffdf9;
+  --color-student-wash: #f8f3ea;
+  --color-student-border: #e8dcc7;
+  --color-student-border-alt: #d8c7aa;
+  --color-student-accent: #8a6c3e;
+  --color-student-primary: #1055cc;
+  --color-student-primary-dark: #0d47ae;
+  --color-student-hover-wash: #e9f0ff;
+  --color-student-hover-light: #eef4ff;
+  --color-student-disabled-bg: #c7d6f5;
+  --color-student-disabled-text: #5e77aa;
+  --color-student-success-bg: #dff2e5;
+  --color-student-success-text: #156341;
+  --color-student-neutral-badge: #eef0f7;
+  --color-student-logout: #b2471f;
+  --color-student-logout-dark: #8f3411;
+  --color-student-logout-wash: #fff0e6;
+
+  --color-background: var(--color-student-bg);
+  --color-foreground: #1f2937;
+}
+
+[data-theme="light-blue"] {
+  --color-shell-bg: #f4f8ff;
+  --color-shell-surface: #ffffff;
+  --color-shell-surface-deep: #eef5ff;
+  --color-shell-input: #f8fbff;
+  --color-shell-input-alt: #edf6ff;
+  --color-shell-border: #c7d9f2;
+  --color-shell-border-deep: #9fbce4;
+  --color-shell-muted: #52657f;
+  --color-shell-muted-dim: #7c8da3;
+  --color-shell-panel-a: #eef5ff;
+  --color-shell-panel-b: #e6f1ff;
+  --color-shell-panel-c: #f0f7ff;
+  --color-shell-panel-d: #dcecff;
+  --color-shell-panel-e: #f8fbff;
+
+  --color-student-bg: #f4f8ff;
+  --color-student-bg-alt: #edf6ff;
+  --color-student-surface: #ffffff;
+  --color-student-wash: #e8f2ff;
+  --color-student-border: #c7d9f2;
+  --color-student-border-alt: #9fbce4;
+  --color-student-accent: #396386;
+  --color-student-primary: #1769d2;
+  --color-student-primary-dark: #0f56ad;
+  --color-student-hover-wash: #dcecff;
+  --color-student-hover-light: #eaf3ff;
+  --color-student-disabled-bg: #c8d7eb;
+  --color-student-disabled-text: #617895;
+  --color-student-success-bg: #daf3ea;
+  --color-student-success-text: #136247;
+  --color-student-neutral-badge: #e6edf7;
+  --color-student-logout: #a33f2a;
+  --color-student-logout-dark: #84311f;
+  --color-student-logout-wash: #fff0ea;
+
+  --color-editor-bg: #eaf3ff;
+  --color-editor-toolbar: #dcecff;
+  --color-editor-border: #b8cde8;
+  --color-editor-btn-border: #9fbce4;
+  --color-editor-btn-hover: #d4e7ff;
+  --color-editor-accent: #1769d2;
+  --color-editor-text: #10233f;
+  --color-editor-correct: #16a36a;
+  --color-editor-placeholder: #7c8da3;
+  --color-editor-remove: #dc4c4c;
+  --color-editor-essay-surface: #ffffff;
+  --color-editor-essay-input: #f4f8ff;
+  --color-editor-focus: #1769d2;
+
+  --color-background: var(--color-shell-bg);
+  --color-foreground: #10233f;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--color-background);
+  --color-foreground: var(--color-foreground);
+  --color-shell-bg: var(--color-shell-bg);
+  --color-shell-surface: var(--color-shell-surface);
+  --color-shell-surface-deep: var(--color-shell-surface-deep);
+  --color-shell-input: var(--color-shell-input);
+  --color-shell-input-alt: var(--color-shell-input-alt);
+  --color-shell-border: var(--color-shell-border);
+  --color-shell-border-deep: var(--color-shell-border-deep);
+  --color-shell-muted: var(--color-shell-muted);
+  --color-shell-muted-dim: var(--color-shell-muted-dim);
+  --color-shell-panel-a: var(--color-shell-panel-a);
+  --color-shell-panel-b: var(--color-shell-panel-b);
+  --color-shell-panel-c: var(--color-shell-panel-c);
+  --color-shell-panel-d: var(--color-shell-panel-d);
+  --color-shell-panel-e: var(--color-shell-panel-e);
+  --color-student-bg: var(--color-student-bg);
+  --color-student-bg-alt: var(--color-student-bg-alt);
+  --color-student-surface: var(--color-student-surface);
+  --color-student-wash: var(--color-student-wash);
+  --color-student-border: var(--color-student-border);
+  --color-student-border-alt: var(--color-student-border-alt);
+  --color-student-accent: var(--color-student-accent);
+  --color-student-primary: var(--color-student-primary);
+  --color-student-primary-dark: var(--color-student-primary-dark);
+  --color-student-hover-wash: var(--color-student-hover-wash);
+  --color-student-hover-light: var(--color-student-hover-light);
+  --color-student-disabled-bg: var(--color-student-disabled-bg);
+  --color-student-disabled-text: var(--color-student-disabled-text);
+  --color-student-success-bg: var(--color-student-success-bg);
+  --color-student-success-text: var(--color-student-success-text);
+  --color-student-neutral-badge: var(--color-student-neutral-badge);
+  --color-student-logout: var(--color-student-logout);
+  --color-student-logout-dark: var(--color-student-logout-dark);
+  --color-student-logout-wash: var(--color-student-logout-wash);
+  --color-editor-bg: var(--color-editor-bg);
+  --color-editor-toolbar: var(--color-editor-toolbar);
+  --color-editor-border: var(--color-editor-border);
+  --color-editor-btn-border: var(--color-editor-btn-border);
+  --color-editor-btn-hover: var(--color-editor-btn-hover);
+  --color-editor-accent: var(--color-editor-accent);
+  --color-editor-text: var(--color-editor-text);
+  --color-editor-correct: var(--color-editor-correct);
+  --color-editor-placeholder: var(--color-editor-placeholder);
+  --color-editor-remove: var(--color-editor-remove);
+  --color-editor-essay-surface: var(--color-editor-essay-surface);
+  --color-editor-essay-input: var(--color-editor-essay-input);
+  --color-editor-focus: var(--color-editor-focus);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-background);
+  color: var(--color-foreground);
   font-family: var(--font-geist-sans), sans-serif;
 }
 

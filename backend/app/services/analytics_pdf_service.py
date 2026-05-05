@@ -30,6 +30,8 @@ from reportlab.platypus import (
     TableStyle,
 )
 
+from app.services.analytics_formatters import fmt as _fmt
+
 # ── Colour palette (dark-accent style matching the UI) ────────────────────────
 _DARK_BG = colors.HexColor("#111827")
 _HEADER_BG = colors.HexColor("#1e3a5f")
@@ -38,13 +40,6 @@ _ROW_ALT = colors.HexColor("#f0f4ff")
 _FLAG_BG = colors.HexColor("#fef2f2")
 _TEXT = colors.HexColor("#1f2937")
 _MUTED = colors.HexColor("#6b7280")
-
-
-def _fmt(val: Optional[float], digits: int = 2) -> str:
-    """Format a nullable float, returning '—' when None."""
-    if val is None:
-        return "—"
-    return f"{val:.{digits}f}"
 
 
 def _build_histogram_image(distribution: List[Dict[str, Any]], width_cm: float = 14) -> RLImage:

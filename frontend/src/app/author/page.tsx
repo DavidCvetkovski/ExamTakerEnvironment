@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import TipTapEditor from '@/components/editor/TipTapEditor';
 import MCQOptionsPanel from '@/components/editor/MCQOptionsPanel';
@@ -9,6 +9,14 @@ import { useAuthoringStore } from '@/stores/useAuthoringStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 export default function AuthorPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-[#1A1A1A]" />}>
+            <AuthorPageInner />
+        </Suspense>
+    );
+}
+
+function AuthorPageInner() {
     const searchParams = useSearchParams();
     const loIdParam = searchParams.get('lo_id');
     const fetchedRef = useRef<string | null>(null);

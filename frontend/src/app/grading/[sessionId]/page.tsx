@@ -342,7 +342,7 @@ export default function SessionGradingPage() {
                                     </p>
                                 </div>
                             </div>
-                            {grade.question_content && (
+                            {grade.question_content != null && (
                                 <div
                                     className="prose prose-invert max-w-none rounded-lg border border-gray-800 bg-gray-950/60 px-4 py-3 text-base leading-relaxed"
                                     dangerouslySetInnerHTML={{ __html: sanitizeHtml(toExamContentHtml(grade.question_content)) }}

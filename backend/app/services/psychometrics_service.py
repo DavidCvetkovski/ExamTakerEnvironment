@@ -7,6 +7,7 @@ Stage 2: Score distribution, Cronbach's Alpha / KR-20, SEM, pass rate, cut-score
 Pure statistical functions live in ctt_metrics.py (CTT) and reliability.py.
 This module contains only the DB-backed orchestration layer.
 """
+import math
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 

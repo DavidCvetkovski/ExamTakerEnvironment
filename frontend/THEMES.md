@@ -13,10 +13,17 @@ OpenVision routes visual decisions through tokens in [frontend/src/app/globals.c
 
 ## Theme Resolution
 
-1. Stage 8 behavior: authenticated `STUDENT` users get `data-theme="warm"`.
-2. Authenticated non-student users fall back to the default dark shell.
-3. Logged-out users fall back to the default dark shell.
-4. Stage 9 will let a stored user preference override the role default.
+1. A stored user `theme_preference` wins when present.
+2. Otherwise authenticated `STUDENT` users get `data-theme="warm"`.
+3. Otherwise authenticated non-student users fall back to the default dark shell.
+4. Logged-out users fall back to the default dark shell.
+
+## Toggle
+
+- The header-mounted theme toggle lets any authenticated user choose `Dark`, `Warm`, or `Light Blue`.
+- The selection is stored immediately in local storage under `theme` to reduce reload flash.
+- The selection is also persisted on the user record through `PATCH /api/users/me/preferences/theme`.
+- Logging out removes the active document theme. Logging back in restores the saved user preference.
 
 ## Adding A Theme
 

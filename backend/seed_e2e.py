@@ -1,5 +1,7 @@
+import hashlib
 import os
 from datetime import datetime, timedelta, timezone
+from random import Random
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -602,6 +604,290 @@ def create_submitted_attempt(
     return exam_session
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Analytics-grade bulk seeding
+#
+# These helpers create enough graded sessions across enough students that the
+# psychometric analytics dashboards (P-value, D-value, distractor analysis,
+# Cronbach's Alpha, score distribution, cut-score scenarios) actually render
+# meaningful charts. Without the bulk wave the dashboard shows ~6 sessions
+# total per test, which is below the threshold for stable statistics and looks
+# empty in the UI.
+# ─────────────────────────────────────────────────────────────────────────────
+
+ANALYTICS_STUDENT_PROFILES = [
+    # (first_name, email, ability) — ability biases the per-item correctness
+    # probability so high-ability students consistently outperform low-ability
+    # ones. This produces realistic point-biserial discrimination scores.
+    ("Aria",   "aria.student@vu.nl",   0.25),
+    ("Bram",   "bram.student@vu.nl",   0.22),
+    ("Cleo",   "cleo.student@vu.nl",   0.20),
+    ("Daan",   "daan.student@vu.nl",   0.18),
+    ("Eli",    "eli.student@vu.nl",    0.15),
+    ("Faye",   "faye.student@vu.nl",   0.12),
+    ("Guus",   "guus.student@vu.nl",   0.10),
+    ("Hana",   "hana.student@vu.nl",   0.08),
+    ("Iris",   "iris.student@vu.nl",   0.05),
+    ("Jakob",  "jakob.student@vu.nl",  0.03),
+    ("Kira",   "kira.student@vu.nl",   0.00),
+    ("Lin",    "lin.student@vu.nl",    0.00),
+    ("Mira",   "mira.student@vu.nl",  -0.02),
+    ("Niels",  "niels.student@vu.nl", -0.05),
+    ("Otto",   "otto.student@vu.nl",  -0.08),
+    ("Pia",    "pia.student@vu.nl",   -0.10),
+    ("Quinn",  "quinn.student@vu.nl", -0.13),
+    ("Rosa",   "rosa.student@vu.nl",  -0.15),
+    ("Sami",   "sami.student@vu.nl",  -0.18),
+    ("Tess",   "tess.student@vu.nl",  -0.20),
+    ("Uri",    "uri.student@vu.nl",   -0.22),
+    ("Vera",   "vera.student@vu.nl",  -0.25),
+    ("Wout",   "wout.student@vu.nl",  -0.27),
+    ("Xinran", "xinran.student@vu.nl", -0.29),
+    ("Yara",   "yara.student@vu.nl",  -0.30),
+]
+
+
+# Target P-values per item drive the underlying correctness probability before
+# the student-ability bias is applied. Choosing extreme values intentionally
+# triggers TOO_EASY / TOO_HARD / POOR_DISCRIMINATION flags so the dashboard's
+# "Flagged Items" section is populated.
+ITEM_TARGET_P = {
+    "math_break_even":              0.95,   # TOO_EASY
+    "math_tangent_slope":           0.55,
+    "math_probability":             0.65,
+    "science_enzyme":               0.50,
+    "science_normal_force":         0.18,   # TOO_HARD
+    "science_ph":                   0.88,
+    "humanities_printing_press":    0.75,
+    "humanities_checks_balances":   0.42,
+    "humanities_fairness_essay":    None,   # essay; graded manually
+    "computing_sql_where":          0.78,
+    "computing_bandwidth":          0.68,
+    "computing_rollback":           0.12,   # TOO_HARD
+}
+
+# Items where ability has minimal effect on correctness — these should look
+# weakly discriminating in the analytics UI and trip POOR_DISCRIMINATION.
+LOW_DISCRIMINATION_ITEMS = {"humanities_printing_press", "math_break_even"}
+
+
+def _stable_random(*parts: str) -> Random:
+    """Deterministic per-(student, item, wave) RNG so re-runs are reproducible."""
+    digest = hashlib.md5("::".join(parts).encode()).hexdigest()
+    return Random(int(digest, 16))
+
+
+def _select_choice_id(choices: list, target_correct: bool, rng: Random) -> str:
+    """Pick a correct or incorrect option id, biasing wrong picks toward
+    plausible distractors so distractor-analysis bars are non-uniform."""
+    correct_ids = [c["id"] for c in choices if c.get("is_correct")]
+    incorrect_ids = [c["id"] for c in choices if not c.get("is_correct")]
+    if target_correct and correct_ids:
+        return rng.choice(correct_ids)
+    if not incorrect_ids:
+        return correct_ids[0] if correct_ids else choices[0]["id"]
+    # Weight first listed distractor a bit higher so the bar chart isn't flat.
+    weights = [3] + [1] * (len(incorrect_ids) - 1)
+    return rng.choices(incorrect_ids, weights=weights, k=1)[0]
+
+
+def _select_multi_response(choices: list, target_correct: bool, rng: Random) -> list[str]:
+    correct_ids = [c["id"] for c in choices if c.get("is_correct")]
+    incorrect_ids = [c["id"] for c in choices if not c.get("is_correct")]
+    if target_correct:
+        return correct_ids
+    # Fail in different ways: drop one correct, add one wrong, or pick all.
+    mode = rng.randint(0, 2)
+    if mode == 0 and len(correct_ids) > 1:
+        dropped = rng.choice(correct_ids)
+        return [cid for cid in correct_ids if cid != dropped]
+    if mode == 1 and incorrect_ids:
+        return correct_ids + [rng.choice(incorrect_ids)]
+    return correct_ids[:1] if correct_ids else [choices[0]["id"]]
+
+
+def _essay_response(ability: float, rng: Random) -> dict:
+    """Generate a reasonable essay grade biased by student ability (max 6 pts)."""
+    base = 3.5 + ability * 6  # ability ∈ [-0.30, 0.25] → roughly 1.7–5.0
+    jitter = rng.uniform(-1.0, 1.0)
+    points = max(0.0, min(6.0, round(base + jitter)))
+    if points >= 5:
+        feedback = "Strong fairness analysis with a concrete safeguard."
+    elif points >= 3:
+        feedback = "Reasonable risk identified; safeguard could be sharper."
+    else:
+        feedback = "Limited engagement with the prompt — revisit risk and mitigation."
+    return {
+        "text": (
+            "Risk: training data may under-represent multilingual students, "
+            "leading the model to over-flag them as at risk. "
+            "Safeguard: subgroup audits with human review before any flag is shown."
+        ),
+        "points_awarded": points,
+        "feedback": feedback,
+    }
+
+
+def create_bulk_attempt(
+    db,
+    *,
+    blueprint: TestDefinition,
+    student: User,
+    grader: User,
+    publisher: User,
+    item_versions_for_attempt: dict[str, ItemVersion],
+    item_slugs: list[str],
+    ability: float,
+    started_at: datetime,
+    submitted_at: datetime,
+    published: bool,
+    wave: str = "v1",
+) -> ExamSession:
+    """Create a graded exam session whose answers are derived from the student's
+    ability profile and per-item target P-values. Used to bulk-populate the
+    analytics dashboard with realistic dummy data."""
+    snapshots = [build_item_snapshot(item_versions_for_attempt[slug]) for slug in item_slugs]
+
+    exam_session = ExamSession(
+        test_definition_id=blueprint.id,
+        student_id=student.id,
+        scheduled_session_id=None,
+        items=snapshots,
+        status=SessionStatus.SUBMITTED,
+        session_mode=ExamSessionMode.ASSIGNED,
+        started_at=started_at,
+        submitted_at=submitted_at,
+        expires_at=submitted_at + timedelta(minutes=2),
+    )
+    db.add(exam_session)
+    db.flush()
+
+    grade_rows: list[QuestionGrade] = []
+    total_points = 0.0
+    max_points = 0.0
+    has_manual_grade = False
+
+    for position, slug in enumerate(item_slugs):
+        snapshot = snapshots[position]
+        item_version = item_versions_for_attempt[slug]
+        rng = _stable_random(student.email, slug, wave, str(blueprint.id))
+        row_created_at = submitted_at + timedelta(seconds=position)
+        question_type = snapshot["question_type"]
+        options = snapshot["options"]
+        target_p = ITEM_TARGET_P.get(slug)
+
+        if question_type == QuestionType.ESSAY.value:
+            essay = _essay_response(ability, rng)
+            points_possible = float((item_version.metadata_tags or {}).get("points", 6))
+            points_awarded = float(essay["points_awarded"])
+            has_manual_grade = True
+            grade_rows.append(
+                QuestionGrade(
+                    session_id=exam_session.id,
+                    learning_object_id=item_version.learning_object_id,
+                    item_version_id=item_version.id,
+                    points_awarded=points_awarded,
+                    points_possible=points_possible,
+                    is_correct=points_awarded >= points_possible,
+                    graded_by=grader.id,
+                    is_auto_graded=False,
+                    feedback=essay["feedback"],
+                    student_answer={"text": essay["text"]},
+                    correct_answer=None,
+                    created_at=row_created_at,
+                    updated_at=row_created_at,
+                )
+            )
+        else:
+            # Apply ability bias unless this item is intentionally weakly
+            # discriminating (then ability barely matters).
+            if slug in LOW_DISCRIMINATION_ITEMS:
+                threshold = target_p if target_p is not None else 0.5
+            else:
+                threshold = max(0.02, min(0.98, (target_p or 0.5) + ability))
+            target_correct = rng.random() < threshold
+            choices = get_option_choices(options)
+
+            if question_type == QuestionType.MULTIPLE_RESPONSE.value:
+                selected_ids = _select_multi_response(choices, target_correct, rng)
+                student_answer = build_multiple_response_answer(options, selected_ids)
+                correct_indices = get_correct_indices(options)
+                is_correct = set(student_answer["selected_option_indices"]) == set(correct_indices)
+            else:
+                selected_id = _select_choice_id(choices, target_correct, rng)
+                student_answer = build_mcq_answer(options, selected_id)
+                correct_indices = get_correct_indices(options)
+                is_correct = student_answer["selected_option_index"] in correct_indices
+
+            grade_rows.append(
+                QuestionGrade(
+                    session_id=exam_session.id,
+                    learning_object_id=item_version.learning_object_id,
+                    item_version_id=item_version.id,
+                    points_awarded=1.0 if is_correct else 0.0,
+                    points_possible=1.0,
+                    is_correct=is_correct,
+                    is_auto_graded=True,
+                    student_answer=student_answer,
+                    correct_answer={"correct_indices": correct_indices},
+                    created_at=row_created_at,
+                )
+            )
+
+        total_points += grade_rows[-1].points_awarded
+        max_points += grade_rows[-1].points_possible
+
+    db.add_all(grade_rows)
+
+    percentage, letter_grade, passed = format_grade_result(total_points, max_points)
+    published_at = submitted_at + timedelta(hours=2) if published else None
+    grading_status = GradingStatus.FULLY_GRADED if has_manual_grade else GradingStatus.AUTO_GRADED
+
+    db.add(
+        SessionResult(
+            session_id=exam_session.id,
+            test_definition_id=blueprint.id,
+            student_id=student.id,
+            total_points=round(total_points, 2),
+            max_points=round(max_points, 2),
+            percentage=percentage,
+            grading_status=grading_status,
+            questions_graded=len(grade_rows),
+            questions_total=len(grade_rows),
+            letter_grade=letter_grade,
+            passed=passed,
+            is_published=published,
+            published_at=published_at,
+            published_by=publisher.id if published else None,
+            created_at=submitted_at,
+            updated_at=published_at if published else submitted_at,
+        )
+    )
+
+    return exam_session
+
+
+# Per-blueprint configuration: which item slugs the bulk wave uses and how
+# many staggered attempts to create per blueprint. Mirrors the curated
+# blueprint specs further down in seed() but lets the analytics wave run
+# independently of the demo attempts.
+BULK_BLUEPRINT_ITEMS = {
+    "Shuffle Lab: Numbers in Motion": [
+        "math_break_even", "math_tangent_slope", "math_probability",
+    ],
+    "Science Check: Forces and Reactions": [
+        "science_enzyme", "science_normal_force", "science_ph",
+    ],
+    "Mixed Mode: Policy, Data and Writing": [
+        "humanities_checks_balances", "computing_sql_where", "humanities_fairness_essay",
+    ],
+    "Smart Draw: Cross Subject Sampler": [
+        "math_probability", "science_enzyme",
+        "humanities_printing_press", "computing_bandwidth",
+    ],
+}
+
+
 def seed():
     db = SessionLocal()
 
@@ -664,6 +950,16 @@ def seed():
             password="studentpass123",
             role=UserRole.STUDENT,
         )
+
+        analytics_students: list[tuple[User, float]] = []
+        for first_name, email, ability in ANALYTICS_STUDENT_PROFILES:
+            analytics_user = ensure_user(
+                db,
+                email=email,
+                password="studentpass123",
+                role=UserRole.STUDENT,
+            )
+            analytics_students.append((analytics_user, ability))
         db.commit()
 
         bank = ItemBank(name="OpenVision Demo Bank", created_by=constructor.id)
@@ -789,7 +1085,7 @@ def seed():
         ]
 
         courses = {}
-        enrolled_students = [student, alex, maya, noor, liam]
+        enrolled_students = [student, alex, maya, noor, liam] + [u for u, _ in analytics_students]
         for code, title in course_specs:
             course = Course(
                 code=code,
@@ -943,11 +1239,171 @@ def seed():
             published=True,
         )
 
+        # ── Analytics wave 1: bulk graded attempts on the v1 item versions ──
+        # Spreads attempts across the past 6 weeks so the score distribution,
+        # Cronbach's Alpha and pass-rate metrics on the analytics dashboard
+        # have enough data to be statistically meaningful.
+        wave1_blueprint_titles = list(BULK_BLUEPRINT_ITEMS.keys())
+        wave1_attempts = 0
+        for blueprint_index, title in enumerate(wave1_blueprint_titles):
+            blueprint = blueprints[title]
+            slugs = BULK_BLUEPRINT_ITEMS[title]
+            for student_index, (analytics_student, ability) in enumerate(analytics_students):
+                # Stagger submissions: blueprint i opens (42 - i*3) days back,
+                # students arrive ~6 hours apart inside that window.
+                base_offset_days = 42 - blueprint_index * 4
+                started_at = (
+                    now
+                    - timedelta(days=base_offset_days)
+                    + timedelta(hours=student_index * 6, minutes=blueprint_index * 7)
+                )
+                submitted_at = started_at + timedelta(minutes=4 + (student_index % 5))
+                create_bulk_attempt(
+                    db,
+                    blueprint=blueprint,
+                    student=analytics_student,
+                    grader=constructor,
+                    publisher=admin,
+                    item_versions_for_attempt=item_versions,
+                    item_slugs=slugs,
+                    ability=ability,
+                    started_at=started_at,
+                    submitted_at=submitted_at,
+                    published=True,
+                    wave="v1",
+                )
+                wave1_attempts += 1
+        db.commit()
+
+        # ── v2 item versions: revise three flagged items so the "Item History"
+        # and "Version Trend" analytics views actually show movement.
+        # The revisions are intended to bring the items inside healthy P/D
+        # bounds (e.g. previously TOO_HARD becomes mid-range).
+        revised_items_spec = [
+            {
+                "slug": "math_break_even",
+                "content": {
+                    "raw_html": (
+                        "<p>Math Warm Up (Revised): A bakery spends EUR 24 on setup and earns EUR 2 per roll. "
+                        "How many rolls must they sell to cover setup costs?</p>"
+                    )
+                },
+                "options": {
+                    "choices": [
+                        {"id": "A", "text": "12 rolls", "is_correct": True},
+                        {"id": "B", "text": "10 rolls", "is_correct": False},
+                        {"id": "C", "text": "14 rolls", "is_correct": False},
+                        {"id": "D", "text": "8 rolls", "is_correct": False},
+                    ]
+                },
+                "new_target_p": 0.78,
+            },
+            {
+                "slug": "science_normal_force",
+                "content": {
+                    "text": (
+                        "Physics Pulse (Revised): An elevator accelerates upward at 2 m/s^2. "
+                        "Compared to the passenger's weight, the floor's normal force is..."
+                    )
+                },
+                "options": {
+                    "choices": [
+                        {"id": "A", "text": "Smaller than the weight", "is_correct": False},
+                        {"id": "B", "text": "Equal to the weight", "is_correct": False},
+                        {"id": "C", "text": "Greater than the weight", "is_correct": True},
+                        {"id": "D", "text": "Exactly zero", "is_correct": False},
+                    ]
+                },
+                "new_target_p": 0.55,
+            },
+            {
+                "slug": "computing_rollback",
+                "content": {
+                    "text": (
+                        "Release Ops (Revised): Which practice helps a team recover most quickly "
+                        "from a bad production deployment?"
+                    )
+                },
+                "options": {
+                    "choices": [
+                        {"id": "A", "text": "Maintaining a tested rollback plan", "is_correct": True},
+                        {"id": "B", "text": "Editing the production database manually", "is_correct": False},
+                        {"id": "C", "text": "Skipping the staging environment", "is_correct": False},
+                        {"id": "D", "text": "Disabling alerting during the release", "is_correct": False},
+                    ]
+                },
+                "new_target_p": 0.62,
+            },
+        ]
+
+        revised_versions: dict[str, ItemVersion] = {}
+        for spec in revised_items_spec:
+            slug = spec["slug"]
+            previous = item_versions[slug]
+            previous.status = ItemStatus.RETIRED
+            new_version = ItemVersion(
+                learning_object_id=previous.learning_object_id,
+                version_number=previous.version_number + 1,
+                status=ItemStatus.APPROVED,
+                question_type=previous.question_type,
+                content=spec["content"],
+                options=spec["options"],
+                metadata_tags=previous.metadata_tags,
+                created_by=constructor.id,
+            )
+            db.add(new_version)
+            revised_versions[slug] = new_version
+            ITEM_TARGET_P[slug] = spec["new_target_p"]
+        db.flush()
+
+        item_versions_v2 = dict(item_versions)
+        item_versions_v2.update(revised_versions)
+
+        # ── Analytics wave 2: smaller batch using v2 versions to populate the
+        # per-item version-history charts.  Spread across the most recent 10
+        # days so the timeline shows a clear "after" cluster.
+        wave2_attempts = 0
+        for blueprint_index, title in enumerate(wave1_blueprint_titles):
+            slugs = BULK_BLUEPRINT_ITEMS[title]
+            # Only bother with v2 for blueprints whose items got revised.
+            if not any(slug in revised_versions for slug in slugs):
+                continue
+            blueprint = blueprints[title]
+            for student_index, (analytics_student, ability) in enumerate(analytics_students[:18]):
+                base_offset_days = 9 - blueprint_index
+                started_at = (
+                    now
+                    - timedelta(days=base_offset_days)
+                    + timedelta(hours=student_index * 5, minutes=blueprint_index * 11)
+                )
+                submitted_at = started_at + timedelta(minutes=4 + (student_index % 4))
+                create_bulk_attempt(
+                    db,
+                    blueprint=blueprint,
+                    student=analytics_student,
+                    grader=constructor,
+                    publisher=admin,
+                    item_versions_for_attempt=item_versions_v2,
+                    item_slugs=slugs,
+                    ability=ability,
+                    started_at=started_at,
+                    submitted_at=submitted_at,
+                    published=True,
+                    wave="v2",
+                )
+                wave2_attempts += 1
+
         db.commit()
 
         print("Seeded 12 curated questions across Mathematics, Science, Humanities, and Computing.")
         print("Created 4 blueprints and 4 short scheduled sessions for rapid manual testing.")
         print("Inserted completed grading data with published results for seeded demo students.")
+        print(
+            f"Analytics: {len(analytics_students)} extra students, "
+            f"{wave1_attempts} v1 attempts and {wave2_attempts} v2 attempts across "
+            f"{len(wave1_blueprint_titles)} blueprints — psychometric dashboards now show "
+            "score distributions, P/D values, distractor analysis, and version history."
+        )
 
     except Exception:
         db.rollback()

@@ -160,6 +160,7 @@ model users {
   role                      userrole
   is_active                 Boolean                   @default(true)
   provision_time_multiplier Float                     @default(1.0)
+  theme_preference          String?                   @db.VarChar
   created_at                DateTime?                 @default(now()) @db.Timestamp(6)
   course_enrollments        course_enrollments[]
   courses                   courses[]

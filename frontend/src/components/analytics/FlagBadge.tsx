@@ -19,7 +19,7 @@ export default function FlagBadge({ code }: { code: string }) {
     const className = FLAG_STYLES[code] ?? 'border-slate-600 bg-slate-800 text-slate-200';
 
     return (
-        <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${className}`}>
+        <span className={`inline-flex rounded-full border px-2.5 py-1 text-eyebrow font-semibold ${className}`}>
             {formatLabel(code)}
         </span>
     );

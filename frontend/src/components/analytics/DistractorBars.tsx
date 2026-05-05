@@ -21,7 +21,7 @@ export default function DistractorBars({ distractors }: { distractors: Distracto
                                     <p className="font-medium text-white">
                                         {distractor.option_text || `Option ${distractor.option_index + 1}`}
                                     </p>
-                                    <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-gray-400">
+                                    <div className="mt-1 flex flex-wrap gap-2 text-eyebrow text-gray-400">
                                         {distractor.is_correct ? (
                                             <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-200">
                                                 Correct

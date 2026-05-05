@@ -42,7 +42,7 @@ export default function CutScoreSlider({
                     onChange={(event) => onChange(Number(event.target.value))}
                     className="h-2 w-full cursor-pointer appearance-none rounded-full bg-gray-800 accent-cyan-400"
                 />
-                <div className="mt-2 flex justify-between text-[11px] text-gray-500">
+                <div className="mt-2 flex justify-between text-eyebrow text-gray-500">
                     <span>0%</span>
                     <span>50%</span>
                     <span>100%</span>
@@ -51,19 +51,19 @@ export default function CutScoreSlider({
 
             <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-lg border border-gray-800 bg-gray-950/70 px-4 py-3">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">Pass Rate</p>
+                    <p className="text-eyebrow uppercase tracking-eyebrow text-gray-500">Pass Rate</p>
                     <p className="mt-2 text-xl font-semibold text-emerald-300">
                         {scenario ? `${scenario.pass_rate.toFixed(1)}%` : '...'}
                     </p>
                 </div>
                 <div className="rounded-lg border border-gray-800 bg-gray-950/70 px-4 py-3">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">Passing</p>
+                    <p className="text-eyebrow uppercase tracking-eyebrow text-gray-500">Passing</p>
                     <p className="mt-2 text-xl font-semibold text-blue-300">
                         {scenario ? scenario.pass_count : '...'}
                     </p>
                 </div>
                 <div className="rounded-lg border border-gray-800 bg-gray-950/70 px-4 py-3">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">Below Cut</p>
+                    <p className="text-eyebrow uppercase tracking-eyebrow text-gray-500">Below Cut</p>
                     <p className="mt-2 text-xl font-semibold text-rose-300">
                         {scenario ? scenario.fail_count : '...'}
                     </p>

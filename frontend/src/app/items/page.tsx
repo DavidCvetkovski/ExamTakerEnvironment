@@ -112,7 +112,7 @@ export default function ItemsLibraryPage() {
                         <select
                             value={subjectFilter}
                             onChange={(e) => setSubjectFilter(e.target.value)}
-                            className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none cursor-pointer min-w-[150px]"
+                            className="min-w-filter cursor-pointer rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm outline-none focus:border-blue-500"
                         >
                             <option value="all">All Subjects</option>
                             {uniqueSubjects.map(subject => (
@@ -161,7 +161,7 @@ export default function ItemsLibraryPage() {
                                         filteredItems.map((item) => (
                                             <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm font-medium text-gray-900 truncate max-w-[200px]" title={item.latest_content_preview}>
+                                                    <div className="max-w-cell truncate text-sm font-medium text-gray-900" title={item.latest_content_preview}>
                                                         {item.latest_content_preview || 'Empty Question'}
                                                     </div>
                                                 </td>

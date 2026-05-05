@@ -26,10 +26,10 @@ export default function MyExamsPage() {
 
     return (
         <ProtectedRoute allowedRoles={['STUDENT']}>
-            <div className="min-h-screen bg-[linear-gradient(180deg,#fff6e8_0%,#f9fcff_40%,#eef4ff_100%)] px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
+            <div className="min-h-screen bg-[image:var(--gradient-student-page)] px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
                 <div className="mx-auto max-w-6xl space-y-10">
-                    <section className="rounded-[34px] border border-[#e8dcc7] bg-[linear-gradient(135deg,#fffdf9_0%,#f4f8ff_100%)] p-8 shadow-[0_35px_80px_rgba(72,52,24,0.12)]">
-                        <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#8a6c3e]">Student Portal</p>
+                    <section className="rounded-card-xl border border-student-border bg-[image:var(--gradient-student-hero)] p-8 shadow-warm-hero-lg">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-student-accent">Student Portal</p>
                         <h1 className="mt-3 text-5xl font-black tracking-tight text-slate-900">My Exams</h1>
                         <p className="mt-4 max-w-2xl text-base text-slate-600">
                             This space only shows the exams you can take. Join live sessions, track upcoming windows, and return here after submission.
@@ -45,14 +45,14 @@ export default function MyExamsPage() {
                     <section className="space-y-4">
                         <div className="flex items-end justify-between gap-4">
                             <div>
-                                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#1055cc]">Current</p>
+                                <p className="text-xs font-semibold uppercase tracking-wide text-student-primary">Current</p>
                                 <h2 className="mt-2 text-3xl font-black">Joinable right now</h2>
                             </div>
                             {isLoading && <p className="text-sm text-slate-500">Refreshing...</p>}
                         </div>
                         <div className="grid gap-5 lg:grid-cols-2">
                             {currentSessions.length === 0 ? (
-                                <div className="rounded-[28px] border border-dashed border-[#d8c7aa] bg-white/70 px-6 py-10 text-sm text-slate-500">
+                                <div className="rounded-card-md border border-dashed border-student-border-alt bg-white/70 px-6 py-10 text-sm text-slate-500">
                                     No current exam sessions are open for you right now.
                                 </div>
                             ) : (
@@ -72,12 +72,12 @@ export default function MyExamsPage() {
 
                     <section className="space-y-4">
                         <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#8a6c3e]">Upcoming</p>
+                            <p className="text-xs font-semibold uppercase tracking-wide text-student-accent">Upcoming</p>
                             <h2 className="mt-2 text-3xl font-black">Scheduled later</h2>
                         </div>
                         <div className="grid gap-5 lg:grid-cols-2">
                             {upcomingSessions.length === 0 ? (
-                                <div className="rounded-[28px] border border-dashed border-[#d8c7aa] bg-white/70 px-6 py-10 text-sm text-slate-500">
+                                <div className="rounded-card-md border border-dashed border-student-border-alt bg-white/70 px-6 py-10 text-sm text-slate-500">
                                     No future exam sessions are scheduled for you.
                                 </div>
                             ) : (
@@ -95,7 +95,7 @@ export default function MyExamsPage() {
                     {(myResults.length > 0 || myResultsLoading) && (
                         <section className="space-y-4">
                             <div>
-                                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#1055cc]">Results</p>
+                                <p className="text-xs font-semibold uppercase tracking-wide text-student-primary">Results</p>
                                 <h2 className="mt-2 text-3xl font-black">My Grades</h2>
                             </div>
                             {myResultsLoading ? (
@@ -106,7 +106,7 @@ export default function MyExamsPage() {
                                         <Link
                                             key={result.session_id}
                                             href={`/my-results/${result.session_id}`}
-                                            className="block rounded-[24px] border border-[#e8dcc7] bg-white/80 p-5 shadow-sm hover:shadow-md hover:border-[#1055cc]/40 transition-all"
+                                            className="block rounded-card border border-student-border bg-white/80 p-5 shadow-sm transition-all hover:border-student-primary/40 hover:shadow-md"
                                         >
                                             <div className="flex items-start justify-between gap-3">
                                                 <div>
@@ -135,7 +135,7 @@ export default function MyExamsPage() {
                                                     }`}>
                                                         {result.letter_grade}
                                                     </span>
-                                                    <span className="text-xs text-[#1055cc] font-medium">View Details →</span>
+                                                    <span className="text-xs font-medium text-student-primary">View Details →</span>
                                                 </div>
                                             )}
                                         </Link>

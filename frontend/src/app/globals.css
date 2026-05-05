@@ -49,6 +49,55 @@
   --color-editor-essay-surface: #1a1a1a;
   --color-editor-essay-input: #242424;
   --color-editor-focus: #3b82f6;
+  --color-editor-code-bg: #0d1117;
+  --color-editor-code-border: #30363d;
+  --color-editor-code-text: #e6edf3;
+  --gradient-student-page: linear-gradient(180deg, #fff6e8 0%, #f9fcff 40%, #eef4ff 100%);
+  --gradient-student-hero: linear-gradient(135deg, #fffdf9 0%, #f4f8ff 100%);
+  --font-size-eyebrow-xs: 9px;
+  --font-size-eyebrow-sm: 10px;
+  --font-size-eyebrow: 11px;
+  --font-size-editor-xs: 13px;
+  --font-size-editor-sm: 14px;
+  --font-size-editor-base: 15px;
+  --font-size-editor-lg: 18px;
+  --font-size-essay-title: 1.125rem;
+  --font-size-essay-body: 0.875rem;
+  --tracking-eyebrow: 0.18em;
+  --tracking-tight: 0.2em;
+  --tracking-medium: 0.24em;
+  --tracking-snug: 0.26em;
+  --tracking-wide: 0.3em;
+  --tracking-wider: 0.32em;
+  --font-display: var(--font-geist-sans);
+  --font-body: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-card-sm: 22px;
+  --radius-card: 24px;
+  --radius-card-md: 28px;
+  --radius-card-lg: 32px;
+  --radius-card-xl: 34px;
+  --size-input-min-w: 240px;
+  --size-table-cell-min-w: 160px;
+  --size-filter-min-w: 150px;
+  --size-cell-max-w: 200px;
+  --size-essay-min-h: 160px;
+  --size-blueprint-canvas-min-h: 700px;
+  --size-page-max-w: 1400px;
+  --shadow-warm-card: 0 24px 60px rgba(83, 65, 35, 0.12);
+  --shadow-warm-hero-md: 0 20px 60px rgba(72, 52, 24, 0.10);
+  --shadow-warm-hero-lg: 0 35px 80px rgba(72, 52, 24, 0.12);
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
 
   --color-background: var(--color-shell-bg);
   --color-foreground: #ffffff;
@@ -89,6 +138,8 @@
   --color-student-logout: #b2471f;
   --color-student-logout-dark: #8f3411;
   --color-student-logout-wash: #fff0e6;
+  --gradient-student-page: linear-gradient(180deg, #fff6e8 0%, #f9fcff 40%, #eef4ff 100%);
+  --gradient-student-hero: linear-gradient(135deg, #fffdf9 0%, #f4f8ff 100%);
 
   --color-background: var(--color-student-bg);
   --color-foreground: #1f2937;
@@ -129,6 +180,8 @@
   --color-student-logout: #a33f2a;
   --color-student-logout-dark: #84311f;
   --color-student-logout-wash: #fff0ea;
+  --gradient-student-page: linear-gradient(180deg, #edf6ff 0%, #f4f8ff 50%, #eaf3ff 100%);
+  --gradient-student-hero: linear-gradient(135deg, #ffffff 0%, #e8f2ff 100%);
 
   --color-editor-bg: #eaf3ff;
   --color-editor-toolbar: #dcecff;
@@ -143,6 +196,9 @@
   --color-editor-essay-surface: #ffffff;
   --color-editor-essay-input: #f4f8ff;
   --color-editor-focus: #1769d2;
+  --color-editor-code-bg: #eef5ff;
+  --color-editor-code-border: #b8cde8;
+  --color-editor-code-text: #10233f;
 
   --color-background: var(--color-shell-bg);
   --color-foreground: #10233f;
@@ -197,14 +253,49 @@
   --color-editor-essay-surface: var(--color-editor-essay-surface);
   --color-editor-essay-input: var(--color-editor-essay-input);
   --color-editor-focus: var(--color-editor-focus);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --text-eyebrow-xs: var(--font-size-eyebrow-xs);
+  --text-eyebrow-sm: var(--font-size-eyebrow-sm);
+  --text-eyebrow: var(--font-size-eyebrow);
+  --tracking-eyebrow: var(--tracking-eyebrow);
+  --tracking-tight: var(--tracking-tight);
+  --tracking-medium: var(--tracking-medium);
+  --tracking-snug: var(--tracking-snug);
+  --tracking-wide: var(--tracking-wide);
+  --tracking-wider: var(--tracking-wider);
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-card-sm: var(--radius-card-sm);
+  --radius-card: var(--radius-card);
+  --radius-card-md: var(--radius-card-md);
+  --radius-card-lg: var(--radius-card-lg);
+  --radius-card-xl: var(--radius-card-xl);
+  --shadow-warm-card: var(--shadow-warm-card);
+  --shadow-warm-hero-md: var(--shadow-warm-hero-md);
+  --shadow-warm-hero-lg: var(--shadow-warm-hero-lg);
+  --duration-fast: var(--duration-fast);
+  --duration-normal: var(--duration-normal);
+  --duration-slow: var(--duration-slow);
+  --ease-standard: var(--ease-standard);
+  --ease-decelerate: var(--ease-decelerate);
+  --ease-accelerate: var(--ease-accelerate);
+  --spacing-input: var(--size-input-min-w);
+  --spacing-table-cell: var(--size-table-cell-min-w);
+  --spacing-filter: var(--size-filter-min-w);
+  --spacing-cell: var(--size-cell-max-w);
+  --spacing-essay: var(--size-essay-min-h);
+  --spacing-blueprint-canvas: var(--size-blueprint-canvas-min-h);
+  --spacing-page: var(--size-page-max-w);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-mono);
 }
 
 body {
   background: var(--color-background);
   color: var(--color-foreground);
-  font-family: var(--font-geist-sans), sans-serif;
+  font-family: var(--font-body), sans-serif;
 }
 
 @keyframes ov-shake {

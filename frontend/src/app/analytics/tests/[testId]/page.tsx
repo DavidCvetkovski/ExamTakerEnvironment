@@ -92,7 +92,7 @@ export default function TestAnalyticsDashboardPage() {
                         </Link>
                         <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                             <div>
-                                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-500">
+                                <p className="text-eyebrow font-semibold uppercase tracking-medium text-gray-500">
                                     Test Dashboard
                                 </p>
                                 <h1 className="mt-2 text-3xl font-bold text-white">{testTitle}</h1>

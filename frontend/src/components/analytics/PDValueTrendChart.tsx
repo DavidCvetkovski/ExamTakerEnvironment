@@ -73,10 +73,11 @@ export default function PDValueTrendChart({ entries }: { entries: ItemHistoryEnt
                     <polyline
                         points={buildPolyline(pPoints)}
                         fill="none"
-                        stroke="#22d3ee"
+                        stroke="currentColor"
                         strokeWidth="3"
                         strokeLinecap="round"
                         strokeLinejoin="round"
+                        className="text-cyan-400"
                     />
                 ) : null}
 
@@ -84,10 +85,11 @@ export default function PDValueTrendChart({ entries }: { entries: ItemHistoryEnt
                     <polyline
                         points={buildPolyline(dPoints)}
                         fill="none"
-                        stroke="#fbbf24"
+                        stroke="currentColor"
                         strokeWidth="3"
                         strokeLinecap="round"
                         strokeLinejoin="round"
+                        className="text-amber-400"
                     />
                 ) : null}
 
@@ -108,10 +110,10 @@ export default function PDValueTrendChart({ entries }: { entries: ItemHistoryEnt
                 })}
 
                 {pPoints.map((point, index) => (
-                    <circle key={`p-${index}`} cx={point.x} cy={point.y} r="4.5" fill="#22d3ee" />
+                    <circle key={`p-${index}`} cx={point.x} cy={point.y} r="4.5" fill="currentColor" className="text-cyan-400" />
                 ))}
                 {dPoints.map((point, index) => (
-                    <circle key={`d-${index}`} cx={point.x} cy={point.y} r="4.5" fill="#fbbf24" />
+                    <circle key={`d-${index}`} cx={point.x} cy={point.y} r="4.5" fill="currentColor" className="text-amber-400" />
                 ))}
             </svg>
         </div>

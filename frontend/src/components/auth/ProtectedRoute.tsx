@@ -31,7 +31,7 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-[#1A1A1A] flex items-center justify-center text-[#A1A1AA] font-sans">
+            <div className="min-h-screen bg-shell-bg flex items-center justify-center text-shell-muted font-sans">
                 Validating session...
             </div>
         );

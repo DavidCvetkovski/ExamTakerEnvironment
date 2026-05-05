@@ -256,7 +256,7 @@ export default function SessionGradingPage() {
                     </button>
 
                     <div className="flex-1">
-                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gray-500">
+                        <p className="text-xs font-semibold uppercase tracking-medium text-gray-500">
                             {blindMode ? 'Blind Review Mode' : 'Grading Review'}
                         </p>
                         <p className="mt-1 text-sm text-gray-300">

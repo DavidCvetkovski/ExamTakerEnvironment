@@ -18,7 +18,7 @@ export default function AnalyticsIndexPage() {
             <div className="min-h-screen bg-gray-950 text-gray-100">
                 <div className="border-b border-gray-800 bg-gray-900 px-6 py-5">
                     <div className="mx-auto max-w-6xl">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-500">
+                        <p className="text-eyebrow font-semibold uppercase tracking-medium text-gray-500">
                             Analytics
                         </p>
                         <h1 className="mt-2 text-3xl font-bold text-white">Psychometric Dashboards</h1>

@@ -60,7 +60,7 @@ export default function SessionsPage() {
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <div className="min-h-screen bg-[radial-gradient(circle_at_top,#17263e_0%,#09111d_50%,#04070d_100%)] px-4 py-8 text-white sm:px-6 lg:px-8">
+            <div className="min-h-screen bg-[radial-gradient(circle_at_top,var(--color-shell-border-deep)_0%,var(--color-shell-input-alt)_50%,var(--color-shell-panel-e)_100%)] px-4 py-8 text-white sm:px-6 lg:px-8">
                 <div className="mx-auto max-w-7xl space-y-8">
                     <SessionCreateForm
                         courses={courses}

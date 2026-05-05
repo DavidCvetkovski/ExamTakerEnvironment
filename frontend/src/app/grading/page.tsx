@@ -136,7 +136,7 @@ export default function GradingDashboard() {
                         onChange={e => {
                             setSelectedTestId(e.target.value);
                         }}
-                        className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 min-w-[240px]"
+                        className="min-w-input bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
                     >
                         <option value="">— Select a test —</option>
                         {blueprints.map(b => (
@@ -285,7 +285,7 @@ export default function GradingDashboard() {
                                             >
                                                 <td className="px-5 py-4">
                                                     {blindMode ? (
-                                                        <span className="text-purple-400 text-xs font-semibold uppercase tracking-[0.18em]">
+                                                        <span className="text-purple-400 text-xs font-semibold uppercase tracking-eyebrow">
                                                             Submission {String(index + 1).padStart(2, '0')}
                                                         </span>
                                                     ) : (
@@ -304,7 +304,7 @@ export default function GradingDashboard() {
                                                 <td className="px-5 py-4">
                                                     {statusBadge(session.grading_status)}
                                                 </td>
-                                                <td className="px-5 py-4 min-w-[160px]">
+                                                <td className="min-w-table-cell px-5 py-4">
                                                     <ProgressBar
                                                         done={session.questions_graded}
                                                         total={session.questions_total}

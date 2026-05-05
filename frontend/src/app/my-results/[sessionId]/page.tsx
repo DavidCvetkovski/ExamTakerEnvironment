@@ -42,8 +42,8 @@ function MCQAnswerDisplay({ detail }: { detail: QuestionResultDetail }) {
     return (
         <div className="space-y-4 mt-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div className="rounded-2xl border border-[#e8dcc7] bg-white/60 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-[#8a6c3e] mb-2">Your Answer</p>
+                <div className="rounded-2xl border border-student-border bg-white/60 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-student-accent mb-2">Your Answer</p>
                     {allSelected.length > 0 ? (
                         <div className="space-y-2">
                             {allSelected.map((idx) => (
@@ -89,8 +89,8 @@ function MCQAnswerDisplay({ detail }: { detail: QuestionResultDetail }) {
             </div>
 
             {options.length > 0 && (
-                <div className="rounded-2xl border border-[#e8dcc7] bg-[#fffaf4] p-4">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-[#8a6c3e] mb-3">Available Options</p>
+                <div className="rounded-2xl border border-student-border bg-student-bg-alt p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-student-accent mb-3">Available Options</p>
                     <div className="space-y-2">
                         {options.map((option, idx) => {
                             const isSelected = allSelected.includes(idx);
@@ -105,7 +105,7 @@ function MCQAnswerDisplay({ detail }: { detail: QuestionResultDetail }) {
                                                 ? 'border-rose-300 bg-rose-50 text-rose-900'
                                                 : isCorrect
                                                     ? 'border-emerald-200 bg-white text-emerald-900'
-                                                    : 'border-[#e8dcc7] bg-white/80 text-slate-700'
+                                                    : 'border-student-border bg-white/80 text-slate-700'
                                     }`}
                                 >
                                     <span className="mr-2 font-semibold">{String.fromCharCode(65 + idx)}.</span>
@@ -128,7 +128,7 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
     const isCorrect = detail.is_correct;
     const isPending = !detail.is_auto_graded && detail.is_correct === null;
 
-    let borderColor = 'border-[#e8dcc7]';
+    let borderColor = 'border-student-border';
     let accentColor = 'bg-slate-100 text-slate-600';
     if (isPending) {
         borderColor = 'border-amber-200';
@@ -142,7 +142,7 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
     }
 
     return (
-        <div className={`rounded-[24px] border ${borderColor} bg-white/80 p-6 shadow-sm space-y-4`}>
+        <div className={`rounded-card border ${borderColor} bg-white/80 p-6 shadow-sm space-y-4`}>
             {/* Header row */}
             <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -167,7 +167,7 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
 
             {detail.question_content != null && (
                 <div
-                    className="prose max-w-none rounded-2xl border border-[#e8dcc7] bg-[#fffaf4] px-4 py-3 text-slate-700"
+                    className="prose max-w-none rounded-2xl border border-student-border bg-student-bg-alt px-4 py-3 text-slate-700"
                     dangerouslySetInnerHTML={{ __html: sanitizeHtml(toExamContentHtml(detail.question_content)) }}
                 />
             )}
@@ -175,8 +175,8 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
             {/* Answer display */}
             {isEssay ? (
                 <div className="space-y-3">
-                    <div className="rounded-2xl border border-[#e8dcc7] bg-[#fffaf4] p-4">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-[#8a6c3e] mb-2">Your Essay</p>
+                    <div className="rounded-2xl border border-student-border bg-student-bg-alt p-4">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-student-accent mb-2">Your Essay</p>
                         {extractEssayText(detail.student_answer) ? (
                             <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
                                 {extractEssayText(detail.student_answer)}
@@ -198,8 +198,8 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
 
             {/* Feedback */}
             {detail.feedback && (
-                <div className="rounded-2xl border border-[#1055cc]/20 bg-[#eef4ff] p-4">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-[#1055cc] mb-1">Grader Feedback</p>
+                <div className="rounded-2xl border border-student-primary/20 bg-student-hover-light p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-student-primary mb-1">Grader Feedback</p>
                     <p className="text-sm text-slate-700 leading-relaxed">{detail.feedback}</p>
                 </div>
             )}
@@ -228,10 +228,10 @@ export default function MyResultDetailPage() {
     const result = currentResultDetail;
 
     return (
-        <div className="min-h-screen bg-[linear-gradient(180deg,#fff6e8_0%,#f9fcff_40%,#eef4ff_100%)] px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-[image:var(--gradient-student-page)] px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-3xl space-y-8">
                 {/* Back */}
-                <Link href="/my-exams" className="inline-flex items-center gap-2 text-sm text-[#1055cc] hover:underline">
+                <Link href="/my-exams" className="inline-flex items-center gap-2 text-sm text-student-primary hover:underline">
                     ← Back to My Exams
                 </Link>
 
@@ -245,7 +245,7 @@ export default function MyResultDetailPage() {
                 {/* Loading */}
                 {detailLoading && (
                     <div className="flex items-center justify-center py-20 text-slate-400 text-sm gap-3">
-                        <div className="w-5 h-5 border-2 border-[#1055cc] border-t-transparent rounded-full animate-spin" />
+                        <div className="w-5 h-5 border-2 border-student-primary border-t-transparent rounded-full animate-spin" />
                         Loading your result…
                     </div>
                 )}
@@ -253,8 +253,8 @@ export default function MyResultDetailPage() {
                 {result && !detailLoading && (
                     <>
                         {/* Result header card */}
-                        <div className="rounded-[34px] border border-[#e8dcc7] bg-[linear-gradient(135deg,#fffdf9_0%,#f4f8ff_100%)] p-8 shadow-[0_20px_60px_rgba(72,52,24,0.10)]">
-                            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#8a6c3e]">Exam Result</p>
+                        <div className="rounded-card-xl border border-student-border bg-[image:var(--gradient-student-hero)] p-8 shadow-warm-hero-md">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-student-accent">Exam Result</p>
                             <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-900">
                                 {result.test_title}
                             </h1>
@@ -268,15 +268,15 @@ export default function MyResultDetailPage() {
 
                             {/* Score summary */}
                             <div className="mt-6 grid grid-cols-3 gap-4">
-                                <div className="rounded-2xl border border-[#e8dcc7] bg-white/60 p-4 text-center">
+                                <div className="rounded-2xl border border-student-border bg-white/60 p-4 text-center">
                                     <p className="text-3xl font-black text-slate-900">{result.percentage.toFixed(1)}%</p>
                                     <p className="text-xs text-slate-500 mt-1">Score</p>
                                 </div>
-                                <div className="rounded-2xl border border-[#e8dcc7] bg-white/60 p-4 text-center">
+                                <div className="rounded-2xl border border-student-border bg-white/60 p-4 text-center">
                                     <p className="text-3xl font-black text-slate-900">{result.total_points}</p>
                                     <p className="text-xs text-slate-500 mt-1">Points (of {result.max_points})</p>
                                 </div>
-                                <div className="rounded-2xl border border-[#e8dcc7] bg-white/60 p-4 text-center">
+                                <div className="rounded-2xl border border-student-border bg-white/60 p-4 text-center">
                                     {result.letter_grade ? (
                                         <>
                                             <p className={`text-3xl font-black ${result.passed ? 'text-emerald-600' : 'text-rose-600'}`}>

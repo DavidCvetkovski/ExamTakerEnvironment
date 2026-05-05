@@ -10,7 +10,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 export default function AuthorPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-[#1A1A1A]" />}>
+        <Suspense fallback={<div className="min-h-screen bg-shell-bg" />}>
             <AuthorPageInner />
         </Suspense>
     );
@@ -56,23 +56,23 @@ function AuthorPageInner() {
 
                 <div className="mb-8">
                     <h1 className="text-3xl font-bold text-white mb-2">✏️ Question Authoring</h1>
-                    <p className="text-[#A1A1AA] text-sm">
+                    <p className="text-shell-muted text-sm">
                         Create or edit question versions for the selected Learning Object.
                     </p>
                 </div>
 
                 {!learningObjectId ? (
-                    <div className="bg-[#242424] border border-[#333] p-12 text-center rounded-xl space-y-4">
+                    <div className="bg-shell-surface border border-shell-border p-12 text-center rounded-xl space-y-4">
                         <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto" />
-                        <p className="text-[#A1A1AA]">Linking to learning object...</p>
-                        <p className="text-xs text-[#555]">If this persists, go back to the library and try again.</p>
+                        <p className="text-shell-muted">Linking to learning object...</p>
+                        <p className="text-xs text-shell-muted-dim">If this persists, go back to the library and try again.</p>
                     </div>
                 ) : (
                     <div className="space-y-6">
                         {/* Control Bar */}
-                        <div className="flex flex-wrap items-center gap-4 p-4 bg-[#242424] border border-[#333] rounded-xl text-sm">
+                        <div className="flex flex-wrap items-center gap-4 p-4 bg-shell-surface border border-shell-border rounded-xl text-sm">
                             <div className="flex items-center gap-2">
-                                <span className="text-[#A1A1AA]">Status:</span>
+                                <span className="text-shell-muted">Status:</span>
                                 <span className={`font-bold ${saveStatus === 'SAVED' ? 'text-emerald-400'
                                     : saveStatus === 'SAVING' ? 'text-amber-400'
                                         : saveStatus === 'ERROR' ? 'text-rose-400'
@@ -88,18 +88,18 @@ function AuthorPageInner() {
                             <div className="flex-1" />
 
                             <div className="flex items-center gap-3">
-                                <label className="text-[#A1A1AA] flex items-center gap-2">
+                                <label className="text-shell-muted flex items-center gap-2">
                                     Subject:
                                     <input
                                         type="text"
                                         placeholder="e.g. Math"
                                         value={(metadataTags.topic as string) || ''}
                                         onChange={(e) => updateMetadataField('topic', e.target.value)}
-                                        className="bg-[#1A1A1A] text-white border border-[#333] rounded px-3 py-1.5 focus:border-blue-500 outline-none transition-colors w-32"
+                                        className="bg-shell-bg text-white border border-shell-border rounded px-3 py-1.5 focus:border-blue-500 outline-none transition-colors w-32"
                                     />
                                 </label>
 
-                                <label className="text-[#A1A1AA] flex items-center gap-2">
+                                <label className="text-shell-muted flex items-center gap-2">
                                     Points:
                                     <input
                                         type="number"
@@ -107,16 +107,16 @@ function AuthorPageInner() {
                                         step="1"
                                         value={metadataTags.points !== undefined ? metadataTags.points as number : ''}
                                         onChange={(e) => updateMetadataField('points', e.target.value === '' ? '' : parseInt(e.target.value))}
-                                        className="bg-[#1A1A1A] text-white border border-[#333] rounded px-3 py-1.5 focus:border-blue-500 outline-none transition-colors w-20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        className="bg-shell-bg text-white border border-shell-border rounded px-3 py-1.5 focus:border-blue-500 outline-none transition-colors w-20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                     />
                                 </label>
 
-                                <label className="text-[#A1A1AA] flex items-center gap-2">
+                                <label className="text-shell-muted flex items-center gap-2">
                                     Type:
                                     <select
                                         value={questionType}
                                         onChange={(e) => setQuestionType(e.target.value as 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY')}
-                                        className="bg-[#1A1A1A] text-white border border-[#333] rounded px-3 py-1.5 focus:border-blue-500 outline-none transition-colors"
+                                        className="bg-shell-bg text-white border border-shell-border rounded px-3 py-1.5 focus:border-blue-500 outline-none transition-colors"
                                     >
                                         <option value="MULTIPLE_CHOICE">Single Choice</option>
                                         <option value="MULTIPLE_RESPONSE">Multiple Choice</option>
@@ -137,12 +137,12 @@ function AuthorPageInner() {
                         </div>
 
                         {/* TipTap Editor */}
-                        <div className="bg-[#1A1A1A] rounded-xl border border-[#333] overflow-hidden">
+                        <div className="bg-shell-bg rounded-xl border border-shell-border overflow-hidden">
                             <TipTapEditor />
                         </div>
 
                         {/* Options Panels */}
-                        <div className="bg-[#1A1A1A] rounded-xl border border-[#333] overflow-hidden">
+                        <div className="bg-shell-bg rounded-xl border border-shell-border overflow-hidden">
                             {questionType === 'MULTIPLE_CHOICE' || questionType === 'MULTIPLE_RESPONSE' ? (
                                 <MCQOptionsPanel />
                             ) : (

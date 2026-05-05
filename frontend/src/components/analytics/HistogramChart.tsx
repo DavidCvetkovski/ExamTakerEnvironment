@@ -20,14 +20,14 @@ export default function HistogramChart({ buckets }: { buckets: HistogramBucket[]
                     const height = `${Math.max((bucket.count / maxCount) * 100, bucket.count > 0 ? 10 : 0)}%`;
                     return (
                         <div key={bucket.range} className="flex min-w-0 flex-1 flex-col items-center gap-2">
-                            <span className="text-[11px] text-gray-500">{bucket.count}</span>
+                            <span className="text-eyebrow text-gray-500">{bucket.count}</span>
                             <div className="flex h-40 w-full items-end rounded-lg bg-gray-950/60 px-1 pb-1">
                                 <div
                                     className="w-full rounded-md bg-gradient-to-t from-blue-600 to-cyan-400 transition-all duration-300"
                                     style={{ height }}
                                 />
                             </div>
-                            <span className="text-[10px] text-gray-500">{bucket.range}</span>
+                            <span className="text-eyebrow-sm text-gray-500">{bucket.range}</span>
                         </div>
                     );
                 })}

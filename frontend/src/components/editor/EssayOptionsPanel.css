@@ -1,8 +1,8 @@
 .essay-options-container {
   padding: 1.5rem;
-  background-color: #1a1a1a;
-  border-radius: 0.75rem;
-  border: 1px solid #333;
+  background-color: var(--color-editor-essay-surface);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-editor-border);
   margin-top: 1.5rem;
 }
 
@@ -11,15 +11,15 @@
 }
 
 .essay-options-title {
-  font-size: 1.125rem;
+  font-size: var(--font-size-essay-title);
   font-weight: 600;
-  color: #fff;
+  color: white;
   margin-bottom: 0.25rem;
 }
 
 .essay-options-subtitle {
-  font-size: 0.875rem;
-  color: #a1a1aa;
+  font-size: var(--font-size-essay-body);
+  color: var(--color-shell-muted);
 }
 
 .essay-inputs-grid {
@@ -35,24 +35,24 @@
 }
 
 .essay-label {
-  font-size: 0.875rem;
+  font-size: var(--font-size-essay-body);
   font-weight: 500;
-  color: #a1a1aa;
+  color: var(--color-shell-muted);
 }
 
 .essay-number-input {
-  background-color: #242424;
-  border: 1px solid #333;
-  border-radius: 0.5rem;
+  background-color: var(--color-editor-essay-input);
+  border: 1px solid var(--color-editor-border);
+  border-radius: var(--radius-lg);
   padding: 0.75rem;
-  color: #fff;
-  font-size: 0.875rem;
+  color: white;
+  font-size: var(--font-size-essay-body);
   transition: border-color 0.2s;
 }
 
 .essay-number-input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: var(--color-editor-focus);
 }
 
 .essay-number-input::-webkit-inner-spin-button,

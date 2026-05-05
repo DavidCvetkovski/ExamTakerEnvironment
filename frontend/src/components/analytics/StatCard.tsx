@@ -25,7 +25,7 @@ export default function StatCard({
 }: StatCardProps) {
     return (
         <div className="rounded-xl border border-gray-800 bg-gray-900 px-4 py-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500">{label}</p>
+            <p className="text-eyebrow font-semibold uppercase tracking-eyebrow text-gray-500">{label}</p>
             <p className={`mt-3 text-2xl font-bold ${ACCENT_CLASS[accent]}`}>{value}</p>
             {note ? <p className="mt-2 text-xs text-gray-500">{note}</p> : null}
         </div>

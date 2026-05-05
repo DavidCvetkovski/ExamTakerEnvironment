@@ -70,7 +70,7 @@ export default function EssayQuestion({ item }: EssayQuestionProps) {
             <textarea
                 value={localText}
                 onChange={handleChange}
-                className="w-full bg-gray-900 border border-gray-700 rounded-xl p-4 focus:ring-2 focus:ring-indigo-500 focus:outline-none placeholder-gray-600 text-gray-200 resize-y min-h-[160px]"
+                className="min-h-essay w-full resize-y rounded-xl border border-gray-700 bg-gray-900 p-4 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="Type your response here..."
                 rows={8}
             />

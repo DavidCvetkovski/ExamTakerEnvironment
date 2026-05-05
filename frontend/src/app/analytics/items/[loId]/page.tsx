@@ -62,7 +62,7 @@ export default function ItemAnalyticsDetailPage() {
                             ← Back to Test
                         </Link>
                         <div className="mt-4">
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-500">
+                            <p className="text-eyebrow font-semibold uppercase tracking-medium text-gray-500">
                                 Item Analytics
                             </p>
                             <h1 className="mt-2 text-3xl font-bold text-white">{previewTitle}</h1>

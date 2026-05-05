@@ -33,10 +33,10 @@ export default function CourseEnrollmentDrawer({
 
     return (
         <div className="fixed inset-0 z-40 flex justify-end bg-black/50 backdrop-blur-sm">
-            <div className="h-full w-full max-w-xl overflow-y-auto border-l border-white/10 bg-[#08101b] p-6 shadow-2xl shadow-black/40">
+            <div className="h-full w-full max-w-xl overflow-y-auto border-l border-white/10 bg-shell-panel-b p-6 shadow-2xl shadow-black/40">
                 <div className="flex items-start justify-between gap-4">
                     <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-300">Course Enrollments</p>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">Course Enrollments</p>
                         <h3 className="mt-2 text-3xl font-black text-white">{course.code}</h3>
                         <p className="mt-1 text-sm text-slate-400">{course.title}</p>
                     </div>
@@ -49,14 +49,14 @@ export default function CourseEnrollmentDrawer({
                     </button>
                 </div>
 
-                <div className="mt-8 rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Add Student</p>
+                <div className="mt-8 rounded-card border border-white/10 bg-white/[0.03] p-5">
+                    <p className="text-xs font-semibold uppercase tracking-medium text-slate-400">Add Student</p>
                     <div className="mt-3 flex flex-col gap-3 md:flex-row">
                         <select
                             aria-label="Student"
                             value={studentId}
                             onChange={(event) => setStudentId(event.target.value)}
-                            className="flex-1 rounded-2xl border border-white/10 bg-[#050b13] px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
+                            className="flex-1 rounded-2xl border border-white/10 bg-shell-panel-d px-4 py-3 text-sm text-white outline-none transition focus:border-amber-300"
                         >
                             <option value="">Select a student</option>
                             {studentCandidates.map((student) => (
@@ -72,24 +72,24 @@ export default function CourseEnrollmentDrawer({
                                 await onAddEnrollment(course.id, { student_id: studentId });
                                 setStudentId('');
                             }}
-                            className="rounded-2xl bg-amber-300 px-4 py-3 text-sm font-black uppercase tracking-[0.2em] text-slate-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="rounded-2xl bg-amber-300 px-4 py-3 text-sm font-black uppercase tracking-tight text-slate-950 transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             Enroll
                         </button>
                     </div>
                 </div>
 
-                <div className="mt-6 rounded-[24px] border border-white/10 bg-white/[0.02] p-5">
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Roster</p>
+                <div className="mt-6 rounded-card border border-white/10 bg-white/[0.02] p-5">
+                    <p className="text-xs font-semibold uppercase tracking-medium text-slate-400">Roster</p>
                     <div className="mt-4 space-y-3">
                         {enrollments.length === 0 ? (
                             <p className="text-sm text-slate-500">No students enrolled yet.</p>
                         ) : (
                             enrollments.map((enrollment) => (
-                                <div key={enrollment.id} className="flex items-center justify-between rounded-2xl border border-white/8 bg-[#040914] px-4 py-3">
+                                <div key={enrollment.id} className="flex items-center justify-between rounded-2xl border border-white/8 bg-shell-panel-e px-4 py-3">
                                     <div>
                                         <p className="font-medium text-white">{enrollment.student_email}</p>
-                                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                                        <p className="text-xs uppercase tracking-tight text-slate-500">
                                             {enrollment.is_active ? 'Active' : 'Inactive'}
                                         </p>
                                     </div>

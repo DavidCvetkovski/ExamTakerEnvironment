@@ -99,7 +99,7 @@ export default function AllItemsTable({
 
             <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
-                    <thead className="bg-gray-950/70 text-[11px] uppercase tracking-[0.18em] text-gray-500">
+                    <thead className="bg-gray-950/70 text-eyebrow uppercase tracking-eyebrow text-gray-500">
                         <tr>
                             <th className="px-4 py-3 text-left">Item</th>
                             <th className="px-4 py-3 text-left">Type</th>

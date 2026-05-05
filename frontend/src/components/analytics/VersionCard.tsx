@@ -27,7 +27,7 @@ export default function VersionCard({
                     <div className="flex flex-wrap items-center gap-2">
                         <p className="text-sm font-semibold text-white">Version {entry.version_number ?? '—'}</p>
                         {isLatest ? (
-                            <span className="rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-[11px] font-semibold text-cyan-200">
+                            <span className="rounded-full border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-eyebrow font-semibold text-cyan-200">
                                 Latest
                             </span>
                         ) : null}
@@ -44,15 +44,15 @@ export default function VersionCard({
 
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 <div className="rounded-lg border border-gray-800 bg-gray-950/70 px-3 py-3">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">P-value</p>
+                    <p className="text-eyebrow uppercase tracking-eyebrow text-gray-500">P-value</p>
                     <p className="mt-2 text-lg font-semibold text-cyan-300">{formatMetric(entry.p_value)}</p>
                 </div>
                 <div className="rounded-lg border border-gray-800 bg-gray-950/70 px-3 py-3">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">D-value</p>
+                    <p className="text-eyebrow uppercase tracking-eyebrow text-gray-500">D-value</p>
                     <p className="mt-2 text-lg font-semibold text-amber-300">{formatMetric(entry.d_value)}</p>
                 </div>
                 <div className="rounded-lg border border-gray-800 bg-gray-950/70 px-3 py-3">
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500">Responses</p>
+                    <p className="text-eyebrow uppercase tracking-eyebrow text-gray-500">Responses</p>
                     <p className="mt-2 text-lg font-semibold text-white">{entry.n_responses}</p>
                 </div>
             </div>

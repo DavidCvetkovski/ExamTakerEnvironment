@@ -260,7 +260,7 @@ function BlueprintPageInner() {
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-12 text-white">
+            <div className="max-w-page mx-auto px-4 py-12 text-white sm:px-6 lg:px-8">
                 <div className="flex gap-8">
                     {/* Main Editor */}
                     <div className="flex-1">
@@ -271,7 +271,7 @@ function BlueprintPageInner() {
                             <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> Back to Blueprints
                         </button>
 
-                        <div className="bg-slate-900/80 backdrop-blur-xl rounded-[32px] border border-white/10 shadow-2xl overflow-hidden min-h-[700px]">
+                        <div className="min-h-blueprint-canvas overflow-hidden rounded-card-lg border border-white/10 bg-slate-900/80 shadow-2xl backdrop-blur-xl">
                             {/* Hero Section */}
                             <div className="p-8 pb-0">
                                 <input
@@ -292,7 +292,7 @@ function BlueprintPageInner() {
                                 {/* Config Bar */}
                                 <div className="flex flex-wrap items-center gap-6 p-6 bg-white/5 rounded-2xl mb-12">
                                     <div className="flex-1 min-w-[150px]">
-                                        <label className="block text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-2">Manual Duration</label>
+                                        <label className="mb-2 block text-eyebrow-sm font-bold uppercase tracking-widest text-indigo-400">Manual Duration</label>
                                         <div className="flex items-center">
                                             <input
                                                 type="number"
@@ -393,7 +393,7 @@ function BlueprintPageInner() {
                                                                 <div className="text-slate-500 cursor-grab hover:text-white">
                                                                     &#x2630;
                                                                 </div>
-                                                                <div className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-tight ${rule.rule_type === 'FIXED' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
+                                                                <div className={`rounded-md px-2 py-1 text-eyebrow-xs font-black uppercase tracking-tight ${rule.rule_type === 'FIXED' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
                                                                     {rule.rule_type === 'FIXED' ? 'Fixed Item' : 'Smart Draw'}
                                                                 </div>
 
@@ -412,7 +412,7 @@ function BlueprintPageInner() {
                                                                 ) : (
                                                                     <div className="flex-1 flex flex-wrap items-center gap-4">
                                                                         <div className="flex items-center gap-2">
-                                                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Quantity:</span>
+                                                                            <span className="text-eyebrow font-bold uppercase tracking-tight text-slate-500">Quantity:</span>
                                                                             <input
                                                                                 type="number"
                                                                                 value={rule.count ?? ''}
@@ -427,7 +427,7 @@ function BlueprintPageInner() {
                                                                             />
                                                                         </div>
                                                                         <div className="flex items-center gap-2">
-                                                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Topic:</span>
+                                                                            <span className="text-eyebrow font-bold uppercase tracking-tight text-slate-500">Topic:</span>
                                                                             <input
                                                                                 placeholder="Any Topic"
                                                                                 value={rule.topic || ''}
@@ -440,7 +440,7 @@ function BlueprintPageInner() {
                                                                             />
                                                                         </div>
                                                                         <div className="flex items-center gap-2">
-                                                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Difficulty:</span>
+                                                                            <span className="text-eyebrow font-bold uppercase tracking-tight text-slate-500">Difficulty:</span>
                                                                             <select
                                                                                 value={rule.difficulty || ''}
                                                                                 onChange={(e) => {
@@ -530,7 +530,7 @@ function BlueprintPageInner() {
 
                     {/* Breakdown Sidebar */}
                     <div className="w-80 space-y-6">
-                        <div className="bg-slate-900/50 backdrop-blur-md rounded-[32px] border border-white/10 p-6 sticky top-12">
+                        <div className="sticky top-12 rounded-card-lg border border-white/10 bg-slate-900/50 p-6 backdrop-blur-md">
                             <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-6 flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
                                 Live Breakdown
@@ -539,21 +539,21 @@ function BlueprintPageInner() {
                             <div className="space-y-8">
                                 <div className="grid grid-cols-3 gap-4">
                                     <div className="bg-white/5 rounded-2xl p-4">
-                                        <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Items</div>
+                                        <div className="mb-1 text-eyebrow-sm font-bold uppercase text-slate-500">Items</div>
                                         <div className="text-2xl font-black">{stats.totalCount}</div>
                                     </div>
                                     <div className="bg-white/5 rounded-2xl p-4">
-                                        <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Points</div>
+                                        <div className="mb-1 text-eyebrow-sm font-bold uppercase text-slate-500">Points</div>
                                         <div className="text-2xl font-black">{stats.totalPoints}</div>
                                     </div>
                                     <div className="bg-white/5 rounded-2xl p-4">
-                                        <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Time</div>
+                                        <div className="mb-1 text-eyebrow-sm font-bold uppercase text-slate-500">Time</div>
                                         <div className="text-2xl font-black">{stats.totalTime}m</div>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-4">Topic Coverage</label>
+                                    <label className="mb-4 block text-eyebrow-sm font-bold uppercase tracking-widest text-slate-500">Topic Coverage</label>
                                     <div className="space-y-3">
                                         {Object.entries(stats.topics).length > 0 ? (
                                             Object.entries(stats.topics).map(([topic, count]) => (
@@ -578,7 +578,7 @@ function BlueprintPageInner() {
 
                                 <div className="pt-6 border-t border-white/5">
                                     <div className="flex items-center justify-between p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
-                                        <div className="text-[10px] font-bold text-indigo-300 uppercase">Complexity</div>
+                                        <div className="text-eyebrow-sm font-bold uppercase text-indigo-300">Complexity</div>
                                         <div className="text-lg font-black text-white">Dynamic</div>
                                     </div>
                                 </div>

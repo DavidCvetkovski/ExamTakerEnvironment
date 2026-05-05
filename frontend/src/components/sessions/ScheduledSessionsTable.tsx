@@ -25,10 +25,10 @@ export default function ScheduledSessionsTable({
     onManageEnrollments,
 }: ScheduledSessionsTableProps) {
     return (
-        <div className="rounded-[28px] border border-white/10 bg-[#0d1321] p-6 shadow-2xl shadow-black/20">
+        <div className="rounded-card-md border border-white/10 bg-shell-panel-a p-6 shadow-2xl shadow-black/20">
             <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                 <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Scheduled Sessions</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Scheduled Sessions</p>
                     <h3 className="mt-2 text-2xl font-black text-white">Exam Windows by Course</h3>
                 </div>
                 <p className="text-sm text-slate-500">
@@ -37,13 +37,13 @@ export default function ScheduledSessionsTable({
             </div>
 
             {sessions.length === 0 ? (
-                <div className="rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] px-6 py-10 text-center text-sm text-slate-500">
+                <div className="rounded-card border border-dashed border-white/10 bg-white/[0.02] px-6 py-10 text-center text-sm text-slate-500">
                     No scheduled sessions yet.
                 </div>
             ) : (
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-left text-sm">
-                        <thead className="text-xs uppercase tracking-[0.24em] text-slate-500">
+                        <thead className="text-xs uppercase tracking-medium text-slate-500">
                             <tr>
                                 <th className="pb-3 pr-4">Course</th>
                                 <th className="pb-3 pr-4">Blueprint</th>

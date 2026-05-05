@@ -105,7 +105,7 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontSize: '1.2rem',
-                            transition: 'all 0.2s'
+                            transition: 'all var(--duration-normal)'
                         }}
                         onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
                         onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)'}
@@ -272,7 +272,7 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                                         backgroundColor: 'rgba(255, 255, 255, 0.03)',
                                         border: '1px solid rgba(255, 255, 255, 0.05)',
                                         cursor: 'pointer',
-                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                        transition: 'all var(--duration-normal) var(--ease-standard)',
                                         display: 'flex',
                                         alignItems: 'center',
                                         gap: '20px'
@@ -343,7 +343,7 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                                             fontSize: '0.85rem',
                                             fontWeight: 700,
                                             cursor: excludeIds.includes(item.id) ? 'not-allowed' : 'pointer',
-                                            transition: 'all 0.2s'
+                                            transition: 'all var(--duration-normal)'
                                         }}
                                         onMouseOver={(e) => {
                                             if (!excludeIds.includes(item.id)) {

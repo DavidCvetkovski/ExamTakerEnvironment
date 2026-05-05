@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
+import ThemeToggle from '@/components/layout/ThemeToggle';
 
 export default function GlobalHeader() {
     const pathname = usePathname();
@@ -57,6 +58,7 @@ export default function GlobalHeader() {
                         </nav>
                     </div>
                     <div className="flex items-center space-x-4">
+                        <ThemeToggle />
                         <div className={`text-sm hidden sm:block ${isStudentShell ? 'text-slate-500' : 'text-gray-400'}`}>
                             <span className={`font-medium ${isStudentShell ? 'text-slate-800' : 'text-gray-200'}`}>{user?.email}</span>
                             <span className={`ml-2 px-2 py-0.5 rounded text-xs ${isStudentShell ? 'border border-student-border-alt bg-white' : 'bg-gray-800 border border-gray-700'}`}>

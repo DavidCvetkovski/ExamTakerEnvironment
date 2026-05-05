@@ -23,4 +23,5 @@ class User(Base):
     role = Column(Enum(UserRole), default=UserRole.STUDENT, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     provision_time_multiplier = Column(Float, default=1.0, nullable=False)
+    theme_preference = Column(String, nullable=True, default=None)
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -1,6 +1,7 @@
 'use client';
 
 import type { DistractorStat } from '@/lib/analytics.types';
+import { Badge } from '@/components/ui';
 
 export default function DistractorBars({ distractors }: { distractors: DistractorStat[] }) {
     if (distractors.length === 0) {
@@ -21,28 +22,24 @@ export default function DistractorBars({ distractors }: { distractors: Distracto
                                     <p className="font-medium text-foreground">
                                         {distractor.option_text || `Option ${distractor.option_index + 1}`}
                                     </p>
-                                    <div className="mt-1 flex flex-wrap gap-2 text-eyebrow text-shell-muted">
+                                    <div className="mt-1 flex flex-wrap gap-1.5">
                                         {distractor.is_correct ? (
-                                            <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-200">
-                                                Correct
-                                            </span>
+                                            <Badge tone="success" size="sm">Correct</Badge>
                                         ) : null}
                                         {distractor.is_non_functional ? (
-                                            <span className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-amber-200">
-                                                Non-functional
-                                            </span>
+                                            <Badge tone="warning" size="sm">Non-functional</Badge>
                                         ) : null}
                                     </div>
                                 </div>
                             </div>
-                            <span className="text-sm font-semibold text-cyan-300">
+                            <span className="text-sm font-semibold text-brand">
                                 {distractor.percentage.toFixed(1)}%
                             </span>
                         </div>
                         <div className="h-3 overflow-hidden rounded-full bg-shell-bg">
                             <div
                                 className={`h-full rounded-full ${
-                                    distractor.is_correct ? 'bg-emerald-400' : 'bg-cyan-400'
+                                    distractor.is_correct ? 'bg-success' : 'bg-brand'
                                 }`}
                                 style={{ width: `${Math.max(distractor.percentage, distractor.count > 0 ? 3 : 0)}%` }}
                             />

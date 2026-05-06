@@ -7,6 +7,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useRouter, useSearchParams } from 'next/navigation';
 import QuestionPickerModal from '@/components/blueprint/QuestionPickerModal';
 import BlueprintSaveIndicator from '@/components/blueprint/BlueprintSaveIndicator';
+import { Badge, Button, useToast } from '@/components/ui';
 
 type BlueprintDraft = Partial<TestDefinition>;
 
@@ -201,31 +202,32 @@ function BlueprintPageInner() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-foreground">
                     <div className="flex justify-between items-end mb-12">
                         <div>
-                            <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">
+                            <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
                                 Test Blueprints
                             </h1>
                             <p className="mt-2 text-shell-muted-dim">Design and manage rule-based exam definitions.</p>
                         </div>
-                        <button
-                            onClick={handleCreateNew}
-                            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-semibold rounded-xl text-white bg-brand hover:bg-brand shadow-lg shadow-indigo-500/20 transition-all active:scale-95"
-                        >
+                        <Button variant="primary" size="lg" onClick={handleCreateNew}>
                             <span className="mr-2 text-xl">+</span> New Blueprint
-                        </button>
+                        </Button>
                     </div>
 
                     {isLoading && blueprints.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-24 opacity-50">
-                            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                        <div className="flex flex-col items-center justify-center py-24 text-shell-muted-dim">
+                            <div className="w-12 h-12 border-4 border-brand border-t-transparent rounded-full animate-spin mb-4"></div>
                             <p>Loading blueprints...</p>
                         </div>
                     )}
-                    {error && <div className="p-4 bg-red-900/20 border border-red-500/50 rounded-xl text-red-400 mb-8">{error}</div>}
+                    {error && (
+                        <div className="p-4 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] mb-8">
+                            {error}
+                        </div>
+                    )}
 
                     {!isLoading && blueprints.length === 0 && (
                         <div className="text-center py-20 bg-shell-surface/30 rounded-3xl border border-dashed border-shell-border">
                             <p className="text-shell-muted-dim mb-6">No blueprints found. Get started by creating your first one!</p>
-                            <button onClick={handleCreateNew} className="text-brand font-semibold hover:text-brand">
+                            <button onClick={handleCreateNew} className="text-brand font-semibold hover:underline">
                                 Create Blueprint →
                             </button>
                         </div>
@@ -236,18 +238,18 @@ function BlueprintPageInner() {
                             <div
                                 key={bp.id}
                                 onClick={() => router.push(`/blueprint?id=${bp.id}`)}
-                                className="group relative bg-shell-surface/50 hover:bg-shell-input/80 p-6 rounded-3xl border border-white/5 hover:border-white/10 transition-all cursor-pointer backdrop-blur-sm"
+                                className="group relative bg-shell-surface/50 hover:bg-shell-input/80 p-6 rounded-3xl border border-shell-border hover:border-shell-border-deep transition-all cursor-pointer backdrop-blur-sm"
                             >
                                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <span className="text-brand text-sm font-medium">Edit →</span>
                                 </div>
-                                <h3 className="text-xl font-bold mb-2 pr-12 line-clamp-1">{bp.title}</h3>
+                                <h3 className="text-xl font-bold mb-2 pr-12 line-clamp-1 text-foreground">{bp.title}</h3>
                                 <p className="text-shell-muted-dim text-sm mb-6 line-clamp-2 min-h-[40px]">{bp.description || 'No description provided.'}</p>
 
-                                <div className="flex items-center justify-between pt-4 border-t border-white/5 text-xs text-shell-muted-dim font-medium tracking-wider uppercase">
+                                <div className="flex items-center justify-between pt-4 border-t border-shell-border text-xs text-shell-muted-dim font-medium tracking-wider uppercase">
                                     <div className="flex items-center gap-4">
                                         <span className="flex items-center gap-1.5">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                            <span className="w-1.5 h-1.5 rounded-full bg-info"></span>
                                             {bp.blocks.length} Sections
                                         </span>
                                         <span className="flex items-center gap-1.5">
@@ -281,7 +283,7 @@ function BlueprintPageInner() {
                             <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> All Blueprints
                         </button>
 
-                        <div className="min-h-blueprint-canvas overflow-hidden rounded-card-lg border border-white/10 bg-shell-surface/80 shadow-2xl backdrop-blur-xl">
+                        <div className="min-h-blueprint-canvas overflow-hidden rounded-card-lg border border-shell-border bg-shell-surface/80 shadow-2xl backdrop-blur-xl">
                             {/* Hero Section */}
                             <div className="p-8 pb-0">
                                 <input
@@ -289,18 +291,18 @@ function BlueprintPageInner() {
                                     placeholder="Untitled Blueprint"
                                     value={currentBlueprint?.title || ''}
                                     onChange={(e) => saveState({ title: e.target.value })}
-                                    className="w-100 bg-transparent border-none text-foreground text-4xl font-black placeholder-white/20 focus:ring-0 mb-2 p-0 w-full"
+                                    className="w-full bg-transparent border-none text-foreground text-4xl font-black placeholder:text-shell-muted-dim focus:ring-0 mb-2 p-0"
                                 />
                                 <textarea
-                                    placeholder="Decribe the purpose of this test (optional)..."
+                                    placeholder="Describe the purpose of this test (optional)..."
                                     value={currentBlueprint?.description || ''}
                                     onChange={(e) => saveState({ description: e.target.value })}
                                     rows={1}
-                                    className="w-100 bg-transparent border-none text-shell-muted-dim text-lg placeholder-white/10 focus:ring-0 mb-8 p-0 resize-none w-full"
+                                    className="w-full bg-transparent border-none text-shell-muted-dim text-lg placeholder:text-shell-muted-dim focus:ring-0 mb-8 p-0 resize-none"
                                 />
 
                                 {/* Config Bar */}
-                                <div className="flex flex-wrap items-center gap-6 p-6 bg-white/5 rounded-2xl mb-12">
+                                <div className="flex flex-wrap items-center gap-6 p-6 bg-shell-input/40 rounded-2xl mb-12">
                                     <div className="flex-1 min-w-[150px]">
                                         <label className="mb-2 block text-eyebrow-sm font-bold uppercase tracking-widest text-brand">Duration (minutes)</label>
                                         <div className="flex items-center">
@@ -310,7 +312,7 @@ function BlueprintPageInner() {
                                                 onChange={(e) => saveState({
                                                     duration_minutes: e.target.value === '' ? undefined : parseInt(e.target.value, 10)
                                                 })}
-                                                className="bg-black/20 border border-white/10 rounded-lg py-2 px-3 text-foreground focus:outline-none focus:border-brand/50 w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                className="bg-shell-input border border-shell-border rounded-lg py-2 px-3 text-foreground focus:outline-none focus:border-brand w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                             />
                                             <span className="ml-3 text-shell-muted-dim text-sm font-medium">minutes</span>
                                         </div>
@@ -320,7 +322,7 @@ function BlueprintPageInner() {
                                             onClick={() => saveState({ shuffle_questions: !currentBlueprint?.shuffle_questions })}
                                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${currentBlueprint?.shuffle_questions ? 'bg-brand' : 'bg-shell-input-alt'}`}
                                         >
-                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${currentBlueprint?.shuffle_questions ? 'translate-x-6' : 'translate-x-1'}`} />
+                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-shell-bg transition-transform ${currentBlueprint?.shuffle_questions ? 'translate-x-6' : 'translate-x-1'}`} />
                                         </button>
                                         <span className="text-sm font-semibold text-shell-muted">Shuffle Questions</span>
                                     </div>
@@ -334,7 +336,7 @@ function BlueprintPageInner() {
                                             })}
                                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${scoringConfig.shuffle_options ? 'bg-brand' : 'bg-shell-input-alt'}`}
                                         >
-                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${scoringConfig.shuffle_options ? 'translate-x-6' : 'translate-x-1'}`} />
+                                            <span className={`inline-block h-4 w-4 transform rounded-full bg-shell-bg transition-transform ${scoringConfig.shuffle_options ? 'translate-x-6' : 'translate-x-1'}`} />
                                         </button>
                                         <span className="text-sm font-semibold text-shell-muted">Shuffle Answer Order</span>
                                     </div>
@@ -363,7 +365,7 @@ function BlueprintPageInner() {
                                                         newBlocks.splice(bIdx, 1);
                                                         saveState({ blocks: newBlocks });
                                                     }}
-                                                    className="text-shell-muted hover:text-red-400 text-sm font-medium transition-colors"
+                                                    className="text-shell-muted hover:text-danger text-sm font-medium transition-colors"
                                                 >
                                                     Remove Section
                                                 </button>
@@ -381,7 +383,7 @@ function BlueprintPageInner() {
                                                 }}
                                             >
                                                 {block.rules.length === 0 && (
-                                                    <div className="h-full min-h-[60px] border-2 border-dashed border-white/10 rounded-2xl flex items-center justify-center text-shell-muted-dim text-xs font-semibold uppercase tracking-widest bg-white/[0.01]">
+                                                    <div className="h-full min-h-[60px] border-2 border-dashed border-shell-border rounded-2xl flex items-center justify-center text-shell-muted-dim text-xs font-semibold uppercase tracking-widest bg-shell-input/30">
                                                         Empty Section
                                                     </div>
                                                 )}
@@ -396,28 +398,29 @@ function BlueprintPageInner() {
                                                             onDragEnd={handleDragEnd}
                                                             onDragOver={(e) => e.preventDefault()}
                                                             onDrop={(e) => handleDrop(e, bIdx, rIdx)}
-                                                            className={`group flex flex-col gap-4 bg-white/[0.03] hover:bg-white/[0.05] border border-white/5 rounded-2xl p-4 transition-all relative cursor-move
-                                                                    ${isDragOver ? 'border-t-2 border-t-indigo-500 bg-brand/10 scale-[1.02]' : ''}`}
+                                                            className={`group flex flex-col gap-4 bg-shell-input/30 hover:bg-shell-input/60 border border-shell-border rounded-2xl p-4 transition-all relative cursor-move
+                                                                    ${isDragOver ? 'border-t-2 border-t-brand bg-brand/10 scale-[1.02]' : ''}`}
                                                         >
                                                             <div className="flex items-center gap-4">
                                                                 <div className="text-shell-muted-dim cursor-grab hover:text-foreground">
                                                                     &#x2630;
                                                                 </div>
-                                                                <div className={`rounded-md px-2 py-1 text-eyebrow-xs font-black uppercase tracking-tight ${rule.rule_type === 'FIXED' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
+                                                                <Badge tone={rule.rule_type === 'FIXED' ? 'info' : 'accent'} size="sm">
                                                                     {rule.rule_type === 'FIXED' ? 'Fixed Item' : 'Smart Draw'}
-                                                                </div>
+                                                                </Badge>
 
                                                                 {rule.rule_type === 'FIXED' ? (
                                                                     <div className="flex-1 flex items-center justify-between gap-4">
                                                                         <div className="text-sm font-medium text-foreground truncate">
                                                                             {rule.learning_object_id ? getItemPreview(rule.learning_object_id) : <span className="text-shell-muted">No question selected</span>}
                                                                         </div>
-                                                                        <button
+                                                                        <Button
+                                                                            variant="secondary"
+                                                                            size="sm"
                                                                             onClick={() => setPickerOpen({ blockIdx: bIdx, ruleIdx: rIdx })}
-                                                                            className="px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-bold rounded-lg transition-colors border border-blue-500/20"
                                                                         >
                                                                             {rule.learning_object_id ? 'Change' : 'Select'}
-                                                                        </button>
+                                                                        </Button>
                                                                     </div>
                                                                 ) : (
                                                                     <div className="flex-1 flex flex-wrap items-center gap-4">
@@ -433,7 +436,7 @@ function BlueprintPageInner() {
                                                                                         : parseInt(e.target.value, 10);
                                                                                     saveState({ blocks: newBlocks });
                                                                                 }}
-                                                                                className="w-12 bg-black/40 border border-white/10 rounded-lg py-1 px-1 text-sm text-center focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                                                className="w-12 bg-shell-input border border-shell-border text-foreground rounded-lg py-1 px-1 text-sm text-center focus:outline-none focus:border-brand [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                                             />
                                                                         </div>
                                                                         <div className="flex items-center gap-2">
@@ -446,7 +449,7 @@ function BlueprintPageInner() {
                                                                                     newBlocks[bIdx].rules[rIdx].topic = e.target.value;
                                                                                     saveState({ blocks: newBlocks });
                                                                                 }}
-                                                                                className="w-32 bg-black/40 border border-white/10 rounded-lg py-1 px-2 text-sm focus:outline-none"
+                                                                                className="w-32 bg-shell-input border border-shell-border text-foreground placeholder:text-shell-muted-dim rounded-lg py-1 px-2 text-sm focus:outline-none focus:border-brand"
                                                                             />
                                                                         </div>
                                                                         <div className="flex items-center gap-2">
@@ -458,7 +461,7 @@ function BlueprintPageInner() {
                                                                                     newBlocks[bIdx].rules[rIdx].difficulty = e.target.value ? parseInt(e.target.value) : undefined;
                                                                                     saveState({ blocks: newBlocks });
                                                                                 }}
-                                                                                className="bg-black/40 border border-white/10 rounded-lg py-1 px-2 text-sm focus:outline-none appearance-none"
+                                                                                className="bg-shell-input border border-shell-border text-foreground rounded-lg py-1 px-2 text-sm focus:outline-none focus:border-brand appearance-none"
                                                                             >
                                                                                 <option value="">Any</option>
                                                                                 {[1, 2, 3, 4, 5].map(d => (
@@ -475,7 +478,7 @@ function BlueprintPageInner() {
                                                                         newBlocks[bIdx].rules.splice(rIdx, 1);
                                                                         saveState({ blocks: newBlocks });
                                                                     }}
-                                                                    className="opacity-0 group-hover:opacity-100 p-2 text-shell-muted hover:text-red-400 transition-all ml-auto"
+                                                                    className="opacity-0 group-hover:opacity-100 p-2 text-shell-muted hover:text-danger transition-all ml-auto"
                                                                 >
                                                                     ✕
                                                                 </button>
@@ -486,18 +489,20 @@ function BlueprintPageInner() {
                                             </div>
 
                                             <div className="mt-6 flex gap-3">
-                                                <button
+                                                <Button
+                                                    variant="secondary"
+                                                    size="sm"
                                                     onClick={() => handleAddRule(bIdx, 'FIXED')}
-                                                    className="px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-xs font-bold rounded-xl transition-all border border-blue-500/10 flex items-center"
                                                 >
-                                                    <span className="mr-2 text-base">+</span> Specific Item
-                                                </button>
-                                                <button
+                                                    <span className="mr-1.5">+</span> Specific Item
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
                                                     onClick={() => handleAddRule(bIdx, 'RANDOM')}
-                                                    className="px-4 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 text-xs font-bold rounded-xl transition-all border border-purple-500/10 flex items-center"
                                                 >
-                                                    <span className="mr-2 text-base">+</span> Smart Rule
-                                                </button>
+                                                    <span className="mr-1.5">+</span> Smart Rule
+                                                </Button>
                                             </div>
                                         </div>
                                     ))}
@@ -505,7 +510,7 @@ function BlueprintPageInner() {
 
                                 <button
                                     onClick={handleAddBlock}
-                                    className="w-full mt-12 py-10 border-2 border-dashed border-white/5 rounded-3xl text-shell-muted hover:text-shell-muted-dim hover:border-white/10 hover:bg-white/[0.01] transition-all flex flex-col items-center justify-center gap-2"
+                                    className="w-full mt-12 py-10 border-2 border-dashed border-shell-border rounded-3xl text-shell-muted hover:text-foreground hover:border-shell-border-deep hover:bg-shell-input/30 transition-all flex flex-col items-center justify-center gap-2"
                                 >
                                     <span className="text-3xl">+</span>
                                     <span className="text-sm font-bold uppercase tracking-widest">Add New Section</span>
@@ -513,26 +518,29 @@ function BlueprintPageInner() {
                             </div>
 
                             {/* Sticky Footer */}
-                            <div className="sticky bottom-0 bg-shell-surface/90 backdrop-blur-xl border-t border-white/10 p-6 px-8 flex justify-between items-center z-10">
+                            <div className="sticky bottom-0 bg-shell-surface/90 backdrop-blur-xl border-t border-shell-border p-6 px-8 flex justify-between items-center z-10">
                                 <div className="flex items-center gap-4">
                                     <BlueprintSaveIndicator />
                                 </div>
                                 <div className="flex gap-4">
                                     {idFromUrl && (
-                                        <button
+                                        <Button
+                                            variant="secondary"
+                                            size="lg"
                                             onClick={handleStartPreview}
                                             disabled={isStarting}
-                                            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-blue-500/20"
+                                            loading={isStarting}
                                         >
                                             {isStarting ? 'Loading...' : 'Practice Blueprint'}
-                                        </button>
+                                        </Button>
                                     )}
-                                    <button
+                                    <Button
+                                        variant="success"
+                                        size="lg"
                                         onClick={handleSave}
-                                        className="px-10 py-2.5 bg-green-500 hover:bg-green-400 text-foreground text-sm font-black rounded-xl transition-all shadow-lg shadow-green-500/20"
                                     >
                                         Publish Blueprint
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         </div>
@@ -540,7 +548,7 @@ function BlueprintPageInner() {
 
                     {/* Breakdown Sidebar — hidden below 1400px to prevent horizontal scroll */}
                     <div className="hidden 2xl:block w-80 shrink-0 space-y-6">
-                        <div className="sticky top-12 rounded-card-lg border border-white/10 bg-shell-surface/50 p-6 backdrop-blur-md">
+                        <div className="sticky top-12 rounded-card-lg border border-shell-border bg-shell-surface/50 p-6 backdrop-blur-md">
                             <h4 className="text-xs font-black uppercase tracking-widest text-brand mb-6 flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-brand animate-pulse"></span>
                                 Live Breakdown
@@ -548,17 +556,17 @@ function BlueprintPageInner() {
 
                             <div className="space-y-8">
                                 <div className="grid grid-cols-3 gap-4">
-                                    <div className="bg-white/5 rounded-2xl p-4">
+                                    <div className="bg-shell-input/50 rounded-2xl p-4">
                                         <div className="mb-1 text-eyebrow-sm font-bold uppercase text-shell-muted-dim">Items</div>
-                                        <div className="text-2xl font-black">{stats.totalCount}</div>
+                                        <div className="text-2xl font-black text-foreground">{stats.totalCount}</div>
                                     </div>
-                                    <div className="bg-white/5 rounded-2xl p-4">
+                                    <div className="bg-shell-input/50 rounded-2xl p-4">
                                         <div className="mb-1 text-eyebrow-sm font-bold uppercase text-shell-muted-dim">Points</div>
-                                        <div className="text-2xl font-black">{stats.totalPoints}</div>
+                                        <div className="text-2xl font-black text-foreground">{stats.totalPoints}</div>
                                     </div>
-                                    <div className="bg-white/5 rounded-2xl p-4">
+                                    <div className="bg-shell-input/50 rounded-2xl p-4">
                                         <div className="mb-1 text-eyebrow-sm font-bold uppercase text-shell-muted-dim">Time</div>
-                                        <div className="text-2xl font-black">{stats.totalTime}m</div>
+                                        <div className="text-2xl font-black text-foreground">{stats.totalTime}m</div>
                                     </div>
                                 </div>
 
@@ -572,7 +580,7 @@ function BlueprintPageInner() {
                                                         <span className="text-shell-muted">{topic}</span>
                                                         <span className="text-brand">{Math.round((count / stats.totalCount) * 100)}%</span>
                                                     </div>
-                                                    <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                                    <div className="h-1.5 w-full bg-shell-input rounded-full overflow-hidden">
                                                         <div
                                                             className="h-full bg-brand rounded-full transition-all duration-500"
                                                             style={{ width: `${(count / (stats.totalCount || 1)) * 100}%` }}
@@ -586,7 +594,7 @@ function BlueprintPageInner() {
                                     </div>
                                 </div>
 
-                                <div className="pt-6 border-t border-white/5">
+                                <div className="pt-6 border-t border-shell-border">
                                     <div className="flex items-center justify-between p-4 bg-brand/10 rounded-2xl border border-brand/20">
                                         <div className="text-eyebrow-sm font-bold uppercase text-brand">Cognitive level</div>
                                         <div className="text-lg font-black text-foreground">Dynamic</div>

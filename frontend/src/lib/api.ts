@@ -27,12 +27,16 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
-        // Avoid infinite loops if the refresh endpoint itself 401s
+        // Avoid infinite loops on auth endpoints — never retry logout/refresh/login
+        const isAuthEndpoint =
+            originalRequest.url?.includes('auth/refresh') ||
+            originalRequest.url?.includes('auth/login') ||
+            originalRequest.url?.includes('auth/logout');
+
         if (
             error.response?.status === 401 &&
             !originalRequest._retry &&
-            !originalRequest.url?.includes('auth/refresh') &&
-            !originalRequest.url?.includes('auth/login')
+            !isAuthEndpoint
         ) {
             originalRequest._retry = true;
             try {

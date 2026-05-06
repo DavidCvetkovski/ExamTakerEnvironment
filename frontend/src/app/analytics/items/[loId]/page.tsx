@@ -7,9 +7,9 @@ import { useParams, useSearchParams } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import DistractorBars from '@/components/analytics/DistractorBars';
 import PDValueTrendChart from '@/components/analytics/PDValueTrendChart';
-import FlagBadge from '@/components/analytics/FlagBadge';
 import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
+import { InfoTooltip } from '@/components/ui';
 
 export default function ItemAnalyticsDetailPage() {
     const { loId } = useParams<{ loId: string }>();
@@ -65,7 +65,6 @@ export default function ItemAnalyticsDetailPage() {
                                 Item Analytics
                             </p>
                             <h1 className="mt-2 text-3xl font-bold text-foreground">{previewTitle}</h1>
-                            <p className="mt-2 text-sm text-shell-muted-dim">Learning Object {loId}</p>
                         </div>
                     </div>
                 </div>
@@ -97,21 +96,32 @@ export default function ItemAnalyticsDetailPage() {
                     {history && history.entries.length > 0 ? (
                         <div className="space-y-6">
                             <section>
-                                <div className="mb-3">
+                                <div className="mb-3 flex items-center gap-2">
                                     <h2 className="text-lg font-semibold text-foreground">Version Trend</h2>
-                                    <p className="text-sm text-shell-muted-dim">P-value and D-value progression across the recorded item history.</p>
+                                    <InfoTooltip>
+                                        Tracks how P-value (difficulty) and D-value (discrimination) shift each time
+                                        the item is revised. A new dot is plotted for every published version.
+                                    </InfoTooltip>
                                 </div>
+                                <p className="mb-3 text-sm text-shell-muted-dim">
+                                    P-value and D-value progression across the recorded item history.
+                                </p>
                                 <PDValueTrendChart entries={history.entries} />
                             </section>
 
                             {latestItemStats && latestItemStats.question_type !== 'ESSAY' && latestItemStats.distractors.length > 0 ? (
                                 <section>
-                                    <div className="mb-3">
+                                    <div className="mb-3 flex items-center gap-2">
                                         <h2 className="text-lg font-semibold text-foreground">Latest Distractor Breakdown</h2>
-                                        <p className="text-sm text-shell-muted-dim">
-                                            Response share for the loaded source test, {sourceHistoryEntry?.test_title ?? 'the latest test'}.
-                                        </p>
+                                        <InfoTooltip>
+                                            For each option, shows the share of students who picked it. A
+                                            "Non-functional" distractor (chosen by &lt;5% of students) is dead weight —
+                                            consider rewriting or removing it.
+                                        </InfoTooltip>
                                     </div>
+                                    <p className="mb-3 text-sm text-shell-muted-dim">
+                                        Response share for the loaded source test, {sourceHistoryEntry?.test_title ?? 'the latest test'}.
+                                    </p>
                                     <DistractorBars distractors={latestItemStats.distractors} />
                                 </section>
                             ) : null}

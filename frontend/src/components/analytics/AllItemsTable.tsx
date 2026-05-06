@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import type { ItemAnalyticsResponse } from '@/lib/analytics.types';
-import { Button } from '@/components/ui';
+import { Button, InfoTooltip } from '@/components/ui';
 import FlagBadge from './FlagBadge';
 
 type SortKey = 'stem' | 'p' | 'd' | 'responses';
@@ -50,7 +50,7 @@ export default function AllItemsTable({
     const sortBtnClass = (key: SortKey) =>
         `rounded-full px-3 py-1 text-xs font-medium transition-colors ${
             sortKey === key
-                ? 'text-foreground'
+                ? 'bg-brand text-white'
                 : 'bg-shell-input text-shell-muted hover:text-foreground'
         }`;
 
@@ -70,7 +70,6 @@ export default function AllItemsTable({
                             key={option.key}
                             onClick={() => setSortKey(option.key)}
                             className={sortBtnClass(option.key)}
-                            style={sortKey === option.key ? { backgroundColor: 'var(--color-brand)', opacity: 1 } : {}}
                         >
                             {option.label}
                         </button>
@@ -93,10 +92,9 @@ export default function AllItemsTable({
                             onClick={() => setActiveFlag(flagCode)}
                             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                                 activeFlag === flagCode
-                                    ? 'text-foreground'
+                                    ? 'bg-brand text-white'
                                     : 'bg-shell-input text-shell-muted hover:text-foreground'
                             }`}
-                            style={activeFlag === flagCode ? { backgroundColor: 'var(--color-brand)' } : {}}
                         >
                             {flagCode.replaceAll('_', ' ')}
                         </button>
@@ -110,8 +108,24 @@ export default function AllItemsTable({
                         <tr>
                             <th className="px-4 py-3 text-left">Item</th>
                             <th className="px-4 py-3 text-left">Type</th>
-                            <th className="px-4 py-3 text-left">P</th>
-                            <th className="px-4 py-3 text-left">D</th>
+                            <th className="px-4 py-3 text-left">
+                                <span className="inline-flex items-center gap-1.5">
+                                    P
+                                    <InfoTooltip>
+                                        Difficulty (P-value): proportion of students who answered correctly.
+                                        0.20 = very hard, 0.90 = very easy. The sweet spot is roughly 0.30–0.80.
+                                    </InfoTooltip>
+                                </span>
+                            </th>
+                            <th className="px-4 py-3 text-left">
+                                <span className="inline-flex items-center gap-1.5">
+                                    D
+                                    <InfoTooltip>
+                                        Discrimination (D-value): how well this item separates strong students from weak students.
+                                        Above 0.30 is good; below 0.15 is poor; negative means the item is misleading.
+                                    </InfoTooltip>
+                                </span>
+                            </th>
                             <th className="px-4 py-3 text-left">Responses</th>
                             <th className="px-4 py-3 text-left">Flags</th>
                             <th className="px-4 py-3 text-right">Open</th>

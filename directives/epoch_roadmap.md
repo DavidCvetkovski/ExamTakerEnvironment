@@ -422,6 +422,30 @@
 
 ---
 
+## Epoch 7.8 — Navigation Persistence, Sessions Overhaul & UI Audit
+
+**Goal:** Fix 29 concrete UX and theming issues uncovered while using the 7.7 build. Frontend-only (one minor backend audit for bulk enrollment and publish flow). No new product surface.
+
+### Stages
+1. **Navigation Architecture** — remove Authoring nav tab; analytics and blueprint remember last open item across tab switches
+2. **Sessions Page** — three sections (Ongoing / Planned / Past), live countdown timers, cancel confirmation modal, schedule success toast
+3. **TimePicker Redesign** — eliminate scroll-DOM feedback loop; replace with wheel + click spinner (3-item window, no scrollTop manipulation)
+4. **Sessions Form Polish** — course dropdown shows title only; course creation toast; bulk email enrollment for admins
+5. **Blueprint Creation** — theme-aware QuestionPickerModal (no inline styles); breakdown overflow fix; "Complexity" → "Cognitive level"; "Manual duration" → "Duration"; back-nav state restored
+6. **Grading & Publishing** — no auto-publish; Publish / Unpublish are mutually exclusive and never mutually disabled
+7. **Analytics Fixes** — top-section buttons theme-aware; remove Version column; remove revision quality-flags section; Poor Discrimination / Latest badge contrast
+8. **Library Filters + Authoring Partial Points** — type + points filters in Question Library; partial credit toggle in MCQ editor; smart back button from authoring
+9. **Theme & Button Audit** — Practice, Enrollments buttons all themes; student grade view dark theme; full button migration to primitives
+10. **Verification** — tsc + next build green; sanity greps; manual check matrix across 3 themes
+
+**Exit Criteria:**
+- All 29 issues in the catalogue verified fixed.
+- `tsc --noEmit` + `next build` pass.
+- Zero raw `<button>` with hardcoded colour classes in audited surfaces.
+- Manual screenshot matrix complete across dark / warm / light-blue.
+
+---
+
 ## Epoch 8 — Media Management & Resource Library
 
 **Goal:** Enable rich media uploads, build a reusable resource library, and support CDN-backed delivery for scalable media serving.

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import type { TestDefinition } from '@/stores/useBlueprintStore';
 import type { Course } from '@/stores/useCourseStore';
+import { Button } from '@/components/ui';
 
 interface SessionCreateFormProps {
     courses: Course[];
@@ -91,7 +92,7 @@ export default function SessionCreateForm({
         <div className={isAdmin ? 'grid gap-6 xl:grid-cols-[1.2fr_0.8fr]' : 'mx-auto max-w-3xl'}>
             <form onSubmit={handleSubmit} className="rounded-card-md border border-white/10 bg-shell-surface-deep p-6 shadow-2xl shadow-black/30">
                 <div className="mb-6">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Session Manager</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-shell-muted-dim">Session Manager</p>
                     <h2 className="mt-2 text-3xl font-black text-foreground">Schedule an Exam Window</h2>
                     <p className="mt-2 max-w-xl text-sm text-shell-muted-dim">
                         Choose the course, lock a blueprint, and define the exact exam start time. Students only see sessions for courses they are enrolled in.
@@ -105,7 +106,7 @@ export default function SessionCreateForm({
                             aria-label="Course"
                             value={courseId}
                             onChange={(event) => setCourseId(event.target.value)}
-                            className="w-full rounded-2xl border border-white/10 bg-shell-input px-4 py-3 text-sm text-foreground outline-none transition focus:border-cyan-400"
+                            className="w-full rounded-2xl border border-white/10 bg-shell-input px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand"
                             required
                         >
                             <option value="">Select a course</option>
@@ -123,7 +124,7 @@ export default function SessionCreateForm({
                             aria-label="Blueprint"
                             value={testDefinitionId}
                             onChange={(event) => setTestDefinitionId(event.target.value)}
-                            className="w-full rounded-2xl border border-white/10 bg-shell-input px-4 py-3 text-sm text-foreground outline-none transition focus:border-cyan-400"
+                            className="w-full rounded-2xl border border-white/10 bg-shell-input px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand"
                             required
                         >
                             <option value="">Select a blueprint</option>
@@ -144,21 +145,19 @@ export default function SessionCreateForm({
                         value={startsAt}
                         onChange={(event) => setStartsAt(event.target.value)}
                         step={900}
-                        className="w-full rounded-2xl border border-white/10 bg-shell-input px-4 py-3 text-sm text-foreground outline-none transition focus:border-cyan-400"
+                        className="w-full rounded-2xl border border-white/10 bg-shell-input px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand"
                         required
                     />
-                    <p className="text-xs text-sky-400/80 mt-1 italic">
+                    <p className="text-xs text-shell-muted mt-1 italic">
                         ↳ All times are scheduled based on your timezone{timeZone ? ` (Current: ${timeZone})` : ''}
                     </p>
                 </label>
 
-                <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="mt-6 inline-flex items-center justify-center rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black uppercase tracking-tight text-foreground transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                    {isSubmitting ? 'Scheduling...' : 'Schedule Session'}
-                </button>
+                <div className="mt-6">
+                    <Button type="submit" variant="primary" size="lg" fullWidth disabled={isSubmitting} loading={isSubmitting}>
+                        {isSubmitting ? 'Scheduling...' : 'Schedule Session'}
+                    </Button>
+                </div>
             </form>
 
             {isAdmin && (
@@ -177,7 +176,7 @@ export default function SessionCreateForm({
                                 value={courseCode}
                                 onChange={(event) => setCourseCode(event.target.value)}
                                 placeholder="e.g. BIO101"
-                                className="w-full rounded-2xl border border-white/10 bg-shell-input-alt px-4 py-3 text-sm text-foreground outline-none transition focus:border-amber-400"
+                                className="w-full rounded-2xl border border-white/10 bg-shell-input-alt px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand"
                             />
                         </label>
                         <label className="space-y-2 block">
@@ -187,18 +186,16 @@ export default function SessionCreateForm({
                                 value={courseTitle}
                                 onChange={(event) => setCourseTitle(event.target.value)}
                                 placeholder="Introductory Biology"
-                                className="w-full rounded-2xl border border-white/10 bg-shell-input-alt px-4 py-3 text-sm text-foreground outline-none transition focus:border-amber-400"
+                                className="w-full rounded-2xl border border-white/10 bg-shell-input-alt px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand"
                             />
                         </label>
                     </div>
 
-                    <button
-                        type="submit"
-                        disabled={courseBusy}
-                        className="mt-6 inline-flex items-center justify-center rounded-2xl border border-amber-300/40 bg-amber-200/10 px-5 py-3 text-sm font-black uppercase tracking-tight text-amber-200 transition hover:bg-amber-200/20 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        {courseBusy ? 'Creating...' : 'Create Course'}
-                    </button>
+                    <div className="mt-6">
+                        <Button type="submit" variant="secondary" size="lg" fullWidth disabled={courseBusy} loading={courseBusy}>
+                            {courseBusy ? 'Creating...' : 'Create Course'}
+                        </Button>
+                    </div>
                 </form>
             )}
         </div>

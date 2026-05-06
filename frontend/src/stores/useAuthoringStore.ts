@@ -30,8 +30,14 @@ interface StoredItemVersion {
     metadata_tags?: Record<string, unknown>;
 }
 
+interface DraftSnapshot {
+    questionType: 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY';
+    tiptapJson: Record<string, unknown>;
+    options: MCQOption[] | EssayOptions;
+    metadataTags: Record<string, unknown>;
+}
+
 interface AuthoringState {
-    // Core item state
     learningObjectId: string | null;
     itemId: string | null;
     versionNumber: number;
@@ -40,8 +46,9 @@ interface AuthoringState {
     tiptapJson: Record<string, unknown>;
     options: MCQOption[] | EssayOptions;
     metadataTags: Record<string, unknown>;
+    serverSnapshot: DraftSnapshot | null;
+    isDirty: boolean;
 
-    // Actions
     setLearningObjectId: (id: string) => void;
     setQuestionType: (type: 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY') => void;
     updateTipTap: (json: Record<string, unknown>) => void;
@@ -49,11 +56,20 @@ interface AuthoringState {
     updateMetadata: (tags: Record<string, unknown>) => void;
     updateMetadataField: (key: string, value: unknown) => void;
     saveDraft: () => Promise<void>;
+    revertChanges: () => void;
     fetchLatestVersion: (loId: string) => Promise<void>;
 }
 
-// Debounce timer reference
-let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+function computeIsDirty(state: AuthoringState): boolean {
+    if (!state.serverSnapshot) return false;
+    const snap = state.serverSnapshot;
+    return (
+        JSON.stringify(state.tiptapJson) !== JSON.stringify(snap.tiptapJson) ||
+        JSON.stringify(state.options) !== JSON.stringify(snap.options) ||
+        JSON.stringify(state.metadataTags) !== JSON.stringify(snap.metadataTags) ||
+        state.questionType !== snap.questionType
+    );
+}
 
 export const useAuthoringStore = create<AuthoringState>((set, get) => ({
     learningObjectId: null,
@@ -64,8 +80,11 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
     tiptapJson: {},
     options: [],
     metadataTags: {},
+    serverSnapshot: null,
+    isDirty: false,
 
     setLearningObjectId: (id) => set({ learningObjectId: id }),
+
     setQuestionType: (type) => {
         const currentOptions = get().options;
         let newOptions = currentOptions;
@@ -76,7 +95,6 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
             newOptions = [];
         }
 
-        // If switching from Multiple Response to Single Choice, clear extra correct answers
         if (type === 'MULTIPLE_CHOICE' && Array.isArray(newOptions)) {
             let correctFound = false;
             newOptions = newOptions.map(opt => {
@@ -88,27 +106,39 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
             });
         }
 
-        set({ questionType: type, options: newOptions });
+        set((s) => {
+            const next = { ...s, questionType: type, options: newOptions };
+            return { questionType: type, options: newOptions, isDirty: computeIsDirty(next) };
+        });
     },
 
     updateTipTap: (json) => {
-        set({ tiptapJson: json });
-        // Trigger debounced auto-save
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            get().saveDraft();
-        }, 3000);
+        set((s) => {
+            const next = { ...s, tiptapJson: json };
+            return { tiptapJson: json, isDirty: computeIsDirty(next) };
+        });
     },
 
-    updateOptions: (options) => set({ options }),
-    updateMetadata: (tags) => set({ metadataTags: tags }),
+    updateOptions: (options) => {
+        set((s) => {
+            const next = { ...s, options };
+            return { options, isDirty: computeIsDirty(next) };
+        });
+    },
+
+    updateMetadata: (tags) => {
+        set((s) => {
+            const next = { ...s, metadataTags: tags };
+            return { metadataTags: tags, isDirty: computeIsDirty(next) };
+        });
+    },
+
     updateMetadataField: (key, value) => {
-        set((state) => ({ metadataTags: { ...state.metadataTags, [key]: value } }));
-        // Trigger debounced auto-save
-        if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            get().saveDraft();
-        }, 3000);
+        set((s) => {
+            const metadataTags = { ...s.metadataTags, [key]: value };
+            const next = { ...s, metadataTags };
+            return { metadataTags, isDirty: computeIsDirty(next) };
+        });
     },
 
     saveDraft: async () => {
@@ -144,11 +174,31 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
             });
 
             const data = res.data;
-            set({ itemId: data.id, versionNumber: data.version_number, saveStatus: 'SAVED' });
+            const snapshot: DraftSnapshot = {
+                questionType: state.questionType,
+                tiptapJson: structuredClone(state.tiptapJson),
+                options: structuredClone(state.options),
+                metadataTags: structuredClone(state.metadataTags),
+            };
+            set({ itemId: data.id, versionNumber: data.version_number, saveStatus: 'SAVED', serverSnapshot: snapshot, isDirty: false });
         } catch (error) {
             console.error("Save failed:", error);
             set({ saveStatus: 'ERROR' });
+            throw error;
         }
+    },
+
+    revertChanges: () => {
+        const snap = get().serverSnapshot;
+        if (!snap) return;
+        set({
+            questionType: snap.questionType,
+            tiptapJson: structuredClone(snap.tiptapJson),
+            options: structuredClone(snap.options),
+            metadataTags: structuredClone(snap.metadataTags),
+            isDirty: false,
+            saveStatus: 'IDLE',
+        });
     },
 
     fetchLatestVersion: async (loId: string) => {
@@ -160,7 +210,6 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
                 const latest = versions[0];
                 let content = latest.content || {};
 
-                // Normalize simple text content to TipTap JSON
                 if (content.text && !content.type) {
                     content = {
                         type: 'doc',
@@ -173,14 +222,12 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
                     };
                 }
 
-                // Correctly extract options based on type
                 let optionsData: MCQOption[] | EssayOptions = Array.isArray(latest.options?.choices) ? [] : {
                     min_words: latest.options?.min_words ?? 50,
                     max_words: latest.options?.max_words ?? 500
                 };
                 if (latest.question_type === 'MULTIPLE_CHOICE' || latest.question_type === 'MULTIPLE_RESPONSE') {
                     const rawChoices = latest.options?.choices || [];
-                    // Ensure every choice has an ID (A, B, C...) for backend schema compliance
                     optionsData = Array.isArray(rawChoices) ? rawChoices.map((choice, index) => ({
                         ...choice,
                         id: choice.id || String.fromCharCode(65 + index),
@@ -195,6 +242,13 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
                     };
                 }
 
+                const snapshot: DraftSnapshot = {
+                    questionType: latest.question_type,
+                    tiptapJson: structuredClone(content),
+                    options: structuredClone(optionsData),
+                    metadataTags: structuredClone(latest.metadata_tags || {}),
+                };
+
                 set({
                     itemId: latest.id,
                     versionNumber: latest.version_number,
@@ -202,6 +256,8 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
                     tiptapJson: content,
                     options: optionsData,
                     metadataTags: latest.metadata_tags || {},
+                    serverSnapshot: snapshot,
+                    isDirty: false,
                     saveStatus: 'IDLE'
                 });
             } else {

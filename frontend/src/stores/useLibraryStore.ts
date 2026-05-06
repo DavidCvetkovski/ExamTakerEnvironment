@@ -5,6 +5,7 @@ export interface LearningObjectSummary {
     id: string;
     bank_id: string;
     created_at: string;
+    updated_at: string;
     latest_version_number: number;
     latest_status: 'DRAFT' | 'READY_FOR_REVIEW' | 'APPROVED' | 'RETIRED';
     latest_question_type: 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY';

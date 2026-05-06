@@ -19,7 +19,6 @@ interface AuthState {
     isAuthenticated: boolean;
     isLoading: boolean;
     themePreference: ThemePreference | null;
-    themeNotice: string | null;
 
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, password: string, role: string) => Promise<void>;
@@ -28,7 +27,6 @@ interface AuthState {
     fetchMe: () => Promise<void>;
     initialize: () => Promise<void>;
     setThemePreference: (theme: ThemePreference | null) => Promise<void>;
-    clearThemeNotice: () => void;
 }
 
 export function getHomePathForRole(role?: UserPublic['role'] | null): string {
@@ -57,7 +55,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     isAuthenticated: false,
     isLoading: true,
     themePreference: null,
-    themeNotice: null,
 
     login: async (email, password) => {
         try {
@@ -164,7 +161,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         syncStoredTheme(theme);
         set({
             themePreference: theme,
-            themeNotice: theme ? `Theme set to ${theme}.` : 'Theme reset to automatic.',
             user: previousUser ? { ...previousUser, theme_preference: theme } : previousUser,
         });
 
@@ -174,12 +170,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             syncStoredTheme(previousTheme);
             set({
                 themePreference: previousTheme,
-                themeNotice: 'Could not save theme preference.',
                 user: previousUser,
             });
             throw error;
         }
     },
-
-    clearThemeNotice: () => set({ themeNotice: null }),
 }));

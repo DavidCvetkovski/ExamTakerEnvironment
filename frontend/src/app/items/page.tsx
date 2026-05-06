@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import {
-    Badge,
     Button,
     EmptyState,
     Input,
@@ -27,12 +26,25 @@ function getMetadataNumber(value: unknown): number | undefined {
     return typeof value === 'number' ? value : undefined;
 }
 
-const STATUS_TONE: Record<string, 'neutral' | 'warning' | 'success' | 'danger'> = {
-    DRAFT: 'neutral',
-    READY_FOR_REVIEW: 'warning',
-    APPROVED: 'success',
-    RETIRED: 'danger',
-};
+function formatRelativeTime(dateStr: string): string {
+    const date = new Date(dateStr);
+    const now = Date.now();
+    const diffMs = now - date.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHr = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHr / 24);
+
+    if (diffDay > 30) {
+        return date.toLocaleDateString();
+    }
+
+    const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+    if (diffDay >= 1) return rtf.format(-diffDay, 'day');
+    if (diffHr >= 1) return rtf.format(-diffHr, 'hour');
+    if (diffMin >= 1) return rtf.format(-diffMin, 'minute');
+    return 'just now';
+}
 
 export default function ItemsLibraryPage() {
     const router = useRouter();
@@ -47,13 +59,17 @@ export default function ItemsLibraryPage() {
         new Set(items.map((item) => getMetadataString(item.metadata_tags?.topic)).filter((v): v is string => v !== null))
     );
 
-    const filteredItems = items.filter((item) => {
-        const matchesSearch =
-            (item.latest_content_preview || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-            item.id.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesSubject = subjectFilter === 'all' || getMetadataString(item.metadata_tags?.topic) === subjectFilter;
-        return matchesSearch && matchesSubject;
-    });
+    const filteredItems = useMemo(() => {
+        return items
+            .filter((item) => {
+                const matchesSearch =
+                    (item.latest_content_preview || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    item.id.toLowerCase().includes(searchQuery.toLowerCase());
+                const matchesSubject = subjectFilter === 'all' || getMetadataString(item.metadata_tags?.topic) === subjectFilter;
+                return matchesSearch && matchesSubject;
+            })
+            .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+    }, [items, searchQuery, subjectFilter]);
 
     const handleCreateNew = async () => {
         setIsCreating(true);
@@ -136,8 +152,7 @@ export default function ItemsLibraryPage() {
                                         <TH>Subject</TH>
                                         <TH align="right">Points</TH>
                                         <TH>Type</TH>
-                                        <TH>Status</TH>
-                                        <TH>Created</TH>
+                                        <TH>Last edited</TH>
                                         <TH align="right">Actions</TH>
                                     </TR>
                                 </THead>
@@ -166,13 +181,8 @@ export default function ItemsLibraryPage() {
                                                     ? 'Multiple choice'
                                                     : 'Essay'}
                                             </TD>
-                                            <TD>
-                                                <Badge tone={STATUS_TONE[item.latest_status] ?? 'neutral'} size="sm">
-                                                    {item.latest_status.replace(/_/g, ' ')}
-                                                </Badge>
-                                            </TD>
                                             <TD className="text-shell-muted-dim tabular-nums">
-                                                {new Date(item.created_at).toLocaleDateString()}
+                                                {formatRelativeTime(item.updated_at || item.created_at)}
                                             </TD>
                                             <TD align="right">
                                                 <Button

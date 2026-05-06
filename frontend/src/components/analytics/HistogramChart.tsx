@@ -23,8 +23,8 @@ export default function HistogramChart({ buckets }: { buckets: HistogramBucket[]
                             <span className="text-eyebrow text-shell-muted-dim">{bucket.count}</span>
                             <div className="flex h-40 w-full items-end rounded-lg bg-shell-bg/60 px-1 pb-1">
                                 <div
-                                    className="w-full rounded-md bg-gradient-to-t from-blue-600 to-cyan-400 transition-all duration-300"
-                                    style={{ height }}
+                                    className="w-full rounded-md transition-all duration-300"
+                                    style={{ height, backgroundColor: 'var(--color-brand)' }}
                                 />
                             </div>
                             <span className="text-eyebrow-sm text-shell-muted-dim">{bucket.range}</span>

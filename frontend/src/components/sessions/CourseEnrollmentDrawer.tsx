@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import type { Course, Enrollment, StudentCandidate } from '@/stores/useCourseStore';
+import { Button } from '@/components/ui';
 
 interface CourseEnrollmentDrawerProps {
     course: Course | null;
@@ -36,7 +37,7 @@ export default function CourseEnrollmentDrawer({
             <div className="h-full w-full max-w-xl overflow-y-auto border-l border-white/10 bg-shell-panel-b p-6 shadow-2xl shadow-black/40">
                 <div className="flex items-start justify-between gap-4">
                     <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">Course Enrollments</p>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-foreground">Course Enrollments</p>
                         <h3 className="mt-2 text-3xl font-black text-foreground">{course.code}</h3>
                         <p className="mt-1 text-sm text-shell-muted-dim">{course.title}</p>
                     </div>
@@ -56,7 +57,7 @@ export default function CourseEnrollmentDrawer({
                             aria-label="Student"
                             value={studentId}
                             onChange={(event) => setStudentId(event.target.value)}
-                            className="flex-1 rounded-2xl border border-white/10 bg-shell-panel-d px-4 py-3 text-sm text-foreground outline-none transition focus:border-amber-300"
+                            className="flex-1 rounded-2xl border border-white/10 bg-shell-panel-d px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand"
                         >
                             <option value="">Select a student</option>
                             {studentCandidates.map((student) => (
@@ -65,17 +66,18 @@ export default function CourseEnrollmentDrawer({
                                 </option>
                             ))}
                         </select>
-                        <button
-                            type="button"
+                        <Button
+                            variant="primary"
+                            size="md"
                             disabled={!studentId || isBusy}
+                            loading={isBusy}
                             onClick={async () => {
                                 await onAddEnrollment(course.id, { student_id: studentId });
                                 setStudentId('');
                             }}
-                            className="rounded-2xl bg-amber-300 px-4 py-3 text-sm font-black uppercase tracking-tight text-foreground transition hover:bg-amber-200 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             Enroll
-                        </button>
+                        </Button>
                     </div>
                 </div>
 

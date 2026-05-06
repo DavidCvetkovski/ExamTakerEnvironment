@@ -1,9 +1,10 @@
 'use client';
 
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import type { ItemAnalyticsResponse } from '@/lib/analytics.types';
+import { Button } from '@/components/ui';
 import FlagBadge from './FlagBadge';
 
 type SortKey = 'stem' | 'p' | 'd' | 'responses';
@@ -23,6 +24,7 @@ export default function AllItemsTable({
     testId,
     getItemLabel,
 }: AllItemsTableProps) {
+    const router = useRouter();
     const [sortKey, setSortKey] = useState<SortKey>('stem');
     const [activeFlag, setActiveFlag] = useState<string>('ALL');
 
@@ -45,26 +47,30 @@ export default function AllItemsTable({
             return (left.d_value ?? 999) - (right.d_value ?? 999);
         });
 
+    const sortBtnClass = (key: SortKey) =>
+        `rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+            sortKey === key
+                ? 'text-foreground'
+                : 'bg-shell-input text-shell-muted hover:text-foreground'
+        }`;
+
     return (
         <div className="rounded-xl border border-shell-border bg-shell-surface overflow-hidden">
             <div className="border-b border-shell-border px-4 py-4">
                 <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-semibold text-foreground">All Items</p>
                     <div className="flex-1" />
-                    {[
+                    {([
                         { key: 'stem', label: 'Sort Stem' },
                         { key: 'responses', label: 'Sort N' },
                         { key: 'p', label: 'Sort P' },
                         { key: 'd', label: 'Sort D' },
-                    ].map((option) => (
+                    ] as const).map((option) => (
                         <button
                             key={option.key}
-                            onClick={() => setSortKey(option.key as SortKey)}
-                            className={`rounded-full px-3 py-1 text-xs font-medium ${
-                                sortKey === option.key
-                                    ? 'bg-cyan-600 text-white'
-                                    : 'bg-shell-input text-shell-muted hover:text-foreground'
-                            }`}
+                            onClick={() => setSortKey(option.key)}
+                            className={sortBtnClass(option.key)}
+                            style={sortKey === option.key ? { backgroundColor: 'var(--color-brand)', opacity: 1 } : {}}
                         >
                             {option.label}
                         </button>
@@ -73,9 +79,9 @@ export default function AllItemsTable({
                 <div className="mt-3 flex flex-wrap gap-2">
                     <button
                         onClick={() => setActiveFlag('ALL')}
-                        className={`rounded-full px-3 py-1 text-xs font-medium ${
+                        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                             activeFlag === 'ALL'
-                                ? 'bg-white text-gray-950'
+                                ? 'bg-shell-border text-foreground'
                                 : 'bg-shell-input text-shell-muted hover:text-foreground'
                         }`}
                     >
@@ -85,11 +91,12 @@ export default function AllItemsTable({
                         <button
                             key={flagCode}
                             onClick={() => setActiveFlag(flagCode)}
-                            className={`rounded-full px-3 py-1 text-xs font-medium ${
+                            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                                 activeFlag === flagCode
-                                    ? 'bg-blue-600 text-white'
+                                    ? 'text-foreground'
                                     : 'bg-shell-input text-shell-muted hover:text-foreground'
                             }`}
+                            style={activeFlag === flagCode ? { backgroundColor: 'var(--color-brand)' } : {}}
                         >
                             {flagCode.replaceAll('_', ' ')}
                         </button>
@@ -111,7 +118,7 @@ export default function AllItemsTable({
                             <th className="px-4 py-3 text-right">Open</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-800">
+                    <tbody className="divide-y divide-shell-border">
                         {visibleItems.map((item) => (
                             <tr key={item.item_version_id} className="hover:bg-shell-input/40">
                                 <td className="px-4 py-4">
@@ -122,9 +129,9 @@ export default function AllItemsTable({
                                     {item.question_type?.replaceAll('_', ' ') ?? '—'}
                                 </td>
                                 <td className="px-4 py-4 text-shell-muted">v{item.version_number ?? '—'}</td>
-                                <td className="px-4 py-4 text-shell-muted">{formatMetric(item.p_value)}</td>
-                                <td className="px-4 py-4 text-shell-muted">{formatMetric(item.d_value)}</td>
-                                <td className="px-4 py-4 text-shell-muted">{item.n_responses}</td>
+                                <td className="px-4 py-4 text-shell-muted tabular-nums">{formatMetric(item.p_value)}</td>
+                                <td className="px-4 py-4 text-shell-muted tabular-nums">{formatMetric(item.d_value)}</td>
+                                <td className="px-4 py-4 text-shell-muted tabular-nums">{item.n_responses}</td>
                                 <td className="px-4 py-4">
                                     {item.flags.length > 0 ? (
                                         <div className="flex flex-wrap gap-2">
@@ -137,12 +144,13 @@ export default function AllItemsTable({
                                     )}
                                 </td>
                                 <td className="px-4 py-4 text-right">
-                                    <Link
-                                        href={`/analytics/items/${item.learning_object_id}?fromTest=${testId}`}
-                                        className="rounded-lg border border-shell-border-deep px-3 py-2 text-xs font-semibold text-foreground hover:border-gray-500 hover:text-foreground"
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => router.push(`/analytics/items/${item.learning_object_id}?fromTest=${testId}`)}
                                     >
-                                        Drill Down
-                                    </Link>
+                                        Drill down →
+                                    </Button>
                                 </td>
                             </tr>
                         ))}

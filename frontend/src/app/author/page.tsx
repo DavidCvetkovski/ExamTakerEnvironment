@@ -7,7 +7,7 @@ import MCQOptionsPanel from '@/components/editor/MCQOptionsPanel';
 import EssayOptionsPanel from '@/components/editor/EssayOptionsPanel';
 import { useAuthoringStore } from '@/stores/useAuthoringStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { Badge, Button, Card, Field, Input, PageHeader, Select, cn } from '@/components/ui';
+import { Badge, Button, Card, Field, Input, PageHeader, Select, StatusDot, cn, useToast } from '@/components/ui';
 
 export default function AuthorPage() {
     return (
@@ -21,11 +21,12 @@ function AuthorPageInner() {
     const searchParams = useSearchParams();
     const loIdParam = searchParams.get('lo_id');
     const fetchedRef = useRef<string | null>(null);
+    const { toast } = useToast();
 
     const {
         saveStatus, questionType, setQuestionType,
-        fetchLatestVersion, learningObjectId, saveDraft,
-        metadataTags, updateMetadataField,
+        fetchLatestVersion, learningObjectId, saveDraft, revertChanges,
+        metadataTags, updateMetadataField, isDirty,
     } = useAuthoringStore();
 
     useEffect(() => {
@@ -35,9 +36,29 @@ function AuthorPageInner() {
         }
     }, [loIdParam, fetchLatestVersion]);
 
+    // Warn on navigation with unsaved changes
+    useEffect(() => {
+        const handler = (e: BeforeUnloadEvent) => {
+            if (isDirty) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        };
+        window.addEventListener('beforeunload', handler);
+        return () => window.removeEventListener('beforeunload', handler);
+    }, [isDirty]);
+
+    const handleSave = async () => {
+        try {
+            await saveDraft();
+            toast({ tone: 'success', title: 'Question saved' });
+        } catch {
+            toast({ tone: 'danger', title: 'Save failed', description: 'Check your connection and try again.' });
+        }
+    };
+
     const statusBadge =
-        saveStatus === 'SAVED' ? <Badge tone="success" size="sm">Saved</Badge>
-        : saveStatus === 'SAVING' ? <Badge tone="warning" size="sm">Saving…</Badge>
+        saveStatus === 'SAVING' ? <Badge tone="warning" size="sm">Saving…</Badge>
         : saveStatus === 'ERROR' ? <Badge tone="danger" size="sm">Save failed</Badge>
         : <Badge tone="neutral" size="sm">Ready</Badge>;
 
@@ -82,6 +103,12 @@ function AuthorPageInner() {
                                             Status
                                         </span>
                                         {statusBadge}
+                                        {isDirty && (
+                                            <span className="flex items-center gap-1 text-xs text-[var(--color-warning-fg)]">
+                                                <StatusDot tone="warning" pulse />
+                                                Unsaved changes
+                                            </span>
+                                        )}
                                     </div>
 
                                     <div className="flex-1" />
@@ -119,7 +146,22 @@ function AuthorPageInner() {
                                         </Select>
                                     </Field>
 
-                                    <Button variant="primary" size="md" onClick={saveDraft}>
+                                    <Button
+                                        variant="secondary"
+                                        size="md"
+                                        disabled={!isDirty || saveStatus === 'SAVING'}
+                                        onClick={revertChanges}
+                                    >
+                                        Revert
+                                    </Button>
+
+                                    <Button
+                                        variant="primary"
+                                        size="md"
+                                        disabled={!isDirty || saveStatus === 'SAVING'}
+                                        loading={saveStatus === 'SAVING'}
+                                        onClick={handleSave}
+                                    >
                                         Save
                                     </Button>
                                 </div>

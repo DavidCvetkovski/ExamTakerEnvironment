@@ -1,8 +1,43 @@
-# Epoch 7.7 Blueprint — UX Bugs, Authoring Save Flow & Date/Time Pickers
+# Epoch 7.7 Blueprint — UX Bugs, Authoring Save Flow & Date/Time Pickers ✅
 
-> **Branch:** `feature/epoch-7.7-ux-fixes`
+> **Branch:** `feature/epoch-7-7-ux-fixes`
 > **Prerequisites:** Epoch 7.6 (visual polish & component primitives) merged to `main`.
 > **Reference:** `directives/epoch_7_6_blueprint.md`, `CLAUDE.md`.
+> **Status:** ✅ Complete — all 6 implementation stages done, pushed to remote.
+
+## Implementation Status
+
+| Stage | Description | Status |
+|---|---|---|
+| 1 | Theme Toggle UX (click-outside, escape, route-change, drop themeNotice) | ✅ |
+| 2 | Light-theme contrast (warm borders, opacity bumps, amber/cyan hardcode removal) | ✅ |
+| 3 | Analytics bugs (histogram solid, slider smooth, Drill down primitive, dedupe Inspect) | ✅ |
+| 4 | Library columns (remove Status, add Last edited with relative time, sort desc) | ✅ |
+| 5 | Toast primitive + authoring explicit save flow (serverSnapshot, isDirty, revert, beforeunload) | ✅ |
+| 6 | DatePicker + TimePicker primitives, SessionCreateForm date/time UX (now+1m default) | ✅ |
+| 7 | Verification (tsc + next build green, sanity greps clean) | ✅ |
+
+### New files
+- `src/hooks/useClickOutside.ts` — reusable click-outside hook (callbackRef pattern, no re-registration bug)
+- `src/components/ui/Toast.tsx` — ToastProvider portal, 4s auto-dismiss, tone-aware
+- `src/components/ui/useToast.ts` — Zustand-backed toast store + useToast hook
+- `src/components/ui/DatePicker.tsx` — calendar popover, month/year nav, min constraint, native fallback
+- `src/components/ui/TimePicker.tsx` — HH/MM/AM·PM spinner columns, scroll-snap, step prop
+
+### Key modified files
+- `src/stores/useAuthStore.ts` — themeNotice fully removed
+- `src/stores/useAuthoringStore.ts` — debounce gone; serverSnapshot/isDirty/revertChanges
+- `src/stores/useLibraryStore.ts` — updated_at field added to LearningObjectSummary
+- `src/app/author/page.tsx` — save toast, Revert button, StatusDot dirty indicator, beforeunload
+- `src/app/items/page.tsx` — Status column out, Last edited in, sort by updated_at desc
+- `src/app/layout.tsx` — ToastProvider mounted
+- `src/components/analytics/HistogramChart.tsx` — solid brand colour, no gradient
+- `src/components/analytics/CutScoreSlider.tsx` — step 0.1, live display, brand track
+- `src/components/analytics/AllItemsTable.tsx` — Button ghost "Drill down →", brand active, shell-border dividers
+- `src/components/analytics/FlaggedItemsTable.tsx` — Button ghost "Drill down →", "Inspect" removed
+- `src/components/sessions/SessionCreateForm.tsx` — Date state, now+1m default, DatePicker+TimePicker
+- `src/components/sessions/CourseEnrollmentDrawer.tsx` — amber hardcodes → Button primitive + brand tokens
+- `src/components/layout/ThemeToggle.tsx` — click-outside, escape, route-change close
 
 ---
 

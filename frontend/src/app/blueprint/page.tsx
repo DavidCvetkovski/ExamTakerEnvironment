@@ -29,7 +29,9 @@ function BlueprintPageInner() {
         fetchBlueprint,
         fetchAvailableItems,
         saveBlueprint,
-        resetCurrent
+        resetCurrent,
+        lastEditingId,
+        setLastEditingId,
     } = useBlueprintStore();
 
     const { instantiateSession } = useExamStore();
@@ -46,15 +48,20 @@ function BlueprintPageInner() {
     useEffect(() => {
         fetchAvailableItems();
         if (idFromUrl) {
+            setLastEditingId(idFromUrl);
             fetchBlueprint(idFromUrl);
             setIsEditing(true);
+        } else if (lastEditingId) {
+            router.replace(`/blueprint?id=${lastEditingId}`);
         } else {
             fetchBlueprints();
             setIsEditing(false);
         }
-    }, [idFromUrl, fetchBlueprints, fetchBlueprint, fetchAvailableItems]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [idFromUrl]); // only re-run when URL id changes
 
     const handleCreateNew = () => {
+        setLastEditingId(null);
         resetCurrent();
         setIsEditing(true);
         router.push('/blueprint');
@@ -263,12 +270,15 @@ function BlueprintPageInner() {
             <div className="max-w-page mx-auto px-4 py-12 text-foreground sm:px-6 lg:px-8">
                 <div className="flex gap-8">
                     {/* Main Editor */}
-                    <div className="flex-1">
+                    <div className="min-w-0 flex-1">
                         <button
-                            onClick={() => router.push('/blueprint')}
+                            onClick={() => {
+                                setLastEditingId(null);
+                                router.push('/blueprint');
+                            }}
                             className="group flex items-center text-shell-muted-dim hover:text-foreground mb-8 transition-colors"
                         >
-                            <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> Back to Blueprints
+                            <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> All Blueprints
                         </button>
 
                         <div className="min-h-blueprint-canvas overflow-hidden rounded-card-lg border border-white/10 bg-shell-surface/80 shadow-2xl backdrop-blur-xl">
@@ -292,7 +302,7 @@ function BlueprintPageInner() {
                                 {/* Config Bar */}
                                 <div className="flex flex-wrap items-center gap-6 p-6 bg-white/5 rounded-2xl mb-12">
                                     <div className="flex-1 min-w-[150px]">
-                                        <label className="mb-2 block text-eyebrow-sm font-bold uppercase tracking-widest text-brand">Manual Duration</label>
+                                        <label className="mb-2 block text-eyebrow-sm font-bold uppercase tracking-widest text-brand">Duration (minutes)</label>
                                         <div className="flex items-center">
                                             <input
                                                 type="number"
@@ -528,8 +538,8 @@ function BlueprintPageInner() {
                         </div>
                     </div>
 
-                    {/* Breakdown Sidebar */}
-                    <div className="w-80 space-y-6">
+                    {/* Breakdown Sidebar — hidden below 1400px to prevent horizontal scroll */}
+                    <div className="hidden 2xl:block w-80 shrink-0 space-y-6">
                         <div className="sticky top-12 rounded-card-lg border border-white/10 bg-shell-surface/50 p-6 backdrop-blur-md">
                             <h4 className="text-xs font-black uppercase tracking-widest text-brand mb-6 flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-brand animate-pulse"></span>
@@ -578,7 +588,7 @@ function BlueprintPageInner() {
 
                                 <div className="pt-6 border-t border-white/5">
                                     <div className="flex items-center justify-between p-4 bg-brand/10 rounded-2xl border border-brand/20">
-                                        <div className="text-eyebrow-sm font-bold uppercase text-brand">Complexity</div>
+                                        <div className="text-eyebrow-sm font-bold uppercase text-brand">Cognitive level</div>
                                         <div className="text-lg font-black text-foreground">Dynamic</div>
                                     </div>
                                 </div>

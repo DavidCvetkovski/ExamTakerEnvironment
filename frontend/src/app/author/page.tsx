@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import TipTapEditor from '@/components/editor/TipTapEditor';
 import MCQOptionsPanel from '@/components/editor/MCQOptionsPanel';
 import EssayOptionsPanel from '@/components/editor/EssayOptionsPanel';
@@ -19,7 +19,10 @@ export default function AuthorPage() {
 
 function AuthorPageInner() {
     const searchParams = useSearchParams();
+    const router = useRouter();
     const loIdParam = searchParams.get('lo_id');
+    const fromBlueprint = searchParams.get('from') === 'blueprint';
+    const blueprintId = searchParams.get('blueprint_id');
     const fetchedRef = useRef<string | null>(null);
     const { toast } = useToast();
 
@@ -67,7 +70,13 @@ function AuthorPageInner() {
             <div className="min-h-screen bg-shell-bg text-foreground">
                 <div className="max-w-4xl mx-auto px-6 py-10">
                     <button
-                        onClick={() => { window.location.href = '/items'; }}
+                        onClick={() => {
+                            if (fromBlueprint && blueprintId) {
+                                router.push(`/blueprint?id=${blueprintId}`);
+                            } else {
+                                router.push('/items');
+                            }
+                        }}
                         className={cn(
                             'mb-6 inline-flex items-center gap-2 text-meta font-medium',
                             'text-shell-muted hover:text-foreground transition-colors'
@@ -76,7 +85,7 @@ function AuthorPageInner() {
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                         </svg>
-                        Back to Library
+                        {fromBlueprint ? 'Back to Blueprint' : 'Back to Library'}
                     </button>
 
                     <PageHeader

@@ -1,8 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import AllItemsTable from '@/components/analytics/AllItemsTable';
@@ -13,6 +12,7 @@ import StatCard from '@/components/analytics/StatCard';
 import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
+import { Button } from '@/components/ui';
 
 function formatMetric(value: number | null, digits = 1): string {
     return value === null ? '—' : value.toFixed(digits);
@@ -20,6 +20,7 @@ function formatMetric(value: number | null, digits = 1): string {
 
 export default function TestAnalyticsDashboardPage() {
     const { testId } = useParams<{ testId: string }>();
+    const router = useRouter();
     const {
         bundles,
         scenarios,
@@ -29,6 +30,7 @@ export default function TestAnalyticsDashboardPage() {
         recompute,
         runCutScoreScenarios,
         clearError,
+        setLastTestId,
     } = useAnalyticsStore();
     const { blueprints, fetchBlueprints } = useBlueprintStore();
     const { items, fetchItems } = useLibraryStore();
@@ -39,8 +41,9 @@ export default function TestAnalyticsDashboardPage() {
         fetchItems();
         if (testId) {
             void loadTestAnalytics(testId);
+            setLastTestId(testId);
         }
-    }, [fetchBlueprints, fetchItems, loadTestAnalytics, testId]);
+    }, [fetchBlueprints, fetchItems, loadTestAnalytics, testId, setLastTestId]);
 
     const bundle = bundles[testId];
 
@@ -87,9 +90,16 @@ export default function TestAnalyticsDashboardPage() {
             <div className="min-h-screen bg-shell-bg text-foreground">
                 <div className="border-b border-shell-border bg-shell-surface px-6 py-5">
                     <div className="mx-auto max-w-7xl">
-                        <Link href="/analytics" className="text-sm text-blue-300 hover:text-blue-200">
-                            ← Back to Analytics
-                        </Link>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                                setLastTestId(null);
+                                router.push('/analytics');
+                            }}
+                        >
+                            ← All tests
+                        </Button>
                         <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                             <div>
                                 <p className="text-eyebrow font-semibold uppercase tracking-medium text-shell-muted-dim">
@@ -105,19 +115,21 @@ export default function TestAnalyticsDashboardPage() {
                                 </p>
                             </div>
                             <div className="flex items-center gap-3">
-                                <button
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
                                     onClick={() => { void handleDownloadPdf(); }}
                                     disabled={!bundle}
-                                    className="rounded-lg border border-shell-border-deep bg-shell-input px-4 py-2 text-sm font-semibold text-foreground hover:bg-shell-input-alt disabled:opacity-40"
                                 >
                                     ↓ Download PDF
-                                </button>
-                                <button
+                                </Button>
+                                <Button
+                                    variant="primary"
+                                    size="sm"
                                     onClick={() => void recompute(testId)}
-                                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
                                 >
                                     Recompute
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     </div>
@@ -132,14 +144,14 @@ export default function TestAnalyticsDashboardPage() {
                     ) : null}
 
                     {bundle?.test.is_stale ? (
-                        <div className="mb-6 rounded-xl border border-amber-700/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                        <div className="mb-6 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-4 py-3 text-sm text-[var(--color-warning-fg)]">
                             This snapshot may be stale because grades changed after publication.
                         </div>
                     ) : null}
 
                     {!bundle && status === 'loading' ? (
                         <div className="flex items-center justify-center py-24 text-shell-muted-dim">
-                            <div className="mr-3 h-6 w-6 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
+                            <div className="mr-3 h-6 w-6 animate-spin rounded-full border-2 border-brand border-t-transparent" />
                             Loading analytics dashboard...
                         </div>
                     ) : null}

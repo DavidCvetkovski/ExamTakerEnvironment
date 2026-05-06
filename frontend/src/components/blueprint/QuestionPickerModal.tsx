@@ -117,7 +117,7 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 overflow-y-auto p-3">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden p-3">
                     {isLoading ? (
                         <div className="px-6 py-10 text-center text-shell-muted-dim text-sm">Loading questions...</div>
                     ) : inspectedItem ? (
@@ -146,9 +146,11 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                             <div className="rounded-2xl border border-shell-border bg-shell-bg p-8 space-y-6">
                                 <div>
                                     <p className="mb-2 text-xs font-bold uppercase tracking-widest text-shell-muted-dim">Content</p>
-                                    <p className="text-base leading-relaxed text-foreground">{inspectedItem.latest_content_preview}</p>
+                                    <p className="text-base leading-relaxed text-foreground break-words whitespace-pre-wrap">
+                                        {inspectedItem.latest_content_preview}
+                                    </p>
                                 </div>
-                                <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+                                <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
                                     <div>
                                         <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-shell-muted-dim">Type</p>
                                         <Badge tone={typeTone(inspectedItem.latest_question_type)} size="sm">
@@ -156,19 +158,15 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                                         </Badge>
                                     </div>
                                     <div>
-                                        <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-shell-muted-dim">Status</p>
-                                        <Badge tone="success" size="sm">{inspectedItem.latest_status}</Badge>
-                                    </div>
-                                    <div>
                                         <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-shell-muted-dim">Points</p>
                                         <span className="text-foreground font-semibold">{inspectedItem.metadata_tags?.points ?? 1}</span>
                                     </div>
-                                    {inspectedItem.metadata_tags?.topic && (
+                                    {inspectedItem.metadata_tags?.topic ? (
                                         <div>
                                             <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-shell-muted-dim">Topic</p>
-                                            <span className="text-foreground">{inspectedItem.metadata_tags.topic}</span>
+                                            <span className="text-foreground">{inspectedItem.metadata_tags.topic as string}</span>
                                         </div>
-                                    )}
+                                    ) : null}
                                 </div>
                             </div>
                         </div>

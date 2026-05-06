@@ -52,6 +52,8 @@ export default function ItemsLibraryPage() {
     const [isCreating, setIsCreating] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [subjectFilter, setSubjectFilter] = useState('all');
+    const [typeFilter, setTypeFilter] = useState<'all' | 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY'>('all');
+    const [pointsFilter, setPointsFilter] = useState<'all' | '1' | '2' | '3+'>('all');
 
     useEffect(() => { fetchItems(); }, [fetchItems]);
 
@@ -66,10 +68,15 @@ export default function ItemsLibraryPage() {
                     (item.latest_content_preview || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                     item.id.toLowerCase().includes(searchQuery.toLowerCase());
                 const matchesSubject = subjectFilter === 'all' || getMetadataString(item.metadata_tags?.topic) === subjectFilter;
-                return matchesSearch && matchesSubject;
+                const matchesType = typeFilter === 'all' || item.latest_question_type === typeFilter;
+                const pts = getMetadataNumber(item.metadata_tags?.points) ?? 1;
+                const matchesPoints = pointsFilter === 'all' ? true :
+                    pointsFilter === '3+' ? pts >= 3 :
+                    String(pts) === pointsFilter;
+                return matchesSearch && matchesSubject && matchesType && matchesPoints;
             })
             .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-    }, [items, searchQuery, subjectFilter]);
+    }, [items, searchQuery, subjectFilter, typeFilter, pointsFilter]);
 
     const handleCreateNew = async () => {
         setIsCreating(true);
@@ -118,6 +125,30 @@ export default function ItemsLibraryPage() {
                                 {uniqueSubjects.map((s) => (
                                     <option key={s} value={s}>{s}</option>
                                 ))}
+                            </Select>
+                        </div>
+                        <div className="min-w-filter">
+                            <Select
+                                inputSize="md"
+                                value={typeFilter}
+                                onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
+                            >
+                                <option value="all">All types</option>
+                                <option value="MULTIPLE_CHOICE">Single choice</option>
+                                <option value="MULTIPLE_RESPONSE">Multiple choice</option>
+                                <option value="ESSAY">Essay</option>
+                            </Select>
+                        </div>
+                        <div className="min-w-filter">
+                            <Select
+                                inputSize="md"
+                                value={pointsFilter}
+                                onChange={(e) => setPointsFilter(e.target.value as typeof pointsFilter)}
+                            >
+                                <option value="all">All points</option>
+                                <option value="1">1 point</option>
+                                <option value="2">2 points</option>
+                                <option value="3+">3+ points</option>
                             </Select>
                         </div>
                     </div>

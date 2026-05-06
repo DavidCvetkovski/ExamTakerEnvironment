@@ -26,12 +26,14 @@ interface AnalyticsState {
     lastLoadedAt: Record<string, number | undefined>;
     status: AnalyticsStatus;
     error: string | null;
+    lastTestId: string | null;
     loadTestAnalytics: (testId: string, force?: boolean) => Promise<void>;
     recompute: (testId: string) => Promise<void>;
     loadFlaggedItems: (testId: string) => Promise<void>;
     loadItemHistory: (loId: string) => Promise<void>;
     runCutScoreScenarios: (testId: string, cuts: number[]) => Promise<void>;
     clearError: () => void;
+    setLastTestId: (id: string | null) => void;
 }
 
 function getApiErrorMessage(error: unknown, fallback: string): string {
@@ -46,6 +48,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     lastLoadedAt: {},
     status: 'idle',
     error: null,
+    lastTestId: null,
 
     loadTestAnalytics: async (testId: string, force = false) => {
         const existing = get().lastLoadedAt[testId];
@@ -160,4 +163,5 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     },
 
     clearError: () => set({ error: null }),
+    setLastTestId: (id) => set({ lastTestId: id }),
 }));

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useClickOutside } from '@/hooks/useClickOutside';
 
 interface TimePickerProps {
@@ -33,30 +33,17 @@ function SpinnerColumn({
     onSelect: (index: number) => void;
     ariaLabel: string;
 }) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const ITEM_HEIGHT = 36;
-
-    // Scroll to selected on mount/change
-    useEffect(() => {
-        const el = containerRef.current;
-        if (!el) return;
-        el.scrollTop = selectedIndex * ITEM_HEIGHT - ITEM_HEIGHT;
-    }, [selectedIndex]);
-
-    const handleScroll = useCallback(() => {
-        const el = containerRef.current;
-        if (!el) return;
-        const idx = Math.round(el.scrollTop / ITEM_HEIGHT) + 1;
-        const clamped = Math.max(0, Math.min(values.length - 1, idx));
-        if (clamped !== selectedIndex) onSelect(clamped);
-    }, [selectedIndex, values.length, onSelect]);
-
     const prev = () => onSelect(Math.max(0, selectedIndex - 1));
     const next = () => onSelect(Math.min(values.length - 1, selectedIndex + 1));
 
+    const handleWheel = (e: React.WheelEvent) => {
+        e.preventDefault();
+        if (e.deltaY > 0) next();
+        else prev();
+    };
+
     return (
         <div
-            className="flex flex-col items-center"
             role="spinbutton"
             aria-label={ariaLabel}
             aria-valuenow={selectedIndex}
@@ -64,6 +51,8 @@ function SpinnerColumn({
             aria-valuemax={values.length - 1}
             aria-valuetext={values[selectedIndex]}
             tabIndex={0}
+            className="flex flex-col items-center select-none outline-none"
+            onWheel={handleWheel}
             onKeyDown={(e) => {
                 if (e.key === 'ArrowUp') { e.preventDefault(); prev(); }
                 if (e.key === 'ArrowDown') { e.preventDefault(); next(); }
@@ -74,51 +63,42 @@ function SpinnerColumn({
                 onClick={prev}
                 disabled={selectedIndex === 0}
                 className="flex h-7 w-full items-center justify-center text-shell-muted hover:text-foreground transition-colors disabled:opacity-30"
-                aria-label={`Decrease ${ariaLabel}`}
+                aria-label={`Previous ${ariaLabel}`}
             >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
-                </svg>
+                ▲
             </button>
 
-            <div
-                ref={containerRef}
-                onScroll={handleScroll}
-                className="h-[108px] overflow-y-auto scrollbar-hide scroll-smooth"
-                style={{ scrollSnapType: 'y mandatory' }}
-            >
-                {values.map((val, idx) => (
-                    <button
-                        key={val}
-                        type="button"
-                        onClick={() => onSelect(idx)}
+            {[-1, 0, 1].map((offset) => {
+                const idx = selectedIndex + offset;
+                const valid = idx >= 0 && idx < values.length;
+                return (
+                    <div
+                        key={offset}
+                        onClick={() => valid && onSelect(idx)}
                         className={[
-                            'flex h-9 w-full min-w-[52px] items-center justify-center rounded-lg text-sm font-mono transition-colors',
-                            idx === selectedIndex
-                                ? 'font-semibold text-foreground'
-                                : 'text-shell-muted hover:text-foreground',
+                            'flex h-9 w-14 cursor-pointer items-center justify-center rounded-lg text-sm font-mono transition-all',
+                            offset === 0
+                                ? 'font-semibold scale-105'
+                                : 'opacity-35 text-shell-muted text-xs scale-95',
                         ].join(' ')}
-                        style={{
-                            scrollSnapAlign: 'center',
-                            backgroundColor: idx === selectedIndex ? 'var(--color-brand)' : undefined,
-                            color: idx === selectedIndex ? 'white' : undefined,
-                        }}
+                        style={offset === 0 ? {
+                            backgroundColor: 'var(--color-brand)',
+                            color: 'white',
+                        } : {}}
                     >
-                        {val}
-                    </button>
-                ))}
-            </div>
+                        {valid ? values[idx] : ''}
+                    </div>
+                );
+            })}
 
             <button
                 type="button"
                 onClick={next}
                 disabled={selectedIndex === values.length - 1}
                 className="flex h-7 w-full items-center justify-center text-shell-muted hover:text-foreground transition-colors disabled:opacity-30"
-                aria-label={`Increase ${ariaLabel}`}
+                aria-label={`Next ${ariaLabel}`}
             >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                </svg>
+                ▼
             </button>
         </div>
     );

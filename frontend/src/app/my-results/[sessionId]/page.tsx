@@ -42,7 +42,7 @@ function MCQAnswerDisplay({ detail }: { detail: QuestionResultDetail }) {
     return (
         <div className="space-y-4 mt-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div className="rounded-2xl border border-student-border bg-white/60 p-4">
+                <div className="rounded-2xl border border-student-border bg-shell-surface/60 p-4">
                     <p className="text-xs font-semibold uppercase tracking-widest text-student-accent mb-2">Your Answer</p>
                     {allSelected.length > 0 ? (
                         <div className="space-y-2">
@@ -51,7 +51,7 @@ function MCQAnswerDisplay({ detail }: { detail: QuestionResultDetail }) {
                                     key={idx}
                                     className={`rounded-xl border px-3 py-2 text-sm ${
                                         opts.includes(idx)
-                                            ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+                                            ? 'border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-fg)]'
                                             : 'border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)]'
                                     }`}
                                 >
@@ -68,12 +68,12 @@ function MCQAnswerDisplay({ detail }: { detail: QuestionResultDetail }) {
                     )}
                 </div>
 
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700 mb-2">Correct Answer</p>
+                <div className="rounded-2xl border border-[var(--color-success-border)] bg-[var(--color-success-bg)]/50 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-success-fg)] mb-2">Correct Answer</p>
                     {opts.length > 0 ? (
                         <div className="space-y-2">
                             {opts.map((idx) => (
-                                <div key={idx} className="rounded-xl border border-emerald-300 bg-emerald-100/70 px-3 py-2 text-sm text-emerald-900">
+                                <div key={idx} className="rounded-xl border border-[var(--color-success-border)] bg-[var(--color-success-bg)] px-3 py-2 text-sm text-[var(--color-success-fg)]">
                                     <span className="mr-2 font-semibold">{String.fromCharCode(65 + idx)}.</span>
                                     <span
                                         className="inline-block align-middle prose prose-sm max-w-none prose-p:my-0 prose-li:my-0 prose-pre:my-1"
@@ -100,12 +100,12 @@ function MCQAnswerDisplay({ detail }: { detail: QuestionResultDetail }) {
                                     key={`${idx}-${option.text}`}
                                     className={`rounded-xl border px-3 py-2 text-sm ${
                                         isSelected && isCorrect
-                                            ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+                                            ? 'border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-fg)]'
                                             : isSelected
                                                 ? 'border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)]'
                                                 : isCorrect
-                                                    ? 'border-emerald-200 bg-white text-emerald-900'
-                                                    : 'border-student-border bg-white/80 text-foreground'
+                                                    ? 'border-[var(--color-success-border)] bg-[var(--color-success-bg)]/50 text-[var(--color-success-fg)]'
+                                                    : 'border-student-border bg-shell-surface/80 text-foreground'
                                     }`}
                                 >
                                     <span className="mr-2 font-semibold">{String.fromCharCode(65 + idx)}.</span>
@@ -131,18 +131,18 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
     let borderColor = 'border-student-border';
     let accentColor = 'bg-shell-input-alt text-shell-muted';
     if (isPending) {
-        borderColor = 'border-amber-200';
-        accentColor = 'bg-amber-50 text-amber-700';
+        borderColor = 'border-[var(--color-warning-border)]';
+        accentColor = 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]';
     } else if (isCorrect === true) {
-        borderColor = 'border-emerald-200';
-        accentColor = 'bg-emerald-100 text-emerald-800';
+        borderColor = 'border-[var(--color-success-border)]';
+        accentColor = 'bg-[var(--color-success-bg)] text-[var(--color-success-fg)]';
     } else if (isCorrect === false) {
         borderColor = 'border-[var(--color-danger-border)]';
         accentColor = 'bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)]';
     }
 
     return (
-        <div className={`rounded-card border ${borderColor} bg-white/80 p-6 shadow-sm space-y-4`}>
+        <div className={`rounded-card border ${borderColor} bg-shell-surface/80 p-6 shadow-sm space-y-4`}>
             {/* Header row */}
             <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -268,18 +268,18 @@ export default function MyResultDetailPage() {
 
                             {/* Score summary */}
                             <div className="mt-6 grid grid-cols-3 gap-4">
-                                <div className="rounded-2xl border border-student-border bg-white/60 p-4 text-center">
+                                <div className="rounded-2xl border border-student-border bg-shell-surface/60 p-4 text-center">
                                     <p className="text-3xl font-black text-foreground">{result.percentage.toFixed(1)}%</p>
                                     <p className="text-xs text-shell-muted-dim mt-1">Score</p>
                                 </div>
-                                <div className="rounded-2xl border border-student-border bg-white/60 p-4 text-center">
+                                <div className="rounded-2xl border border-student-border bg-shell-surface/60 p-4 text-center">
                                     <p className="text-3xl font-black text-foreground">{result.total_points}</p>
                                     <p className="text-xs text-shell-muted-dim mt-1">Points (of {result.max_points})</p>
                                 </div>
-                                <div className="rounded-2xl border border-student-border bg-white/60 p-4 text-center">
+                                <div className="rounded-2xl border border-student-border bg-shell-surface/60 p-4 text-center">
                                     {result.letter_grade ? (
                                         <>
-                                            <p className={`text-3xl font-black ${result.passed ? 'text-emerald-600' : 'text-[var(--color-danger-fg)]'}`}>
+                                            <p className={`text-3xl font-black ${result.passed ? 'text-[var(--color-success-fg)]' : 'text-[var(--color-danger-fg)]'}`}>
                                                 {result.letter_grade}
                                             </p>
                                             <p className="text-xs text-shell-muted-dim mt-1">Grade</p>
@@ -298,7 +298,7 @@ export default function MyResultDetailPage() {
                                 <div className="mt-4">
                                     <span className={`inline-block px-4 py-1.5 rounded-full text-sm font-bold ${
                                         result.passed
-                                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                            ? 'bg-[var(--color-success-bg)] text-[var(--color-success-fg)] border border-[var(--color-success-border)]'
                                             : 'bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] border border-[var(--color-danger-border)]'
                                     }`}>
                                         {result.passed ? '✓ Passed' : '✗ Did not pass'}

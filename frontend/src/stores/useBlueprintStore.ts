@@ -81,6 +81,7 @@ interface BlueprintState {
     isLoading: boolean;
     error: string | null;
     saveStatus: BlueprintSaveStatus;
+    lastEditingId: string | null;
 
     fetchBlueprints: () => Promise<void>;
     fetchBlueprint: (id: string) => Promise<void>;
@@ -88,6 +89,7 @@ interface BlueprintState {
     saveBlueprint: (data: Partial<TestDefinition>) => Promise<string>;
     resetCurrent: () => void;
     resetSaveStatus: () => void;
+    setLastEditingId: (id: string | null) => void;
 }
 
 function getApiErrorMessage(error: unknown, fallback: string): string {
@@ -101,6 +103,7 @@ export const useBlueprintStore = create<BlueprintState>((set) => ({
     isLoading: false,
     error: null,
     saveStatus: 'idle',
+    lastEditingId: null,
 
     fetchAvailableItems: async () => {
         set({ isLoading: true, error: null });
@@ -166,4 +169,5 @@ export const useBlueprintStore = create<BlueprintState>((set) => ({
     },
 
     resetSaveStatus: () => set({ saveStatus: 'idle' }),
+    setLastEditingId: (id) => set({ lastEditingId: id }),
 }));

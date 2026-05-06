@@ -1,103 +1,240 @@
 'use client';
 
+import { useState } from 'react';
 import type { ScheduledSession } from '@/stores/useSessionManagerStore';
+import { Button, Badge } from '@/components/ui';
+import { useCountdown } from '@/hooks/useCountdown';
 
 interface ScheduledSessionsTableProps {
     sessions: ScheduledSession[];
     isBusy: boolean;
-    onCancel: (sessionId: string) => Promise<void>;
+    onRequestCancel: (sessionId: string) => void;
     onPractice: (testDefinitionId: string) => Promise<void>;
     onManageEnrollments: (courseId: string) => void;
 }
 
-const statusClasses: Record<ScheduledSession['status'], string> = {
-    SCHEDULED: 'bg-cyan-500/15 text-cyan-200 border-cyan-400/30',
-    ACTIVE: 'bg-emerald-500/15 text-emerald-200 border-emerald-400/30',
-    CLOSED: 'bg-shell-input-alt text-shell-muted border-shell-border',
-    CANCELED: 'bg-[var(--color-danger-bg)] text-danger border-[var(--color-danger-border)]',
-};
+function SessionRow({
+    session,
+    isBusy,
+    onRequestCancel,
+    onPractice,
+    onManageEnrollments,
+    countdownTarget,
+    countdownLabel,
+    countdownTone,
+}: {
+    session: ScheduledSession;
+    isBusy: boolean;
+    onRequestCancel: (id: string) => void;
+    onPractice: (testDefinitionId: string) => Promise<void>;
+    onManageEnrollments: (courseId: string) => void;
+    countdownTarget?: string;
+    countdownLabel?: string;
+    countdownTone?: string;
+}) {
+    const countdown = useCountdown(countdownTarget ?? session.starts_at);
+    const canCancel = session.status !== 'CLOSED' && session.status !== 'CANCELED';
+
+    return (
+        <tr className="border-t border-shell-border">
+            <td className="py-4 pr-4">
+                <p className="font-semibold text-foreground">{session.course_code}</p>
+                <p className="text-shell-muted-dim text-xs">{session.course_title}</p>
+            </td>
+            <td className="py-4 pr-4 text-foreground">{session.test_title}</td>
+            <td className="py-4 pr-4 text-shell-muted text-sm">{new Date(session.starts_at).toLocaleString()}</td>
+            <td className="py-4 pr-4 text-shell-muted-dim text-sm">{new Date(session.ends_at).toLocaleString()}</td>
+            {countdownTarget && (
+                <td className="py-4 pr-4 text-sm tabular-nums" style={{ color: countdownTone }}>
+                    {countdownLabel} {countdown}
+                </td>
+            )}
+            <td className="py-4">
+                <div className="flex flex-wrap gap-2">
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onManageEnrollments(session.course_id)}
+                    >
+                        Enrollments
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onPractice(session.test_definition_id)}
+                    >
+                        Practice
+                    </Button>
+                    {canCancel && (
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            disabled={isBusy}
+                            onClick={() => onRequestCancel(session.id)}
+                        >
+                            Cancel
+                        </Button>
+                    )}
+                </div>
+            </td>
+        </tr>
+    );
+}
+
+function SessionTable({
+    sessions,
+    isBusy,
+    onRequestCancel,
+    onPractice,
+    onManageEnrollments,
+    showCountdown,
+    countdownField,
+    countdownLabel,
+    countdownTone,
+}: {
+    sessions: ScheduledSession[];
+    isBusy: boolean;
+    onRequestCancel: (id: string) => void;
+    onPractice: (testDefinitionId: string) => Promise<void>;
+    onManageEnrollments: (courseId: string) => void;
+    showCountdown?: boolean;
+    countdownField?: 'starts_at' | 'ends_at';
+    countdownLabel?: string;
+    countdownTone?: string;
+}) {
+    if (sessions.length === 0) return null;
+    return (
+        <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+                <thead className="text-xs uppercase tracking-medium text-shell-muted-dim">
+                    <tr>
+                        <th className="pb-3 pr-4">Course</th>
+                        <th className="pb-3 pr-4">Blueprint</th>
+                        <th className="pb-3 pr-4">Starts</th>
+                        <th className="pb-3 pr-4">Ends</th>
+                        {showCountdown && <th className="pb-3 pr-4">Time</th>}
+                        <th className="pb-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {sessions.map((session) => (
+                        <SessionRow
+                            key={session.id}
+                            session={session}
+                            isBusy={isBusy}
+                            onRequestCancel={onRequestCancel}
+                            onPractice={onPractice}
+                            onManageEnrollments={onManageEnrollments}
+                            countdownTarget={showCountdown && countdownField ? session[countdownField] : undefined}
+                            countdownLabel={countdownLabel}
+                            countdownTone={countdownTone}
+                        />
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
 
 export default function ScheduledSessionsTable({
     sessions,
     isBusy,
-    onCancel,
+    onRequestCancel,
     onPractice,
     onManageEnrollments,
 }: ScheduledSessionsTableProps) {
-    return (
-        <div className="rounded-card-md border border-white/10 bg-shell-panel-a p-6 shadow-2xl shadow-black/20">
-            <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-                <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-shell-muted-dim">Scheduled Sessions</p>
-                    <h3 className="mt-2 text-2xl font-black text-foreground">Exam Windows by Course</h3>
-                </div>
-                <p className="text-sm text-shell-muted-dim">
-                    Active and upcoming sessions are updated from their real time window.
-                </p>
-            </div>
+    const [showPast, setShowPast] = useState(false);
+    const now = new Date();
 
-            {sessions.length === 0 ? (
-                <div className="rounded-card border border-dashed border-white/10 bg-white/[0.02] px-6 py-10 text-center text-sm text-shell-muted-dim">
+    const ongoing = sessions.filter((s) => s.status === 'ACTIVE');
+    const planned = sessions.filter(
+        (s) => s.status === 'SCHEDULED' && new Date(s.starts_at) > now
+    );
+    const past = sessions.filter(
+        (s) =>
+            s.status === 'CLOSED' ||
+            s.status === 'CANCELED' ||
+            (s.status === 'SCHEDULED' && new Date(s.ends_at) <= now)
+    );
+
+    if (sessions.length === 0) {
+        return (
+            <div className="rounded-card-md border border-shell-border bg-shell-panel-a p-6">
+                <div className="rounded-card border border-dashed border-shell-border bg-shell-surface/30 px-6 py-10 text-center text-sm text-shell-muted-dim">
                     No scheduled sessions yet.
                 </div>
-            ) : (
-                <div className="overflow-x-auto">
-                    <table className="min-w-full text-left text-sm">
-                        <thead className="text-xs uppercase tracking-medium text-shell-muted-dim">
-                            <tr>
-                                <th className="pb-3 pr-4">Course</th>
-                                <th className="pb-3 pr-4">Blueprint</th>
-                                <th className="pb-3 pr-4">Starts</th>
-                                <th className="pb-3 pr-4">Ends</th>
-                                <th className="pb-3 pr-4">Status</th>
-                                <th className="pb-3">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sessions.map((session) => (
-                                <tr key={session.id} className="border-t border-white/6">
-                                    <td className="py-4 pr-4">
-                                        <p className="font-semibold text-foreground">{session.course_code}</p>
-                                        <p className="text-shell-muted-dim">{session.course_title}</p>
-                                    </td>
-                                    <td className="py-4 pr-4 text-foreground">{session.test_title}</td>
-                                    <td className="py-4 pr-4 text-shell-muted">{new Date(session.starts_at).toLocaleString()}</td>
-                                    <td className="py-4 pr-4 text-shell-muted-dim">{new Date(session.ends_at).toLocaleString()}</td>
-                                    <td className="py-4 pr-4">
-                                        <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${statusClasses[session.status]}`}>
-                                            {session.status}
-                                        </span>
-                                    </td>
-                                    <td className="py-4">
-                                        <div className="flex flex-wrap gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => onManageEnrollments(session.course_id)}
-                                                className="rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-white/5"
-                                            >
-                                                Enrollments
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => onPractice(session.test_definition_id)}
-                                                className="rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-400/20"
-                                            >
-                                                Practice
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => onCancel(session.id)}
-                                                disabled={isBusy || session.status === 'CLOSED' || session.status === 'CANCELED'}
-                                                className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] px-3 py-2 text-xs font-semibold text-danger transition hover:bg-[var(--color-danger-bg)] disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6">
+            {/* Ongoing */}
+            {ongoing.length > 0 && (
+                <div className="rounded-card-md border border-shell-border bg-shell-panel-a p-6">
+                    <div className="mb-4 flex items-center gap-3">
+                        <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--color-success-fg)]" />
+                        <h3 className="text-lg font-semibold text-foreground">Ongoing</h3>
+                        <Badge tone="success" size="sm">{ongoing.length}</Badge>
+                    </div>
+                    <SessionTable
+                        sessions={ongoing}
+                        isBusy={isBusy}
+                        onRequestCancel={onRequestCancel}
+                        onPractice={onPractice}
+                        onManageEnrollments={onManageEnrollments}
+                        showCountdown
+                        countdownField="ends_at"
+                        countdownLabel="Ends in"
+                        countdownTone="var(--color-warning-fg)"
+                    />
+                </div>
+            )}
+
+            {/* Planned */}
+            {planned.length > 0 && (
+                <div className="rounded-card-md border border-shell-border bg-shell-panel-a p-6">
+                    <div className="mb-4 flex items-center gap-3">
+                        <h3 className="text-lg font-semibold text-foreground">Planned</h3>
+                        <Badge tone="info" size="sm">{planned.length}</Badge>
+                    </div>
+                    <SessionTable
+                        sessions={planned}
+                        isBusy={isBusy}
+                        onRequestCancel={onRequestCancel}
+                        onPractice={onPractice}
+                        onManageEnrollments={onManageEnrollments}
+                        showCountdown
+                        countdownField="starts_at"
+                        countdownLabel="Starts in"
+                        countdownTone="var(--color-info-fg)"
+                    />
+                </div>
+            )}
+
+            {/* Past */}
+            {past.length > 0 && (
+                <div className="rounded-card-md border border-shell-border bg-shell-panel-a p-6">
+                    <button
+                        type="button"
+                        onClick={() => setShowPast((v) => !v)}
+                        className="flex w-full items-center gap-3 text-left"
+                    >
+                        <h3 className="text-lg font-semibold text-shell-muted">Past sessions</h3>
+                        <Badge tone="neutral" size="sm">{past.length}</Badge>
+                        <span className="ml-auto text-sm text-shell-muted-dim">{showPast ? '▲ Hide' : '▼ Show'}</span>
+                    </button>
+                    {showPast && (
+                        <div className="mt-4">
+                            <SessionTable
+                                sessions={past}
+                                isBusy={isBusy}
+                                onRequestCancel={onRequestCancel}
+                                onPractice={onPractice}
+                                onManageEnrollments={onManageEnrollments}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
         </div>

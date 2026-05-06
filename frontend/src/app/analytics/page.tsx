@@ -1,16 +1,26 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useBlueprintStore } from '@/stores/useBlueprintStore';
+import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 import { Badge, Button, Card, EmptyState, PageHeader } from '@/components/ui';
 
 export default function AnalyticsIndexPage() {
+    const router = useRouter();
     const { blueprints, isLoading, error, fetchBlueprints } = useBlueprintStore();
+    const { lastTestId } = useAnalyticsStore();
 
-    useEffect(() => { fetchBlueprints(); }, [fetchBlueprints]);
+    useEffect(() => {
+        if (lastTestId) {
+            router.replace(`/analytics/tests/${lastTestId}`);
+        } else {
+            fetchBlueprints();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // run once on mount
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
@@ -49,9 +59,13 @@ export default function AnalyticsIndexPage() {
                                                 {blueprint.description || 'No description provided.'}
                                             </p>
                                         </div>
-                                        <Link href={`/analytics/tests/${blueprint.id}`}>
-                                            <Button variant="primary" size="sm">Open →</Button>
-                                        </Link>
+                                                        <Button
+                                            variant="primary"
+                                            size="sm"
+                                            onClick={() => router.push(`/analytics/tests/${blueprint.id}`)}
+                                        >
+                                            Open →
+                                        </Button>
                                     </div>
                                     <div className="mt-4 flex flex-wrap gap-1.5">
                                         <Badge tone="neutral" size="sm">{blueprint.blocks.length} sections</Badge>

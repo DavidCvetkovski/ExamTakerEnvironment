@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 
 import { ThemePreference, useAuthStore, UserPublic } from '@/stores/useAuthStore';
 import { useClickOutside } from '@/hooks/useClickOutside';
-import { Button } from '@/components/ui/Button';
+import Button from '@/components/ui/Button';
 
 const THEMES: Array<{ label: string; value: ThemePreference }> = [
     { label: 'Dark', value: 'dark' },

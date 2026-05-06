@@ -6,6 +6,7 @@ from app.api.endpoints import (
     grading,
     interactions,
     items,
+    preferences,
     scheduled_sessions,
     sessions,
     student_sessions,
@@ -15,6 +16,7 @@ from app.api.endpoints import (
 api_router = APIRouter()
 api_router.include_router(items.router)
 api_router.include_router(auth.router)
+api_router.include_router(preferences.router)
 api_router.include_router(courses.router)
 api_router.include_router(tests.router, prefix="/tests", tags=["tests"])
 api_router.include_router(sessions.router, prefix="/sessions", tags=["sessions"])

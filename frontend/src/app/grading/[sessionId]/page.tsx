@@ -55,20 +55,20 @@ function AutoGradeResult({ grade }: { grade: QuestionGrade }) {
             {/* Student answer */}
             <div className={`rounded-lg p-3 border ${grade.is_correct ? 'bg-emerald-950/40 border-emerald-800/60' : 'bg-red-950/40 border-red-800/60'}`}>
                 <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-semibold text-gray-400">STUDENT ANSWER</span>
+                    <span className="text-xs font-semibold text-shell-muted">STUDENT ANSWER</span>
                     {grade.is_correct !== null && (
                         <span className={`text-xs font-bold ${grade.is_correct ? 'text-emerald-400' : 'text-red-400'}`}>
                             {grade.is_correct ? '✓ CORRECT' : '✗ INCORRECT'}
                         </span>
                     )}
                 </div>
-                <p className="text-white text-sm">{getSelectedLabel(studentAnswer)}</p>
+                <p className="text-foreground text-sm">{getSelectedLabel(studentAnswer)}</p>
             </div>
 
             {/* Correct answer */}
             {grade.correct_answer && (
-                <div className="rounded-lg p-3 bg-gray-800/50 border border-gray-700">
-                    <p className="text-xs font-semibold text-gray-400 mb-1">CORRECT ANSWER</p>
+                <div className="rounded-lg p-3 bg-shell-input/50 border border-shell-border-deep">
+                    <p className="text-xs font-semibold text-shell-muted mb-1">CORRECT ANSWER</p>
                     {((grade.correct_answer as Record<string, number[]>).correct_indices ?? []).map((idx: number) => (
                         <span key={idx} className="bg-emerald-900/40 text-emerald-300 text-xs px-2 py-0.5 rounded mr-1">
                             {options[idx]?.text ?? `Option ${idx + 1}`}
@@ -78,8 +78,8 @@ function AutoGradeResult({ grade }: { grade: QuestionGrade }) {
             )}
 
             {options.length > 0 && (
-                <div className="rounded-lg p-3 bg-gray-800/50 border border-gray-700">
-                    <p className="text-xs font-semibold text-gray-400 mb-2">AVAILABLE OPTIONS</p>
+                <div className="rounded-lg p-3 bg-shell-input/50 border border-shell-border-deep">
+                    <p className="text-xs font-semibold text-shell-muted mb-2">AVAILABLE OPTIONS</p>
                     <div className="space-y-2">
                         {options.map((option, idx) => {
                             const isSelected = selectedIndices.includes(idx);
@@ -93,8 +93,8 @@ function AutoGradeResult({ grade }: { grade: QuestionGrade }) {
                                             : isSelected
                                                 ? 'border-red-700 bg-red-950/30 text-red-200'
                                                 : isCorrect
-                                                    ? 'border-emerald-900/60 bg-gray-900 text-emerald-300'
-                                                    : 'border-gray-700 bg-gray-900/60 text-gray-300'
+                                                    ? 'border-emerald-900/60 bg-shell-surface text-emerald-300'
+                                                    : 'border-shell-border-deep bg-shell-surface/60 text-shell-muted'
                                     }`}
                                 >
                                     <span className="font-semibold mr-2">{String.fromCharCode(65 + idx)}.</span>
@@ -110,8 +110,8 @@ function AutoGradeResult({ grade }: { grade: QuestionGrade }) {
             )}
 
             {/* Score */}
-            <div className="text-sm text-gray-400">
-                Score: <span className="text-white font-semibold">{grade.points_awarded}</span> / {grade.points_possible} pts
+            <div className="text-sm text-shell-muted">
+                Score: <span className="text-foreground font-semibold">{grade.points_awarded}</span> / {grade.points_possible} pts
             </div>
         </div>
     );
@@ -160,15 +160,15 @@ function EssayGradingPanel({
     return (
         <div className="space-y-4">
             {/* Student essay */}
-            <div className="rounded-lg border border-gray-700 bg-gray-800/40">
-                <div className="px-4 py-2 border-b border-gray-700">
-                    <span className="text-xs font-semibold text-gray-400">STUDENT ESSAY</span>
+            <div className="rounded-lg border border-shell-border-deep bg-shell-input/40">
+                <div className="px-4 py-2 border-b border-shell-border-deep">
+                    <span className="text-xs font-semibold text-shell-muted">STUDENT ESSAY</span>
                 </div>
                 <div className="px-4 py-3 max-h-48 overflow-y-auto">
                     {essayText ? (
-                        <p className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed">{essayText}</p>
+                        <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{essayText}</p>
                     ) : (
-                        <p className="text-sm text-gray-500 italic">No answer submitted</p>
+                        <p className="text-sm text-shell-muted-dim italic">No answer submitted</p>
                     )}
                 </div>
             </div>
@@ -177,7 +177,7 @@ function EssayGradingPanel({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
                 {/* Points */}
                 <div>
-                    <label className="block text-xs font-semibold text-gray-400 mb-1">
+                    <label className="block text-xs font-semibold text-shell-muted mb-1">
                         Points (max {grade.points_possible})
                     </label>
                     <input
@@ -187,19 +187,19 @@ function EssayGradingPanel({
                         step={0.5}
                         value={pointsInput}
                         onChange={e => setPointsInput(e.target.value)}
-                        className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500"
+                        className="w-full bg-shell-surface border border-shell-border-deep rounded-lg px-3 py-2 text-foreground text-sm focus:outline-none focus:border-blue-500"
                     />
                 </div>
 
                 {/* Feedback */}
                 <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-gray-400 mb-1">Feedback (optional)</label>
+                    <label className="block text-xs font-semibold text-shell-muted mb-1">Feedback (optional)</label>
                     <textarea
                         rows={3}
                         value={feedback}
                         onChange={e => setFeedback(e.target.value)}
                         placeholder="Write feedback for the student…"
-                        className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-blue-500 resize-none"
+                        className="w-full bg-shell-surface border border-shell-border-deep rounded-lg px-3 py-2 text-foreground text-sm focus:outline-none focus:border-blue-500 resize-none"
                     />
                 </div>
             </div>
@@ -244,22 +244,22 @@ export default function SessionGradingPage() {
     const pendingEssays = questionGrades.filter(g => !g.is_auto_graded && g.is_correct === null && !g.feedback);
 
     return (
-        <div className="min-h-screen bg-gray-950 text-gray-100">
+        <div className="min-h-screen bg-shell-bg text-foreground">
             {/* ── Top bar ── */}
-            <div className="bg-gray-900 border-b border-gray-800 px-6 py-4 sticky top-0 z-10">
+            <div className="bg-shell-surface border-b border-shell-border px-6 py-4 sticky top-0 z-10">
                 <div className="max-w-5xl mx-auto flex items-center gap-4">
                     <button
                         onClick={() => router.push('/grading')}
-                        className="text-gray-400 hover:text-white text-sm transition-colors"
+                        className="text-shell-muted hover:text-foreground text-sm transition-colors"
                     >
                         ← Back to Dashboard
                     </button>
 
                     <div className="flex-1">
-                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-gray-500">
+                        <p className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim">
                             {blindMode ? 'Blind Review Mode' : 'Grading Review'}
                         </p>
-                        <p className="mt-1 text-sm text-gray-300">
+                        <p className="mt-1 text-sm text-shell-muted">
                             {sessionResult?.test_title ?? 'Submitted exam response'}
                         </p>
                     </div>
@@ -267,10 +267,10 @@ export default function SessionGradingPage() {
                     {/* Session result summary */}
                     {sessionResult && (
                         <div className="flex items-center gap-4 text-sm">
-                            <span className="text-gray-400">
+                            <span className="text-shell-muted">
                                 {sessionResult.questions_graded} / {sessionResult.questions_total} graded
                             </span>
-                            <span className="font-bold text-white">
+                            <span className="font-bold text-foreground">
                                 {sessionResult.total_points} / {sessionResult.max_points} pts
                                 <span className="ml-2 text-blue-400">({sessionResult.percentage.toFixed(1)}%)</span>
                             </span>
@@ -300,7 +300,7 @@ export default function SessionGradingPage() {
 
                 {/* Loading */}
                 {gradesLoading && (
-                    <div className="flex items-center justify-center py-20 text-gray-500">
+                    <div className="flex items-center justify-center py-20 text-shell-muted-dim">
                         <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-3" />
                         Loading grades…
                     </div>
@@ -316,7 +316,7 @@ export default function SessionGradingPage() {
                     return (
                         <div
                             key={grade.id}
-                            className={`bg-gray-900 border rounded-xl p-6 space-y-5 transition-colors ${
+                            className={`bg-shell-surface border rounded-xl p-6 space-y-5 transition-colors ${
                                 isGraded
                                     ? 'border-emerald-900/60'
                                     : 'border-amber-800/60'
@@ -329,22 +329,22 @@ export default function SessionGradingPage() {
                                         {isGraded ? '✓' : idx + 1}
                                     </span>
                                     <div>
-                                        <p className="text-white font-semibold text-sm">{getQuestionHeading(grade.question_content, idx)}</p>
-                                        <p className="text-gray-500 text-xs capitalize">
+                                        <p className="text-foreground font-semibold text-sm">{getQuestionHeading(grade.question_content, idx)}</p>
+                                        <p className="text-shell-muted-dim text-xs capitalize">
                                             Question {idx + 1} · {isEssay ? 'Essay - manual grading required' : 'Auto-graded'}
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className="text-right">
-                                    <p className="text-white font-bold">
-                                        {grade.points_awarded} <span className="text-gray-500 font-normal">/ {grade.points_possible} pts</span>
+                                    <p className="text-foreground font-bold">
+                                        {grade.points_awarded} <span className="text-shell-muted-dim font-normal">/ {grade.points_possible} pts</span>
                                     </p>
                                 </div>
                             </div>
                             {grade.question_content != null && (
                                 <div
-                                    className="prose prose-invert max-w-none rounded-lg border border-gray-800 bg-gray-950/60 px-4 py-3 text-base leading-relaxed"
+                                    className="prose prose-invert max-w-none rounded-lg border border-shell-border bg-shell-bg/60 px-4 py-3 text-base leading-relaxed"
                                     dangerouslySetInnerHTML={{ __html: sanitizeHtml(toExamContentHtml(grade.question_content)) }}
                                 />
                             )}
@@ -364,7 +364,7 @@ export default function SessionGradingPage() {
                 })}
 
                 {!gradesLoading && questionGrades.length === 0 && (
-                    <div className="text-center py-20 text-gray-500">
+                    <div className="text-center py-20 text-shell-muted-dim">
                         No grades found for this session. This session may not have been submitted yet.
                     </div>
                 )}

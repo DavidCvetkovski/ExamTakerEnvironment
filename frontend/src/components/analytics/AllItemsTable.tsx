@@ -46,10 +46,10 @@ export default function AllItemsTable({
         });
 
     return (
-        <div className="rounded-xl border border-gray-800 bg-gray-900 overflow-hidden">
-            <div className="border-b border-gray-800 px-4 py-4">
+        <div className="rounded-xl border border-shell-border bg-shell-surface overflow-hidden">
+            <div className="border-b border-shell-border px-4 py-4">
                 <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-semibold text-white">All Items</p>
+                    <p className="text-sm font-semibold text-foreground">All Items</p>
                     <div className="flex-1" />
                     {[
                         { key: 'stem', label: 'Sort Stem' },
@@ -63,7 +63,7 @@ export default function AllItemsTable({
                             className={`rounded-full px-3 py-1 text-xs font-medium ${
                                 sortKey === option.key
                                     ? 'bg-cyan-600 text-white'
-                                    : 'bg-gray-800 text-gray-400 hover:text-white'
+                                    : 'bg-shell-input text-shell-muted hover:text-foreground'
                             }`}
                         >
                             {option.label}
@@ -76,7 +76,7 @@ export default function AllItemsTable({
                         className={`rounded-full px-3 py-1 text-xs font-medium ${
                             activeFlag === 'ALL'
                                 ? 'bg-white text-gray-950'
-                                : 'bg-gray-800 text-gray-400 hover:text-white'
+                                : 'bg-shell-input text-shell-muted hover:text-foreground'
                         }`}
                     >
                         All
@@ -88,7 +88,7 @@ export default function AllItemsTable({
                             className={`rounded-full px-3 py-1 text-xs font-medium ${
                                 activeFlag === flagCode
                                     ? 'bg-blue-600 text-white'
-                                    : 'bg-gray-800 text-gray-400 hover:text-white'
+                                    : 'bg-shell-input text-shell-muted hover:text-foreground'
                             }`}
                         >
                             {flagCode.replaceAll('_', ' ')}
@@ -99,7 +99,7 @@ export default function AllItemsTable({
 
             <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
-                    <thead className="bg-gray-950/70 text-[11px] uppercase tracking-[0.18em] text-gray-500">
+                    <thead className="bg-shell-bg/70 text-eyebrow uppercase tracking-eyebrow text-shell-muted-dim">
                         <tr>
                             <th className="px-4 py-3 text-left">Item</th>
                             <th className="px-4 py-3 text-left">Type</th>
@@ -113,18 +113,18 @@ export default function AllItemsTable({
                     </thead>
                     <tbody className="divide-y divide-gray-800">
                         {visibleItems.map((item) => (
-                            <tr key={item.item_version_id} className="hover:bg-gray-800/40">
+                            <tr key={item.item_version_id} className="hover:bg-shell-input/40">
                                 <td className="px-4 py-4">
-                                    <div className="font-medium text-white">{getItemLabel(item.learning_object_id)}</div>
-                                    <div className="mt-1 text-xs text-gray-500">{item.learning_object_id.slice(0, 8)}</div>
+                                    <div className="font-medium text-foreground">{getItemLabel(item.learning_object_id)}</div>
+                                    <div className="mt-1 text-xs text-shell-muted-dim">{item.learning_object_id.slice(0, 8)}</div>
                                 </td>
-                                <td className="px-4 py-4 text-gray-300">
+                                <td className="px-4 py-4 text-shell-muted">
                                     {item.question_type?.replaceAll('_', ' ') ?? '—'}
                                 </td>
-                                <td className="px-4 py-4 text-gray-300">v{item.version_number ?? '—'}</td>
-                                <td className="px-4 py-4 text-gray-300">{formatMetric(item.p_value)}</td>
-                                <td className="px-4 py-4 text-gray-300">{formatMetric(item.d_value)}</td>
-                                <td className="px-4 py-4 text-gray-300">{item.n_responses}</td>
+                                <td className="px-4 py-4 text-shell-muted">v{item.version_number ?? '—'}</td>
+                                <td className="px-4 py-4 text-shell-muted">{formatMetric(item.p_value)}</td>
+                                <td className="px-4 py-4 text-shell-muted">{formatMetric(item.d_value)}</td>
+                                <td className="px-4 py-4 text-shell-muted">{item.n_responses}</td>
                                 <td className="px-4 py-4">
                                     {item.flags.length > 0 ? (
                                         <div className="flex flex-wrap gap-2">
@@ -133,13 +133,13 @@ export default function AllItemsTable({
                                             ))}
                                         </div>
                                     ) : (
-                                        <span className="text-xs text-gray-500">Clean</span>
+                                        <span className="text-xs text-shell-muted-dim">Clean</span>
                                     )}
                                 </td>
                                 <td className="px-4 py-4 text-right">
                                     <Link
                                         href={`/analytics/items/${item.learning_object_id}?fromTest=${testId}`}
-                                        className="rounded-lg border border-gray-700 px-3 py-2 text-xs font-semibold text-gray-200 hover:border-gray-500 hover:text-white"
+                                        className="rounded-lg border border-shell-border-deep px-3 py-2 text-xs font-semibold text-foreground hover:border-gray-500 hover:text-foreground"
                                     >
                                         Drill Down
                                     </Link>
@@ -148,7 +148,7 @@ export default function AllItemsTable({
                         ))}
                         {visibleItems.length === 0 ? (
                             <tr>
-                                <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-500">
+                                <td colSpan={8} className="px-4 py-10 text-center text-sm text-shell-muted-dim">
                                     No items match the active flag filter.
                                 </td>
                             </tr>

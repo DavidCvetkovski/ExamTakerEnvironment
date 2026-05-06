@@ -15,7 +15,7 @@ export default function SaveIndicator() {
 
     const config: Record<SaveStatus, { text: string; color: string; icon: string }> = {
         idle: { text: '', color: '', icon: '' },
-        saving: { text: 'Saving...', color: 'text-gray-400', icon: '⟳' },
+        saving: { text: 'Saving...', color: 'text-shell-muted', icon: '⟳' },
         saved: { text: 'Saved', color: 'text-emerald-400', icon: '✓' },
         error: { text: 'Save failed — retrying...', color: 'text-red-400', icon: '✗' },
     };

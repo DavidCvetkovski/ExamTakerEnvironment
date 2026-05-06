@@ -12,7 +12,7 @@ type BlueprintDraft = Partial<TestDefinition>;
 
 export default function BlueprintPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-gray-950" />}>
+        <Suspense fallback={<div className="min-h-screen bg-shell-bg" />}>
             <BlueprintPageInner />
         </Suspense>
     );
@@ -191,17 +191,17 @@ function BlueprintPageInner() {
     if (!isEditing) {
         return (
             <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-white">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-foreground">
                     <div className="flex justify-between items-end mb-12">
                         <div>
                             <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-500">
                                 Test Blueprints
                             </h1>
-                            <p className="mt-2 text-slate-400">Design and manage rule-based exam definitions.</p>
+                            <p className="mt-2 text-shell-muted-dim">Design and manage rule-based exam definitions.</p>
                         </div>
                         <button
                             onClick={handleCreateNew}
-                            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-semibold rounded-xl text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 transition-all active:scale-95"
+                            className="inline-flex items-center px-6 py-3 border border-transparent text-base font-semibold rounded-xl text-white bg-brand hover:bg-brand shadow-lg shadow-indigo-500/20 transition-all active:scale-95"
                         >
                             <span className="mr-2 text-xl">+</span> New Blueprint
                         </button>
@@ -216,9 +216,9 @@ function BlueprintPageInner() {
                     {error && <div className="p-4 bg-red-900/20 border border-red-500/50 rounded-xl text-red-400 mb-8">{error}</div>}
 
                     {!isLoading && blueprints.length === 0 && (
-                        <div className="text-center py-20 bg-slate-900/30 rounded-3xl border border-dashed border-slate-800">
-                            <p className="text-slate-500 mb-6">No blueprints found. Get started by creating your first one!</p>
-                            <button onClick={handleCreateNew} className="text-indigo-400 font-semibold hover:text-indigo-300">
+                        <div className="text-center py-20 bg-shell-surface/30 rounded-3xl border border-dashed border-shell-border">
+                            <p className="text-shell-muted-dim mb-6">No blueprints found. Get started by creating your first one!</p>
+                            <button onClick={handleCreateNew} className="text-brand font-semibold hover:text-brand">
                                 Create Blueprint →
                             </button>
                         </div>
@@ -229,22 +229,22 @@ function BlueprintPageInner() {
                             <div
                                 key={bp.id}
                                 onClick={() => router.push(`/blueprint?id=${bp.id}`)}
-                                className="group relative bg-slate-900/50 hover:bg-slate-800/80 p-6 rounded-3xl border border-white/5 hover:border-white/10 transition-all cursor-pointer backdrop-blur-sm"
+                                className="group relative bg-shell-surface/50 hover:bg-shell-input/80 p-6 rounded-3xl border border-white/5 hover:border-white/10 transition-all cursor-pointer backdrop-blur-sm"
                             >
                                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <span className="text-indigo-400 text-sm font-medium">Edit →</span>
+                                    <span className="text-brand text-sm font-medium">Edit →</span>
                                 </div>
                                 <h3 className="text-xl font-bold mb-2 pr-12 line-clamp-1">{bp.title}</h3>
-                                <p className="text-slate-400 text-sm mb-6 line-clamp-2 min-h-[40px]">{bp.description || 'No description provided.'}</p>
+                                <p className="text-shell-muted-dim text-sm mb-6 line-clamp-2 min-h-[40px]">{bp.description || 'No description provided.'}</p>
 
-                                <div className="flex items-center justify-between pt-4 border-t border-white/5 text-xs text-slate-500 font-medium tracking-wider uppercase">
+                                <div className="flex items-center justify-between pt-4 border-t border-white/5 text-xs text-shell-muted-dim font-medium tracking-wider uppercase">
                                     <div className="flex items-center gap-4">
                                         <span className="flex items-center gap-1.5">
                                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                                             {bp.blocks.length} Sections
                                         </span>
                                         <span className="flex items-center gap-1.5">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                                            <span className="w-1.5 h-1.5 rounded-full bg-brand"></span>
                                             {bp.duration_minutes} min
                                         </span>
                                     </div>
@@ -260,18 +260,18 @@ function BlueprintPageInner() {
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-12 text-white">
+            <div className="max-w-page mx-auto px-4 py-12 text-foreground sm:px-6 lg:px-8">
                 <div className="flex gap-8">
                     {/* Main Editor */}
                     <div className="flex-1">
                         <button
                             onClick={() => router.push('/blueprint')}
-                            className="group flex items-center text-slate-400 hover:text-white mb-8 transition-colors"
+                            className="group flex items-center text-shell-muted-dim hover:text-foreground mb-8 transition-colors"
                         >
                             <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> Back to Blueprints
                         </button>
 
-                        <div className="bg-slate-900/80 backdrop-blur-xl rounded-[32px] border border-white/10 shadow-2xl overflow-hidden min-h-[700px]">
+                        <div className="min-h-blueprint-canvas overflow-hidden rounded-card-lg border border-white/10 bg-shell-surface/80 shadow-2xl backdrop-blur-xl">
                             {/* Hero Section */}
                             <div className="p-8 pb-0">
                                 <input
@@ -279,20 +279,20 @@ function BlueprintPageInner() {
                                     placeholder="Untitled Blueprint"
                                     value={currentBlueprint?.title || ''}
                                     onChange={(e) => saveState({ title: e.target.value })}
-                                    className="w-100 bg-transparent border-none text-white text-4xl font-black placeholder-white/20 focus:ring-0 mb-2 p-0 w-full"
+                                    className="w-100 bg-transparent border-none text-foreground text-4xl font-black placeholder-white/20 focus:ring-0 mb-2 p-0 w-full"
                                 />
                                 <textarea
                                     placeholder="Decribe the purpose of this test (optional)..."
                                     value={currentBlueprint?.description || ''}
                                     onChange={(e) => saveState({ description: e.target.value })}
                                     rows={1}
-                                    className="w-100 bg-transparent border-none text-slate-400 text-lg placeholder-white/10 focus:ring-0 mb-8 p-0 resize-none w-full"
+                                    className="w-100 bg-transparent border-none text-shell-muted-dim text-lg placeholder-white/10 focus:ring-0 mb-8 p-0 resize-none w-full"
                                 />
 
                                 {/* Config Bar */}
                                 <div className="flex flex-wrap items-center gap-6 p-6 bg-white/5 rounded-2xl mb-12">
                                     <div className="flex-1 min-w-[150px]">
-                                        <label className="block text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-2">Manual Duration</label>
+                                        <label className="mb-2 block text-eyebrow-sm font-bold uppercase tracking-widest text-brand">Manual Duration</label>
                                         <div className="flex items-center">
                                             <input
                                                 type="number"
@@ -300,19 +300,19 @@ function BlueprintPageInner() {
                                                 onChange={(e) => saveState({
                                                     duration_minutes: e.target.value === '' ? undefined : parseInt(e.target.value, 10)
                                                 })}
-                                                className="bg-black/20 border border-white/10 rounded-lg py-2 px-3 text-white focus:outline-none focus:border-indigo-500/50 w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                className="bg-black/20 border border-white/10 rounded-lg py-2 px-3 text-foreground focus:outline-none focus:border-brand/50 w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                             />
-                                            <span className="ml-3 text-slate-400 text-sm font-medium">minutes</span>
+                                            <span className="ml-3 text-shell-muted-dim text-sm font-medium">minutes</span>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <button
                                             onClick={() => saveState({ shuffle_questions: !currentBlueprint?.shuffle_questions })}
-                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${currentBlueprint?.shuffle_questions ? 'bg-indigo-600' : 'bg-slate-700'}`}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${currentBlueprint?.shuffle_questions ? 'bg-brand' : 'bg-shell-input-alt'}`}
                                         >
                                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${currentBlueprint?.shuffle_questions ? 'translate-x-6' : 'translate-x-1'}`} />
                                         </button>
-                                        <span className="text-sm font-semibold text-slate-300">Shuffle Questions</span>
+                                        <span className="text-sm font-semibold text-shell-muted">Shuffle Questions</span>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <button
@@ -322,11 +322,11 @@ function BlueprintPageInner() {
                                                     shuffle_options: !scoringConfig.shuffle_options,
                                                 },
                                             })}
-                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${scoringConfig.shuffle_options ? 'bg-indigo-600' : 'bg-slate-700'}`}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${scoringConfig.shuffle_options ? 'bg-brand' : 'bg-shell-input-alt'}`}
                                         >
                                             <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${scoringConfig.shuffle_options ? 'translate-x-6' : 'translate-x-1'}`} />
                                         </button>
-                                        <span className="text-sm font-semibold text-slate-300">Shuffle Answer Order</span>
+                                        <span className="text-sm font-semibold text-shell-muted">Shuffle Answer Order</span>
                                     </div>
                                 </div>
                             </div>
@@ -336,7 +336,7 @@ function BlueprintPageInner() {
                                 <div className="space-y-12">
                                     {(currentBlueprint?.blocks || []).map((block, bIdx) => (
                                         <div key={bIdx} className="relative">
-                                            <div className="absolute -left-4 top-0 bottom-0 w-1 bg-indigo-500/20 rounded-full"></div>
+                                            <div className="absolute -left-4 top-0 bottom-0 w-1 bg-brand/20 rounded-full"></div>
                                             <div className="flex justify-between items-center mb-6">
                                                 <input
                                                     value={block.title}
@@ -345,7 +345,7 @@ function BlueprintPageInner() {
                                                         newBlocks[bIdx].title = e.target.value;
                                                         saveState({ blocks: newBlocks });
                                                     }}
-                                                    className="bg-transparent border-none text-xl font-bold text-white focus:ring-0 p-0"
+                                                    className="bg-transparent border-none text-xl font-bold text-foreground focus:ring-0 p-0"
                                                 />
                                                 <button
                                                     onClick={() => {
@@ -353,7 +353,7 @@ function BlueprintPageInner() {
                                                         newBlocks.splice(bIdx, 1);
                                                         saveState({ blocks: newBlocks });
                                                     }}
-                                                    className="text-slate-600 hover:text-red-400 text-sm font-medium transition-colors"
+                                                    className="text-shell-muted hover:text-red-400 text-sm font-medium transition-colors"
                                                 >
                                                     Remove Section
                                                 </button>
@@ -371,7 +371,7 @@ function BlueprintPageInner() {
                                                 }}
                                             >
                                                 {block.rules.length === 0 && (
-                                                    <div className="h-full min-h-[60px] border-2 border-dashed border-white/10 rounded-2xl flex items-center justify-center text-slate-500 text-xs font-semibold uppercase tracking-widest bg-white/[0.01]">
+                                                    <div className="h-full min-h-[60px] border-2 border-dashed border-white/10 rounded-2xl flex items-center justify-center text-shell-muted-dim text-xs font-semibold uppercase tracking-widest bg-white/[0.01]">
                                                         Empty Section
                                                     </div>
                                                 )}
@@ -387,20 +387,20 @@ function BlueprintPageInner() {
                                                             onDragOver={(e) => e.preventDefault()}
                                                             onDrop={(e) => handleDrop(e, bIdx, rIdx)}
                                                             className={`group flex flex-col gap-4 bg-white/[0.03] hover:bg-white/[0.05] border border-white/5 rounded-2xl p-4 transition-all relative cursor-move
-                                                                    ${isDragOver ? 'border-t-2 border-t-indigo-500 bg-indigo-500/10 scale-[1.02]' : ''}`}
+                                                                    ${isDragOver ? 'border-t-2 border-t-indigo-500 bg-brand/10 scale-[1.02]' : ''}`}
                                                         >
                                                             <div className="flex items-center gap-4">
-                                                                <div className="text-slate-500 cursor-grab hover:text-white">
+                                                                <div className="text-shell-muted-dim cursor-grab hover:text-foreground">
                                                                     &#x2630;
                                                                 </div>
-                                                                <div className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-tight ${rule.rule_type === 'FIXED' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
+                                                                <div className={`rounded-md px-2 py-1 text-eyebrow-xs font-black uppercase tracking-tight ${rule.rule_type === 'FIXED' ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}`}>
                                                                     {rule.rule_type === 'FIXED' ? 'Fixed Item' : 'Smart Draw'}
                                                                 </div>
 
                                                                 {rule.rule_type === 'FIXED' ? (
                                                                     <div className="flex-1 flex items-center justify-between gap-4">
-                                                                        <div className="text-sm font-medium text-slate-200 truncate">
-                                                                            {rule.learning_object_id ? getItemPreview(rule.learning_object_id) : <span className="text-slate-600">No question selected</span>}
+                                                                        <div className="text-sm font-medium text-foreground truncate">
+                                                                            {rule.learning_object_id ? getItemPreview(rule.learning_object_id) : <span className="text-shell-muted">No question selected</span>}
                                                                         </div>
                                                                         <button
                                                                             onClick={() => setPickerOpen({ blockIdx: bIdx, ruleIdx: rIdx })}
@@ -412,7 +412,7 @@ function BlueprintPageInner() {
                                                                 ) : (
                                                                     <div className="flex-1 flex flex-wrap items-center gap-4">
                                                                         <div className="flex items-center gap-2">
-                                                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Quantity:</span>
+                                                                            <span className="text-eyebrow font-bold uppercase tracking-tight text-shell-muted-dim">Quantity:</span>
                                                                             <input
                                                                                 type="number"
                                                                                 value={rule.count ?? ''}
@@ -427,7 +427,7 @@ function BlueprintPageInner() {
                                                                             />
                                                                         </div>
                                                                         <div className="flex items-center gap-2">
-                                                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Topic:</span>
+                                                                            <span className="text-eyebrow font-bold uppercase tracking-tight text-shell-muted-dim">Topic:</span>
                                                                             <input
                                                                                 placeholder="Any Topic"
                                                                                 value={rule.topic || ''}
@@ -440,7 +440,7 @@ function BlueprintPageInner() {
                                                                             />
                                                                         </div>
                                                                         <div className="flex items-center gap-2">
-                                                                            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Difficulty:</span>
+                                                                            <span className="text-eyebrow font-bold uppercase tracking-tight text-shell-muted-dim">Difficulty:</span>
                                                                             <select
                                                                                 value={rule.difficulty || ''}
                                                                                 onChange={(e) => {
@@ -465,7 +465,7 @@ function BlueprintPageInner() {
                                                                         newBlocks[bIdx].rules.splice(rIdx, 1);
                                                                         saveState({ blocks: newBlocks });
                                                                     }}
-                                                                    className="opacity-0 group-hover:opacity-100 p-2 text-slate-600 hover:text-red-400 transition-all ml-auto"
+                                                                    className="opacity-0 group-hover:opacity-100 p-2 text-shell-muted hover:text-red-400 transition-all ml-auto"
                                                                 >
                                                                     ✕
                                                                 </button>
@@ -495,7 +495,7 @@ function BlueprintPageInner() {
 
                                 <button
                                     onClick={handleAddBlock}
-                                    className="w-full mt-12 py-10 border-2 border-dashed border-white/5 rounded-3xl text-slate-600 hover:text-slate-400 hover:border-white/10 hover:bg-white/[0.01] transition-all flex flex-col items-center justify-center gap-2"
+                                    className="w-full mt-12 py-10 border-2 border-dashed border-white/5 rounded-3xl text-shell-muted hover:text-shell-muted-dim hover:border-white/10 hover:bg-white/[0.01] transition-all flex flex-col items-center justify-center gap-2"
                                 >
                                     <span className="text-3xl">+</span>
                                     <span className="text-sm font-bold uppercase tracking-widest">Add New Section</span>
@@ -503,7 +503,7 @@ function BlueprintPageInner() {
                             </div>
 
                             {/* Sticky Footer */}
-                            <div className="sticky bottom-0 bg-slate-900/90 backdrop-blur-xl border-t border-white/10 p-6 px-8 flex justify-between items-center z-10">
+                            <div className="sticky bottom-0 bg-shell-surface/90 backdrop-blur-xl border-t border-white/10 p-6 px-8 flex justify-between items-center z-10">
                                 <div className="flex items-center gap-4">
                                     <BlueprintSaveIndicator />
                                 </div>
@@ -519,7 +519,7 @@ function BlueprintPageInner() {
                                     )}
                                     <button
                                         onClick={handleSave}
-                                        className="px-10 py-2.5 bg-green-500 hover:bg-green-400 text-slate-950 text-sm font-black rounded-xl transition-all shadow-lg shadow-green-500/20"
+                                        className="px-10 py-2.5 bg-green-500 hover:bg-green-400 text-foreground text-sm font-black rounded-xl transition-all shadow-lg shadow-green-500/20"
                                     >
                                         Publish Blueprint
                                     </button>
@@ -530,56 +530,56 @@ function BlueprintPageInner() {
 
                     {/* Breakdown Sidebar */}
                     <div className="w-80 space-y-6">
-                        <div className="bg-slate-900/50 backdrop-blur-md rounded-[32px] border border-white/10 p-6 sticky top-12">
-                            <h4 className="text-xs font-black uppercase tracking-widest text-indigo-400 mb-6 flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span>
+                        <div className="sticky top-12 rounded-card-lg border border-white/10 bg-shell-surface/50 p-6 backdrop-blur-md">
+                            <h4 className="text-xs font-black uppercase tracking-widest text-brand mb-6 flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-brand animate-pulse"></span>
                                 Live Breakdown
                             </h4>
 
                             <div className="space-y-8">
                                 <div className="grid grid-cols-3 gap-4">
                                     <div className="bg-white/5 rounded-2xl p-4">
-                                        <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Items</div>
+                                        <div className="mb-1 text-eyebrow-sm font-bold uppercase text-shell-muted-dim">Items</div>
                                         <div className="text-2xl font-black">{stats.totalCount}</div>
                                     </div>
                                     <div className="bg-white/5 rounded-2xl p-4">
-                                        <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Points</div>
+                                        <div className="mb-1 text-eyebrow-sm font-bold uppercase text-shell-muted-dim">Points</div>
                                         <div className="text-2xl font-black">{stats.totalPoints}</div>
                                     </div>
                                     <div className="bg-white/5 rounded-2xl p-4">
-                                        <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Time</div>
+                                        <div className="mb-1 text-eyebrow-sm font-bold uppercase text-shell-muted-dim">Time</div>
                                         <div className="text-2xl font-black">{stats.totalTime}m</div>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-4">Topic Coverage</label>
+                                    <label className="mb-4 block text-eyebrow-sm font-bold uppercase tracking-widest text-shell-muted-dim">Topic Coverage</label>
                                     <div className="space-y-3">
                                         {Object.entries(stats.topics).length > 0 ? (
                                             Object.entries(stats.topics).map(([topic, count]) => (
                                                 <div key={topic} className="space-y-1">
                                                     <div className="flex justify-between text-xs font-semibold">
-                                                        <span className="text-slate-300">{topic}</span>
-                                                        <span className="text-indigo-400">{Math.round((count / stats.totalCount) * 100)}%</span>
+                                                        <span className="text-shell-muted">{topic}</span>
+                                                        <span className="text-brand">{Math.round((count / stats.totalCount) * 100)}%</span>
                                                     </div>
                                                     <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                                                         <div
-                                                            className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                                                            className="h-full bg-brand rounded-full transition-all duration-500"
                                                             style={{ width: `${(count / (stats.totalCount || 1)) * 100}%` }}
                                                         />
                                                     </div>
                                                 </div>
                                             ))
                                         ) : (
-                                            <p className="text-xs text-slate-600 italic">No topics selected yet.</p>
+                                            <p className="text-xs text-shell-muted italic">No topics selected yet.</p>
                                         )}
                                     </div>
                                 </div>
 
                                 <div className="pt-6 border-t border-white/5">
-                                    <div className="flex items-center justify-between p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
-                                        <div className="text-[10px] font-bold text-indigo-300 uppercase">Complexity</div>
-                                        <div className="text-lg font-black text-white">Dynamic</div>
+                                    <div className="flex items-center justify-between p-4 bg-brand/10 rounded-2xl border border-brand/20">
+                                        <div className="text-eyebrow-sm font-bold uppercase text-brand">Complexity</div>
+                                        <div className="text-lg font-black text-foreground">Dynamic</div>
                                     </div>
                                 </div>
                             </div>

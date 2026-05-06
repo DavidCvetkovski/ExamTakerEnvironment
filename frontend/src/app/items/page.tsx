@@ -4,14 +4,35 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useLibraryStore } from '@/stores/useLibraryStore';
+import {
+    Badge,
+    Button,
+    EmptyState,
+    Input,
+    PageHeader,
+    Select,
+    Table,
+    TableContainer,
+    TBody,
+    TD,
+    TH,
+    THead,
+    TR,
+} from '@/components/ui';
 
 function getMetadataString(value: unknown): string | null {
     return typeof value === 'string' && value.trim() !== '' ? value : null;
 }
-
 function getMetadataNumber(value: unknown): number | undefined {
     return typeof value === 'number' ? value : undefined;
 }
+
+const STATUS_TONE: Record<string, 'neutral' | 'warning' | 'success' | 'danger'> = {
+    DRAFT: 'neutral',
+    READY_FOR_REVIEW: 'warning',
+    APPROVED: 'success',
+    RETIRED: 'danger',
+};
 
 export default function ItemsLibraryPage() {
     const router = useRouter();
@@ -20,16 +41,15 @@ export default function ItemsLibraryPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [subjectFilter, setSubjectFilter] = useState('all');
 
-    useEffect(() => {
-        fetchItems();
-    }, [fetchItems]);
+    useEffect(() => { fetchItems(); }, [fetchItems]);
 
     const uniqueSubjects = Array.from(
-        new Set(items.map((item) => getMetadataString(item.metadata_tags?.topic)).filter((value): value is string => value !== null))
+        new Set(items.map((item) => getMetadataString(item.metadata_tags?.topic)).filter((v): v is string => v !== null))
     );
 
-    const filteredItems = items.filter(item => {
-        const matchesSearch = (item.latest_content_preview || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    const filteredItems = items.filter((item) => {
+        const matchesSearch =
+            (item.latest_content_preview || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
             item.id.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesSubject = subjectFilter === 'all' || getMetadataString(item.metadata_tags?.topic) === subjectFilter;
         return matchesSearch && matchesSubject;
@@ -47,164 +67,129 @@ export default function ItemsLibraryPage() {
         }
     };
 
-    const StatusBadge = ({ status }: { status: string }) => {
-        const colors: Record<string, string> = {
-            DRAFT: 'bg-gray-100 text-gray-800 border-gray-200',
-            READY_FOR_REVIEW: 'bg-yellow-50 text-yellow-800 border-yellow-200',
-            APPROVED: 'bg-green-50 text-green-800 border-green-200',
-            RETIRED: 'bg-red-50 text-red-800 border-red-200',
-        };
-        const color = colors[status] || 'bg-gray-100 text-gray-800 border-gray-200';
-        return (
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${color}`}>
-                {status.replace(/_/g, ' ')}
-            </span>
-        );
-    };
-
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4 sm:px-6 lg:px-8">
-                <main className="w-full max-w-6xl space-y-6">
-                    {/* Header */}
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Question Library</h1>
-                            <p className="mt-1 text-sm text-gray-500">Manage and create learning objects</p>
-                        </div>
-                        <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-3">
-                            <button
-                                onClick={handleCreateNew}
-                                disabled={isCreating}
-                                className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50 transition-colors"
-                            >
-                                {isCreating ? (
-                                    <>
-                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Creating...
-                                    </>
-                                ) : (
-                                    <>
-                                        <svg className="-ml-0.5 mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                                        </svg>
-                                        Create New Question
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    </div>
+            <div className="min-h-screen bg-shell-bg text-foreground">
+                <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+                    <PageHeader
+                        eyebrow="Item bank"
+                        title="Question Library"
+                        subtitle="Browse, filter, and author the learning objects that feed every test."
+                        actions={
+                            <Button variant="primary" size="md" loading={isCreating} onClick={handleCreateNew}>
+                                + New question
+                            </Button>
+                        }
+                    />
 
-                    {/* Filters */}
-                    <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-4">
-                        <div className="flex-1 relative">
-                            <input
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex-1 min-w-[280px]">
+                            <Input
+                                inputSize="md"
                                 type="text"
-                                placeholder="Search questions..."
+                                placeholder="Search by content or ID…"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none"
                             />
                         </div>
-                        <select
-                            value={subjectFilter}
-                            onChange={(e) => setSubjectFilter(e.target.value)}
-                            className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-2 text-sm focus:border-blue-500 outline-none cursor-pointer min-w-[150px]"
-                        >
-                            <option value="all">All Subjects</option>
-                            {uniqueSubjects.map(subject => (
-                                <option key={subject} value={subject}>{subject}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Table Area */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                        {error && (
-                            <div className="p-4 bg-red-50 border-b border-red-100 text-red-600 text-sm">
-                                {typeof error === 'string' ? error : 'An error occurred while loading items.'}
-                            </div>
-                        )}
-
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preview</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Points</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                                        <th scope="col" className="relative px-6 py-3">
-                                            <span className="sr-only">Edit</span>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {isLoading && items.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-500">
-                                                Loading library items...
-                                            </td>
-                                        </tr>
-                                    ) : items.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={7} className="px-6 py-10 text-center text-sm text-gray-500">
-                                                No questions found. Click &quot;Create New Question&quot; to get started.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        filteredItems.map((item) => (
-                                            <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm font-medium text-gray-900 truncate max-w-[200px]" title={item.latest_content_preview}>
-                                                        {item.latest_content_preview || 'Empty Question'}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-900 font-medium">
-                                                        {getMetadataString(item.metadata_tags?.topic) || <span className="text-gray-400 italic">General</span>}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-900 font-medium">
-                                                        {getMetadataNumber(item.metadata_tags?.points) ?? 1}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <div className="text-sm text-gray-600">
-                                                        {item.latest_question_type === 'MULTIPLE_CHOICE' ? 'Single Choice' : item.latest_question_type === 'MULTIPLE_RESPONSE' ? 'Multiple Choice' : 'Essay'}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <StatusBadge status={item.latest_status} />
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    {new Date(item.created_at).toLocaleDateString()}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                                    <button
-                                                        onClick={() => router.push(`/author?lo_id=${item.id}`)}
-                                                        className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-md transition-colors inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                                    >
-                                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-                                                        </svg>
-                                                        Edit
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
+                        <div className="min-w-filter">
+                            <Select
+                                inputSize="md"
+                                value={subjectFilter}
+                                onChange={(e) => setSubjectFilter(e.target.value)}
+                            >
+                                <option value="all">All subjects</option>
+                                {uniqueSubjects.map((s) => (
+                                    <option key={s} value={s}>{s}</option>
+                                ))}
+                            </Select>
                         </div>
                     </div>
-                </main>
+
+                    {error && (
+                        <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] px-4 py-3 text-meta text-[var(--color-danger-fg)]">
+                            {typeof error === 'string' ? error : 'An error occurred while loading items.'}
+                        </div>
+                    )}
+
+                    {isLoading && items.length === 0 ? (
+                        <div className="flex items-center justify-center py-16 text-shell-muted-dim text-meta">
+                            <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin mr-3" />
+                            Loading library items…
+                        </div>
+                    ) : items.length === 0 ? (
+                        <EmptyState
+                            title="No questions yet"
+                            description="Get started by creating your first learning object."
+                            action={
+                                <Button variant="primary" size="md" onClick={handleCreateNew} loading={isCreating}>
+                                    + New question
+                                </Button>
+                            }
+                        />
+                    ) : (
+                        <TableContainer>
+                            <Table>
+                                <THead>
+                                    <TR>
+                                        <TH>Preview</TH>
+                                        <TH>Subject</TH>
+                                        <TH align="right">Points</TH>
+                                        <TH>Type</TH>
+                                        <TH>Status</TH>
+                                        <TH>Created</TH>
+                                        <TH align="right">Actions</TH>
+                                    </TR>
+                                </THead>
+                                <TBody>
+                                    {filteredItems.map((item) => (
+                                        <TR key={item.id}>
+                                            <TD>
+                                                <div className="max-w-cell truncate font-medium text-foreground" title={item.latest_content_preview}>
+                                                    {item.latest_content_preview || (
+                                                        <span className="text-shell-muted-dim italic">Empty question</span>
+                                                    )}
+                                                </div>
+                                            </TD>
+                                            <TD>
+                                                {getMetadataString(item.metadata_tags?.topic) || (
+                                                    <span className="text-shell-muted-dim italic">General</span>
+                                                )}
+                                            </TD>
+                                            <TD align="right" numeric className="font-medium">
+                                                {getMetadataNumber(item.metadata_tags?.points) ?? 1}
+                                            </TD>
+                                            <TD className="text-shell-muted">
+                                                {item.latest_question_type === 'MULTIPLE_CHOICE'
+                                                    ? 'Single choice'
+                                                    : item.latest_question_type === 'MULTIPLE_RESPONSE'
+                                                    ? 'Multiple choice'
+                                                    : 'Essay'}
+                                            </TD>
+                                            <TD>
+                                                <Badge tone={STATUS_TONE[item.latest_status] ?? 'neutral'} size="sm">
+                                                    {item.latest_status.replace(/_/g, ' ')}
+                                                </Badge>
+                                            </TD>
+                                            <TD className="text-shell-muted-dim tabular-nums">
+                                                {new Date(item.created_at).toLocaleDateString()}
+                                            </TD>
+                                            <TD align="right">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => router.push(`/author?lo_id=${item.id}`)}
+                                                >
+                                                    Edit →
+                                                </Button>
+                                            </TD>
+                                        </TR>
+                                    ))}
+                                </TBody>
+                            </Table>
+                        </TableContainer>
+                    )}
+                </div>
             </div>
         </ProtectedRoute>
     );

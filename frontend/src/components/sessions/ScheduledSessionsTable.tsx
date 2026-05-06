@@ -13,8 +13,8 @@ interface ScheduledSessionsTableProps {
 const statusClasses: Record<ScheduledSession['status'], string> = {
     SCHEDULED: 'bg-cyan-500/15 text-cyan-200 border-cyan-400/30',
     ACTIVE: 'bg-emerald-500/15 text-emerald-200 border-emerald-400/30',
-    CLOSED: 'bg-slate-500/15 text-slate-300 border-slate-400/20',
-    CANCELED: 'bg-rose-500/15 text-rose-200 border-rose-400/30',
+    CLOSED: 'bg-shell-input-alt text-shell-muted border-shell-border',
+    CANCELED: 'bg-[var(--color-danger-bg)] text-danger border-[var(--color-danger-border)]',
 };
 
 export default function ScheduledSessionsTable({
@@ -25,25 +25,25 @@ export default function ScheduledSessionsTable({
     onManageEnrollments,
 }: ScheduledSessionsTableProps) {
     return (
-        <div className="rounded-[28px] border border-white/10 bg-[#0d1321] p-6 shadow-2xl shadow-black/20">
+        <div className="rounded-card-md border border-white/10 bg-shell-panel-a p-6 shadow-2xl shadow-black/20">
             <div className="mb-5 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
                 <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">Scheduled Sessions</p>
-                    <h3 className="mt-2 text-2xl font-black text-white">Exam Windows by Course</h3>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-shell-muted-dim">Scheduled Sessions</p>
+                    <h3 className="mt-2 text-2xl font-black text-foreground">Exam Windows by Course</h3>
                 </div>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-shell-muted-dim">
                     Active and upcoming sessions are updated from their real time window.
                 </p>
             </div>
 
             {sessions.length === 0 ? (
-                <div className="rounded-[24px] border border-dashed border-white/10 bg-white/[0.02] px-6 py-10 text-center text-sm text-slate-500">
+                <div className="rounded-card border border-dashed border-white/10 bg-white/[0.02] px-6 py-10 text-center text-sm text-shell-muted-dim">
                     No scheduled sessions yet.
                 </div>
             ) : (
                 <div className="overflow-x-auto">
                     <table className="min-w-full text-left text-sm">
-                        <thead className="text-xs uppercase tracking-[0.24em] text-slate-500">
+                        <thead className="text-xs uppercase tracking-medium text-shell-muted-dim">
                             <tr>
                                 <th className="pb-3 pr-4">Course</th>
                                 <th className="pb-3 pr-4">Blueprint</th>
@@ -57,12 +57,12 @@ export default function ScheduledSessionsTable({
                             {sessions.map((session) => (
                                 <tr key={session.id} className="border-t border-white/6">
                                     <td className="py-4 pr-4">
-                                        <p className="font-semibold text-white">{session.course_code}</p>
-                                        <p className="text-slate-500">{session.course_title}</p>
+                                        <p className="font-semibold text-foreground">{session.course_code}</p>
+                                        <p className="text-shell-muted-dim">{session.course_title}</p>
                                     </td>
-                                    <td className="py-4 pr-4 text-slate-200">{session.test_title}</td>
-                                    <td className="py-4 pr-4 text-slate-300">{new Date(session.starts_at).toLocaleString()}</td>
-                                    <td className="py-4 pr-4 text-slate-400">{new Date(session.ends_at).toLocaleString()}</td>
+                                    <td className="py-4 pr-4 text-foreground">{session.test_title}</td>
+                                    <td className="py-4 pr-4 text-shell-muted">{new Date(session.starts_at).toLocaleString()}</td>
+                                    <td className="py-4 pr-4 text-shell-muted-dim">{new Date(session.ends_at).toLocaleString()}</td>
                                     <td className="py-4 pr-4">
                                         <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${statusClasses[session.status]}`}>
                                             {session.status}
@@ -73,7 +73,7 @@ export default function ScheduledSessionsTable({
                                             <button
                                                 type="button"
                                                 onClick={() => onManageEnrollments(session.course_id)}
-                                                className="rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/5"
+                                                className="rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-white/5"
                                             >
                                                 Enrollments
                                             </button>
@@ -88,7 +88,7 @@ export default function ScheduledSessionsTable({
                                                 type="button"
                                                 onClick={() => onCancel(session.id)}
                                                 disabled={isBusy || session.status === 'CLOSED' || session.status === 'CANCELED'}
-                                                className="rounded-xl border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-xs font-semibold text-rose-200 transition hover:bg-rose-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+                                                className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] px-3 py-2 text-xs font-semibold text-danger transition hover:bg-[var(--color-danger-bg)] disabled:cursor-not-allowed disabled:opacity-50"
                                             >
                                                 Cancel
                                             </button>

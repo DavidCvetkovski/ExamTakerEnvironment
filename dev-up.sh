@@ -115,7 +115,7 @@ cd ..
 
 echo "🎨 Starting Frontend (Port 3000)..."
 cd frontend
-npm run dev -- -p 3000 > /dev/null 2>&1 &
+npm run dev -- -p 3000 > frontend.log 2>&1 &
 FRONTEND_PID=$!
 cd ..
 
@@ -143,8 +143,14 @@ while ! curl -s http://127.0.0.1:8000/health > /dev/null; do
     fi
 done
 
+frontend_count=0
 while ! curl -s http://127.0.0.1:3000/login > /dev/null; do
     sleep 1
+    frontend_count=$((frontend_count + 1))
+    if [ $frontend_count -eq $max_retries ]; then
+        echo "❌ Frontend failed to start. Check frontend/frontend.log."
+        cleanup
+    fi
 done
 
 echo "✅ Environment is ready!"

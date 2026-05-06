@@ -93,7 +93,7 @@ test.describe('Exam Lifecycle E2E', () => {
 
     test('latest answer still wins when autosave is already in flight', async ({ page }) => {
         const heartbeatPayloads: string[] = [];
-        let releaseFirstHeartbeat: (() => void) | null = null;
+        let releaseFirstHeartbeat: (() => void) | undefined;
         let firstHeartbeatBlocked = false;
 
         await page.route('**/api/sessions/*/heartbeat', async (route) => {
@@ -124,7 +124,9 @@ test.describe('Exam Lifecycle E2E', () => {
         await expect(page.getByText('Saving...')).toBeVisible({ timeout: 7000 });
 
         await page.locator('label').filter({ hasText: '12 rolls' }).first().click();
-        releaseFirstHeartbeat?.();
+        if (releaseFirstHeartbeat) {
+            releaseFirstHeartbeat();
+        }
 
         await expect.poll(() => heartbeatPayloads.length, { timeout: 10000 }).toBe(2);
 

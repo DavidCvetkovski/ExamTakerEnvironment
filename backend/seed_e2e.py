@@ -578,7 +578,9 @@ def create_submitted_attempt(
 
     percentage, letter_grade, passed = format_grade_result(total_points, max_points)
     published_at = submitted_at + timedelta(hours=2) if published else None
-    grading_status = GradingStatus.FULLY_GRADED if has_manual_grade else GradingStatus.AUTO_GRADED
+    # Sessions with no pending manual work are fully complete regardless of whether
+    # any human grading was needed (epoch 7.9: AUTO_GRADED collapses into FULLY_GRADED).
+    grading_status = GradingStatus.FULLY_GRADED
 
     db.add(
         SessionResult(
@@ -841,7 +843,9 @@ def create_bulk_attempt(
 
     percentage, letter_grade, passed = format_grade_result(total_points, max_points)
     published_at = submitted_at + timedelta(hours=2) if published else None
-    grading_status = GradingStatus.FULLY_GRADED if has_manual_grade else GradingStatus.AUTO_GRADED
+    # Sessions with no pending manual work are fully complete regardless of whether
+    # any human grading was needed (epoch 7.9: AUTO_GRADED collapses into FULLY_GRADED).
+    grading_status = GradingStatus.FULLY_GRADED
 
     db.add(
         SessionResult(

@@ -25,7 +25,8 @@ import {
 function statusBadge(status: GradingStatus) {
     const map: Record<GradingStatus, { label: string; tone: 'neutral' | 'info' | 'warning' | 'success' }> = {
         UNGRADED: { label: 'Ungraded', tone: 'neutral' },
-        AUTO_GRADED: { label: 'Auto-graded', tone: 'info' },
+        // Legacy AUTO_GRADED rows are functionally equivalent to FULLY_GRADED — display matches.
+        AUTO_GRADED: { label: 'Fully graded', tone: 'success' },
         PARTIALLY_GRADED: { label: 'Partial', tone: 'warning' },
         FULLY_GRADED: { label: 'Fully graded', tone: 'success' },
     };
@@ -103,7 +104,10 @@ export default function GradingDashboard() {
 
     const stats = {
         total: gradingOverview.length,
-        fullyGraded: gradingOverview.filter(s => s.grading_status === 'FULLY_GRADED').length,
+        // AUTO_GRADED sessions have no manual work pending — count them as fully complete.
+        fullyGraded: gradingOverview.filter(s =>
+            s.grading_status === 'FULLY_GRADED' || s.grading_status === 'AUTO_GRADED'
+        ).length,
         published: gradingOverview.filter(s => s.is_published).length,
         avgPct: gradingOverview.length
             ? Math.round(gradingOverview.reduce((a, s) => a + s.percentage, 0) / gradingOverview.length)

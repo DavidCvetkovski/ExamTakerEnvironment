@@ -67,7 +67,7 @@ interface ResultsState {
     error: string | null;
 
     // Actions
-    fetchMyResults: () => Promise<void>;
+    fetchMyResults: (options?: { includeUnpublished?: boolean }) => Promise<void>;
     fetchMyResultDetail: (sessionId: string) => Promise<void>;
     clearError: () => void;
 }
@@ -83,10 +83,13 @@ export const useResultsStore = create<ResultsState>((set) => ({
     detailLoading: false,
     error: null,
 
-    fetchMyResults: async () => {
+    fetchMyResults: async (options) => {
         set({ myResultsLoading: true, error: null });
         try {
-            const res = await api.get<StudentResult[]>('grading/my-results');
+            const url = options?.includeUnpublished
+                ? 'grading/my-results?include_unpublished=true'
+                : 'grading/my-results';
+            const res = await api.get<StudentResult[]>(url);
             set({ myResults: res.data, myResultsLoading: false });
         } catch (err) {
             set({

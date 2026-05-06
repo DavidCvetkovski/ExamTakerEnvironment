@@ -4,10 +4,10 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import type { ItemAnalyticsResponse } from '@/lib/analytics.types';
-import { Button } from '@/components/ui';
+import { Button, InfoTooltip } from '@/components/ui';
 import FlagBadge from './FlagBadge';
 
-type SortKey = 'stem' | 'p' | 'd' | 'version';
+type SortKey = 'stem' | 'p' | 'd';
 
 interface FlaggedItemsTableProps {
     items: ItemAnalyticsResponse[];
@@ -31,9 +31,6 @@ export default function FlaggedItemsTable({
         if (sortKey === 'stem') {
             return getItemLabel(left.learning_object_id).localeCompare(getItemLabel(right.learning_object_id));
         }
-        if (sortKey === 'version') {
-            return (right.version_number ?? 0) - (left.version_number ?? 0);
-        }
         if (sortKey === 'p') {
             return (left.p_value ?? 999) - (right.p_value ?? 999);
         }
@@ -56,7 +53,6 @@ export default function FlaggedItemsTable({
                 {([
                     { key: 'd', label: 'Sort D' },
                     { key: 'p', label: 'Sort P' },
-                    { key: 'version', label: 'Sort Version' },
                     { key: 'stem', label: 'Sort Stem' },
                 ] as const).map((option) => (
                     <button
@@ -64,10 +60,9 @@ export default function FlaggedItemsTable({
                         onClick={() => setSortKey(option.key)}
                         className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                             sortKey === option.key
-                                ? 'text-foreground'
+                                ? 'bg-brand text-white'
                                 : 'bg-shell-input text-shell-muted hover:text-foreground'
                         }`}
-                        style={sortKey === option.key ? { backgroundColor: 'var(--color-brand)' } : {}}
                     >
                         {option.label}
                     </button>
@@ -79,9 +74,24 @@ export default function FlaggedItemsTable({
                     <thead className="bg-shell-bg/70 text-eyebrow uppercase tracking-eyebrow text-shell-muted-dim">
                         <tr>
                             <th className="px-4 py-3 text-left">Item</th>
-                            <th className="px-4 py-3 text-left">Version</th>
-                            <th className="px-4 py-3 text-left">P</th>
-                            <th className="px-4 py-3 text-left">D</th>
+                            <th className="px-4 py-3 text-left">
+                                <span className="inline-flex items-center gap-1.5">
+                                    P
+                                    <InfoTooltip>
+                                        Difficulty (P-value): proportion of students who answered correctly.
+                                        0.20 = very hard, 0.90 = very easy. The sweet spot is roughly 0.30–0.80.
+                                    </InfoTooltip>
+                                </span>
+                            </th>
+                            <th className="px-4 py-3 text-left">
+                                <span className="inline-flex items-center gap-1.5">
+                                    D
+                                    <InfoTooltip>
+                                        Discrimination (D-value): how well this item separates strong students from weak students.
+                                        Above 0.30 is good; below 0.15 is poor; negative means the item is misleading.
+                                    </InfoTooltip>
+                                </span>
+                            </th>
                             <th className="px-4 py-3 text-left">Flags</th>
                             <th className="px-4 py-3 text-right">Open</th>
                         </tr>
@@ -93,7 +103,6 @@ export default function FlaggedItemsTable({
                                     <div className="font-medium text-foreground">{getItemLabel(item.learning_object_id)}</div>
                                     <div className="mt-1 text-xs text-shell-muted-dim">{item.learning_object_id.slice(0, 8)}</div>
                                 </td>
-                                <td className="px-4 py-4 text-shell-muted">v{item.version_number ?? '—'}</td>
                                 <td className="px-4 py-4 text-shell-muted tabular-nums">{formatMetric(item.p_value)}</td>
                                 <td className="px-4 py-4 text-shell-muted tabular-nums">{formatMetric(item.d_value)}</td>
                                 <td className="px-4 py-4">

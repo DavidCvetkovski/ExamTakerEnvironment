@@ -41,8 +41,8 @@ export default function MCQQuestion({ item, questionIndex }: MCQQuestionProps) {
                     <label
                         key={idx}
                         className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all duration-150 ${isSelected
-                                ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500/50'
-                                : 'border-gray-700 bg-gray-900/50 hover:bg-gray-700/30 hover:border-gray-600'
+                                ? 'border-brand bg-brand/10 ring-1 ring-brand/50'
+                                : 'border-shell-border-deep bg-shell-surface/50 hover:bg-shell-input-alt/30 hover:border-shell-border-deep'
                             }`}
                     >
                         <input
@@ -50,9 +50,9 @@ export default function MCQQuestion({ item, questionIndex }: MCQQuestionProps) {
                             name={`q-${questionIndex}`}
                             checked={isSelected}
                             onChange={() => handleSelect(idx)}
-                            className="w-5 h-5 text-indigo-600 bg-gray-700 border-gray-600 focus:ring-indigo-600 focus:ring-offset-0"
+                            className="w-5 h-5 text-brand bg-shell-input-alt border-shell-border-deep focus:ring-brand focus:ring-offset-0"
                         />
-                        <span className="text-gray-200">{choice.text}</span>
+                        <span className="text-foreground">{choice.text}</span>
                     </label>
                 );
             })}

@@ -60,8 +60,8 @@ export default function SessionsPage() {
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <div className="min-h-screen bg-[radial-gradient(circle_at_top,#17263e_0%,#09111d_50%,#04070d_100%)] px-4 py-8 text-white sm:px-6 lg:px-8">
-                <div className="mx-auto max-w-7xl space-y-8">
+            <div className="min-h-screen bg-shell-bg text-foreground">
+                <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
                     <SessionCreateForm
                         courses={courses}
                         blueprints={blueprints}
@@ -72,7 +72,7 @@ export default function SessionsPage() {
                     />
 
                     {(coursesError || sessionsError) && (
-                        <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-5 py-4 text-sm text-rose-200">
+                        <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] px-4 py-3 text-meta text-[var(--color-danger-fg)]">
                             {coursesError || sessionsError}
                         </div>
                     )}

@@ -8,20 +8,20 @@ export default function DistractorBars({ distractors }: { distractors: Distracto
     }
 
     return (
-        <div className="rounded-xl border border-gray-800 bg-gray-900 px-5 py-5">
+        <div className="rounded-xl border border-shell-border bg-shell-surface px-5 py-5">
             <div className="space-y-4">
                 {distractors.map((distractor) => (
                     <div key={distractor.option_index}>
                         <div className="mb-2 flex items-center justify-between gap-3 text-sm">
                             <div className="flex items-center gap-2">
-                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gray-800 text-xs font-semibold text-gray-200">
+                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-shell-input text-xs font-semibold text-foreground">
                                     {String.fromCharCode(65 + distractor.option_index)}
                                 </span>
                                 <div>
-                                    <p className="font-medium text-white">
+                                    <p className="font-medium text-foreground">
                                         {distractor.option_text || `Option ${distractor.option_index + 1}`}
                                     </p>
-                                    <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-gray-400">
+                                    <div className="mt-1 flex flex-wrap gap-2 text-eyebrow text-shell-muted">
                                         {distractor.is_correct ? (
                                             <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-emerald-200">
                                                 Correct
@@ -39,7 +39,7 @@ export default function DistractorBars({ distractors }: { distractors: Distracto
                                 {distractor.percentage.toFixed(1)}%
                             </span>
                         </div>
-                        <div className="h-3 overflow-hidden rounded-full bg-gray-950">
+                        <div className="h-3 overflow-hidden rounded-full bg-shell-bg">
                             <div
                                 className={`h-full rounded-full ${
                                     distractor.is_correct ? 'bg-emerald-400' : 'bg-cyan-400'
@@ -47,7 +47,7 @@ export default function DistractorBars({ distractors }: { distractors: Distracto
                                 style={{ width: `${Math.max(distractor.percentage, distractor.count > 0 ? 3 : 0)}%` }}
                             />
                         </div>
-                        <p className="mt-1 text-xs text-gray-500">{distractor.count} selections</p>
+                        <p className="mt-1 text-xs text-shell-muted-dim">{distractor.count} selections</p>
                     </div>
                 ))}
             </div>

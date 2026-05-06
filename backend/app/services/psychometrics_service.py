@@ -3,129 +3,31 @@ Epoch 7 psychometric analytics: per-item (Stage 1) and per-test (Stage 2) statis
 
 Stage 1: P-value, D-value, distractor analysis, version history, quality flags.
 Stage 2: Score distribution, Cronbach's Alpha / KR-20, SEM, pass rate, cut-score analysis.
+
+Pure statistical functions live in ctt_metrics.py (CTT) and reliability.py.
+This module contains only the DB-backed orchestration layer.
 """
-import json
 import math
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple
 
 from app.core.prisma_db import prisma
-
-
-# ─────────────────────────────────────────────
-# Pure-function helpers (easily unit-testable)
-# ─────────────────────────────────────────────
-
-def _parse_json(value: Any) -> Any:
-    """Deserialise a value that may already be a dict/list or still a JSON string."""
-    if isinstance(value, str):
-        try:
-            return json.loads(value)
-        except (json.JSONDecodeError, ValueError):
-            return {}
-    return value or {}
-
-
-def _parse_options(raw: Any) -> List[Dict]:
-    """Normalise item options to a flat list of option dicts."""
-    parsed = _parse_json(raw)
-    if isinstance(parsed, list):
-        return parsed
-    if isinstance(parsed, dict):
-        return parsed.get("choices") or parsed.get("options") or []
-    return []
-
-
-def _point_biserial(correct_flags: List[bool], scores: List[float]) -> Optional[float]:
-    """
-    Point-biserial correlation between a binary correct/incorrect vector and
-    continuous overall-score vector.  Returns None when insufficient data.
-
-    Formula: r_pb = (M_p - M_all) / S_all * sqrt(p * q)
-    """
-    n = len(correct_flags)
-    if n < 2:
-        return None
-    n_p = sum(1 for c in correct_flags if c)
-    n_q = n - n_p
-    if n_p == 0 or n_q == 0:
-        return None  # no variance in the binary variable
-
-    p = n_p / n
-    mean_all = sum(scores) / n
-    variance = sum((s - mean_all) ** 2 for s in scores) / n
-    if variance == 0:
-        return None  # no variance in scores — everyone scored the same
-
-    std_all = math.sqrt(variance)
-    correct_scores = [s for c, s in zip(correct_flags, scores) if c]
-    mean_p = sum(correct_scores) / n_p
-
-    r_pb = (mean_p - mean_all) / std_all * math.sqrt(p * (1 - p))
-    return round(r_pb, 4)
-
-
-def _build_flags(p_value: Optional[float], d_value: Optional[float]) -> List[Dict]:
-    """Return a list of quality-flag dicts based on psychometric thresholds."""
-    flags = []
-    if p_value is not None:
-        if p_value < 0.20:
-            flags.append({
-                "code": "TOO_HARD",
-                "message": "P-value below 0.20 — item may be too difficult.",
-            })
-        elif p_value > 0.90:
-            flags.append({
-                "code": "TOO_EASY",
-                "message": "P-value above 0.90 — item may be too easy.",
-            })
-    if d_value is not None and d_value < 0.15:
-        flags.append({
-            "code": "POOR_DISCRIMINATION",
-            "message": "D-value below 0.15 — item does not effectively discriminate between high and low performers.",
-        })
-    return flags
-
-
-def _compute_distractor_stats(
-    grades: List[Any],
-    options: List[Dict],
-    question_type: str,
-) -> List[Dict]:
-    """
-    For MCQ/MR items, count how many students selected each option.
-    Options with < 5% selection that are incorrect are flagged as non-functional.
-    """
-    if not grades or question_type not in ("MULTIPLE_CHOICE", "MULTIPLE_RESPONSE"):
-        return []
-
-    n_respondents = len(grades)
-    counts: Dict[int, int] = defaultdict(int)
-
-    for grade in grades:
-        answer = _parse_json(grade.student_answer)
-        if question_type == "MULTIPLE_CHOICE":
-            idx = answer.get("selected_option_index")
-            if idx is not None:
-                counts[int(idx)] += 1
-        else:  # MULTIPLE_RESPONSE
-            for idx in (answer.get("selected_option_indices") or []):
-                counts[int(idx)] += 1
-
-    result = []
-    for i, opt in enumerate(options):
-        count = counts.get(i, 0)
-        pct = round(count / n_respondents * 100, 2)
-        is_correct = bool(opt.get("is_correct", False))
-        result.append({
-            "option_index": i,
-            "option_text": opt.get("text"),
-            "count": count,
-            "percentage": pct,
-            "is_correct": is_correct,
-            "is_non_functional": not is_correct and pct < 5.0,
-        })
-    return result
+from app.services.ctt_metrics import (
+    _parse_json,
+    _parse_options,
+    build_flags as _build_flags,
+    compute_distractor_stats as _compute_distractor_stats,
+    point_biserial as _point_biserial,
+)
+from app.services.reliability import (
+    DEFAULT_CUT_SCORES as _DEFAULT_CUT_SCORES,
+    cronbach_alpha as _cronbach_alpha,
+    cut_score_analysis as _cut_score_analysis,
+    mean as _mean,
+    median as _median,
+    score_distribution as _score_distribution,
+    std_dev as _std_dev,
+)
 
 
 # ─────────────────────────────────────────────
@@ -300,99 +202,7 @@ async def compute_item_version_history(learning_object_id: str) -> Dict:
 
 
 # ─────────────────────────────────────────────
-# Stage 2 helpers
-# ─────────────────────────────────────────────
-
-def _mean(values: List[float]) -> Optional[float]:
-    if not values:
-        return None
-    return round(sum(values) / len(values), 4)
-
-
-def _median(values: List[float]) -> Optional[float]:
-    if not values:
-        return None
-    s = sorted(values)
-    n = len(s)
-    mid = n // 2
-    return round((s[mid - 1] + s[mid]) / 2 if n % 2 == 0 else s[mid], 4)
-
-
-def _std_dev(values: List[float], population: bool = False) -> Optional[float]:
-    """Sample std dev (ddof=1) by default; population (ddof=0) when population=True."""
-    n = len(values)
-    if n < 2:
-        return None
-    m = sum(values) / n
-    divisor = n if population else n - 1
-    variance = sum((v - m) ** 2 for v in values) / divisor
-    return round(math.sqrt(variance), 4)
-
-
-def _score_distribution(percentages: List[float]) -> List[Dict]:
-    """Return a 10-bucket histogram (0-10, 10-20, …, 90-100)."""
-    buckets = [{"range": f"{i*10}-{(i+1)*10}", "min": i * 10, "max": (i + 1) * 10, "count": 0}
-               for i in range(10)]
-    for pct in percentages:
-        idx = min(int(pct // 10), 9)
-        buckets[idx]["count"] += 1
-    return buckets
-
-
-def _cronbach_alpha(item_scores_matrix: List[List[float]]) -> Optional[float]:
-    """
-    Cronbach's Alpha (reduces to KR-20 for binary 0/1 items).
-    item_scores_matrix: rows = students, cols = items (raw points_awarded).
-    Returns None when there are fewer than 2 students or fewer than 2 items.
-    """
-    n = len(item_scores_matrix)
-    if n < 2:
-        return None
-    k = len(item_scores_matrix[0]) if item_scores_matrix else 0
-    if k < 2:
-        return None
-
-    sum_item_var = 0.0
-    for col in range(k):
-        col_scores = [item_scores_matrix[row][col] for row in range(n)]
-        m = sum(col_scores) / n
-        var = sum((s - m) ** 2 for s in col_scores) / (n - 1)
-        sum_item_var += var
-
-    total_scores = [sum(row) for row in item_scores_matrix]
-    m_total = sum(total_scores) / n
-    total_var = sum((s - m_total) ** 2 for s in total_scores) / (n - 1)
-
-    if total_var == 0:
-        return None
-
-    alpha = (k / (k - 1)) * (1 - sum_item_var / total_var)
-    return round(alpha, 4)
-
-
-def _cut_score_analysis(percentages: List[float], cut_scores: List[float]) -> List[Dict]:
-    """For each candidate cut-score, report the resulting pass/fail split."""
-    total = len(percentages)
-    result = []
-    for cut in cut_scores:
-        pass_count = sum(1 for p in percentages if p >= cut)
-        result.append({
-            "cut_score": cut,
-            "pass_count": pass_count,
-            "fail_count": total - pass_count,
-            "pass_rate": round(pass_count / total * 100, 2) if total else 0.0,
-        })
-    return result
-
-
-# ─────────────────────────────────────────────
-# Stage 2 DB-backed service function
-# ─────────────────────────────────────────────
-
-_DEFAULT_CUT_SCORES = [30.0, 40.0, 45.0, 50.0, 55.0, 60.0, 65.0, 70.0]
-
-# ─────────────────────────────────────────────
-# Stage 3 helpers
+# Stage 2 / 3 DB-backed service functions
 # ─────────────────────────────────────────────
 
 
@@ -518,10 +328,6 @@ async def compute_test_stats(
         "cut_score_analysis": _cut_score_analysis(percentages, cut_scores),
     }
 
-
-# ─────────────────────────────────────────────
-# Stage 3 DB-backed service functions
-# ─────────────────────────────────────────────
 
 async def compute_dashboard(
     test_definition_id: str,

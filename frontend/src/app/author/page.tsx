@@ -7,10 +7,11 @@ import MCQOptionsPanel from '@/components/editor/MCQOptionsPanel';
 import EssayOptionsPanel from '@/components/editor/EssayOptionsPanel';
 import { useAuthoringStore } from '@/stores/useAuthoringStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { Badge, Button, Card, Field, Input, PageHeader, Select, cn } from '@/components/ui';
 
 export default function AuthorPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-[#1A1A1A]" />}>
+        <Suspense fallback={<div className="min-h-screen bg-shell-bg" />}>
             <AuthorPageInner />
         </Suspense>
     );
@@ -22,17 +23,11 @@ function AuthorPageInner() {
     const fetchedRef = useRef<string | null>(null);
 
     const {
-        saveStatus,
-        questionType,
-        setQuestionType,
-        fetchLatestVersion,
-        learningObjectId,
-        saveDraft,
-        metadataTags,
-        updateMetadataField,
+        saveStatus, questionType, setQuestionType,
+        fetchLatestVersion, learningObjectId, saveDraft,
+        metadataTags, updateMetadataField,
     } = useAuthoringStore();
 
-    // Always fetch on mount when lo_id param is present, guard against double-render
     useEffect(() => {
         if (loIdParam && fetchedRef.current !== loIdParam) {
             fetchedRef.current = loIdParam;
@@ -40,117 +35,110 @@ function AuthorPageInner() {
         }
     }, [loIdParam, fetchLatestVersion]);
 
+    const statusBadge =
+        saveStatus === 'SAVED' ? <Badge tone="success" size="sm">Saved</Badge>
+        : saveStatus === 'SAVING' ? <Badge tone="warning" size="sm">Saving…</Badge>
+        : saveStatus === 'ERROR' ? <Badge tone="danger" size="sm">Save failed</Badge>
+        : <Badge tone="neutral" size="sm">Ready</Badge>;
+
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <div className="max-w-4xl mx-auto py-10 px-6 font-sans">
+            <div className="min-h-screen bg-shell-bg text-foreground">
+                <div className="max-w-4xl mx-auto px-6 py-10">
+                    <button
+                        onClick={() => { window.location.href = '/items'; }}
+                        className={cn(
+                            'mb-6 inline-flex items-center gap-2 text-meta font-medium',
+                            'text-shell-muted hover:text-foreground transition-colors'
+                        )}
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back to Library
+                    </button>
 
-                <button
-                    onClick={() => window.location.href = '/items'}
-                    className="text-blue-400 hover:text-blue-300 transition-colors mb-6 flex items-center gap-2 text-sm font-medium"
-                >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                    Back to Library
-                </button>
+                    <PageHeader
+                        eyebrow="Authoring workbench"
+                        title="Question authoring"
+                        subtitle="Create or edit question versions for the selected learning object."
+                        compact
+                    />
 
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-white mb-2">✏️ Question Authoring</h1>
-                    <p className="text-[#A1A1AA] text-sm">
-                        Create or edit question versions for the selected Learning Object.
-                    </p>
+                    {!learningObjectId ? (
+                        <Card variant="surface" padding="lg" className="text-center">
+                            <div className="animate-spin w-6 h-6 border-2 border-brand border-t-transparent rounded-full mx-auto mb-3" />
+                            <p className="text-shell-muted text-meta">Linking to learning object…</p>
+                            <p className="text-shell-muted-dim text-meta mt-1">
+                                If this persists, return to the library and try again.
+                            </p>
+                        </Card>
+                    ) : (
+                        <div className="space-y-5">
+                            <Card variant="surface" padding="md">
+                                <div className="flex flex-wrap items-end gap-4">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim">
+                                            Status
+                                        </span>
+                                        {statusBadge}
+                                    </div>
+
+                                    <div className="flex-1" />
+
+                                    <Field label="Subject" className="w-32">
+                                        <Input
+                                            inputSize="sm"
+                                            type="text"
+                                            placeholder="e.g. Math"
+                                            value={(metadataTags.topic as string) || ''}
+                                            onChange={(e) => updateMetadataField('topic', e.target.value)}
+                                        />
+                                    </Field>
+
+                                    <Field label="Points" className="w-20">
+                                        <Input
+                                            inputSize="sm"
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            value={metadataTags.points !== undefined ? metadataTags.points as number : ''}
+                                            onChange={(e) => updateMetadataField('points', e.target.value === '' ? '' : parseInt(e.target.value))}
+                                        />
+                                    </Field>
+
+                                    <Field label="Type" className="min-w-[160px]">
+                                        <Select
+                                            inputSize="sm"
+                                            value={questionType}
+                                            onChange={(e) => setQuestionType(e.target.value as 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY')}
+                                        >
+                                            <option value="MULTIPLE_CHOICE">Single choice</option>
+                                            <option value="MULTIPLE_RESPONSE">Multiple choice</option>
+                                            <option value="ESSAY">Essay</option>
+                                        </Select>
+                                    </Field>
+
+                                    <Button variant="primary" size="md" onClick={saveDraft}>
+                                        Save
+                                    </Button>
+                                </div>
+                            </Card>
+
+                            <Card variant="bordered" padding="none" className="overflow-hidden">
+                                <TipTapEditor />
+                            </Card>
+
+                            <Card variant="bordered" padding="none" className="overflow-hidden">
+                                {questionType === 'MULTIPLE_CHOICE' || questionType === 'MULTIPLE_RESPONSE' ? (
+                                    <MCQOptionsPanel />
+                                ) : (
+                                    <EssayOptionsPanel />
+                                )}
+                            </Card>
+                        </div>
+                    )}
                 </div>
-
-                {!learningObjectId ? (
-                    <div className="bg-[#242424] border border-[#333] p-12 text-center rounded-xl space-y-4">
-                        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto" />
-                        <p className="text-[#A1A1AA]">Linking to learning object...</p>
-                        <p className="text-xs text-[#555]">If this persists, go back to the library and try again.</p>
-                    </div>
-                ) : (
-                    <div className="space-y-6">
-                        {/* Control Bar */}
-                        <div className="flex flex-wrap items-center gap-4 p-4 bg-[#242424] border border-[#333] rounded-xl text-sm">
-                            <div className="flex items-center gap-2">
-                                <span className="text-[#A1A1AA]">Status:</span>
-                                <span className={`font-bold ${saveStatus === 'SAVED' ? 'text-emerald-400'
-                                    : saveStatus === 'SAVING' ? 'text-amber-400'
-                                        : saveStatus === 'ERROR' ? 'text-rose-400'
-                                            : 'text-gray-500'
-                                    }`}>
-                                    {saveStatus === 'IDLE' ? 'Ready'
-                                        : saveStatus === 'SAVING' ? '⏳ Saving...'
-                                            : saveStatus === 'SAVED' ? '✓ Changes saved'
-                                                : '✕ Save Failed'}
-                                </span>
-                            </div>
-
-                            <div className="flex-1" />
-
-                            <div className="flex items-center gap-3">
-                                <label className="text-[#A1A1AA] flex items-center gap-2">
-                                    Subject:
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. Math"
-                                        value={(metadataTags.topic as string) || ''}
-                                        onChange={(e) => updateMetadataField('topic', e.target.value)}
-                                        className="bg-[#1A1A1A] text-white border border-[#333] rounded px-3 py-1.5 focus:border-blue-500 outline-none transition-colors w-32"
-                                    />
-                                </label>
-
-                                <label className="text-[#A1A1AA] flex items-center gap-2">
-                                    Points:
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        step="1"
-                                        value={metadataTags.points !== undefined ? metadataTags.points as number : ''}
-                                        onChange={(e) => updateMetadataField('points', e.target.value === '' ? '' : parseInt(e.target.value))}
-                                        className="bg-[#1A1A1A] text-white border border-[#333] rounded px-3 py-1.5 focus:border-blue-500 outline-none transition-colors w-20 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                    />
-                                </label>
-
-                                <label className="text-[#A1A1AA] flex items-center gap-2">
-                                    Type:
-                                    <select
-                                        value={questionType}
-                                        onChange={(e) => setQuestionType(e.target.value as 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY')}
-                                        className="bg-[#1A1A1A] text-white border border-[#333] rounded px-3 py-1.5 focus:border-blue-500 outline-none transition-colors"
-                                    >
-                                        <option value="MULTIPLE_CHOICE">Single Choice</option>
-                                        <option value="MULTIPLE_RESPONSE">Multiple Choice</option>
-                                        <option value="ESSAY">Essay</option>
-                                    </select>
-                                </label>
-
-                                <button
-                                    onClick={saveDraft}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-emerald-50 px-4 py-2 rounded font-bold transition-colors shadow-lg shadow-emerald-900/10 flex items-center gap-2"
-                                >
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                                    </svg>
-                                    Save
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* TipTap Editor */}
-                        <div className="bg-[#1A1A1A] rounded-xl border border-[#333] overflow-hidden">
-                            <TipTapEditor />
-                        </div>
-
-                        {/* Options Panels */}
-                        <div className="bg-[#1A1A1A] rounded-xl border border-[#333] overflow-hidden">
-                            {questionType === 'MULTIPLE_CHOICE' || questionType === 'MULTIPLE_RESPONSE' ? (
-                                <MCQOptionsPanel />
-                            ) : (
-                                <EssayOptionsPanel />
-                            )}
-                        </div>
-                    </div>
-                )}
             </div>
         </ProtectedRoute>
     );

@@ -5,85 +5,65 @@ import { useEffect } from 'react';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useBlueprintStore } from '@/stores/useBlueprintStore';
+import { Badge, Button, Card, EmptyState, PageHeader } from '@/components/ui';
 
 export default function AnalyticsIndexPage() {
     const { blueprints, isLoading, error, fetchBlueprints } = useBlueprintStore();
 
-    useEffect(() => {
-        fetchBlueprints();
-    }, [fetchBlueprints]);
+    useEffect(() => { fetchBlueprints(); }, [fetchBlueprints]);
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <div className="min-h-screen bg-gray-950 text-gray-100">
-                <div className="border-b border-gray-800 bg-gray-900 px-6 py-5">
-                    <div className="mx-auto max-w-6xl">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-500">
-                            Analytics
-                        </p>
-                        <h1 className="mt-2 text-3xl font-bold text-white">Psychometric Dashboards</h1>
-                        <p className="mt-2 max-w-2xl text-sm text-gray-400">
-                            Pick a test blueprint to inspect item quality, score distribution, and version-level behavior.
-                        </p>
-                    </div>
-                </div>
+            <div className="min-h-screen bg-shell-bg text-foreground">
+                <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <PageHeader
+                        eyebrow="Psychometric analysis"
+                        title="Analytics dashboards"
+                        subtitle="Pick a test blueprint to inspect item quality, score distribution, and version-level behaviour."
+                    />
 
-                <div className="mx-auto max-w-6xl px-6 py-6">
-                    {error ? (
-                        <div className="mb-6 rounded-xl border border-rose-800 bg-rose-900/20 px-4 py-3 text-sm text-rose-200">
+                    {error && (
+                        <div className="mb-6 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] px-4 py-3 text-meta">
                             {error}
                         </div>
-                    ) : null}
+                    )}
 
                     {isLoading && blueprints.length === 0 ? (
-                        <div className="flex items-center justify-center py-24 text-gray-500">
-                            <div className="mr-3 h-6 w-6 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
-                            Loading available tests...
+                        <div className="flex items-center justify-center py-24 text-shell-muted-dim text-meta">
+                            <div className="mr-3 h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+                            Loading available tests…
                         </div>
-                    ) : null}
-
-                    {!isLoading && blueprints.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-gray-800 bg-gray-900/50 px-6 py-16 text-center">
-                            <p className="text-lg font-semibold text-white">No test blueprints yet</p>
-                            <p className="mt-2 text-sm text-gray-500">
-                                Create and publish a test before analytics can tell us anything useful.
-                            </p>
-                        </div>
-                    ) : null}
-
-                    {blueprints.length > 0 ? (
+                    ) : !isLoading && blueprints.length === 0 ? (
+                        <EmptyState
+                            title="No test blueprints yet"
+                            description="Create and publish a test before analytics can tell us anything useful."
+                        />
+                    ) : (
                         <div className="grid gap-4 lg:grid-cols-2">
                             {blueprints.map((blueprint) => (
-                                <div key={blueprint.id} className="rounded-xl border border-gray-800 bg-gray-900 px-5 py-5">
+                                <Card key={blueprint.id} variant="surface" padding="md" interactive>
                                     <div className="flex items-start justify-between gap-4">
-                                        <div>
-                                            <p className="text-lg font-semibold text-white">{blueprint.title}</p>
-                                            <p className="mt-1 text-sm text-gray-500">
+                                        <div className="min-w-0">
+                                            <p className="text-h3 font-semibold text-foreground">{blueprint.title}</p>
+                                            <p className="mt-1 text-meta text-shell-muted-dim line-clamp-2">
                                                 {blueprint.description || 'No description provided.'}
                                             </p>
                                         </div>
-                                        <Link
-                                            href={`/analytics/tests/${blueprint.id}`}
-                                            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
-                                        >
-                                            Open
+                                        <Link href={`/analytics/tests/${blueprint.id}`}>
+                                            <Button variant="primary" size="sm">Open →</Button>
                                         </Link>
                                     </div>
-                                    <div className="mt-4 flex flex-wrap gap-2 text-xs text-gray-400">
-                                        <span className="rounded-full border border-gray-700 px-3 py-1">
-                                            {blueprint.blocks.length} sections
-                                        </span>
-                                        <span className="rounded-full border border-gray-700 px-3 py-1">
-                                            {blueprint.duration_minutes} minutes
-                                        </span>
-                                        <span className="rounded-full border border-gray-700 px-3 py-1">
+                                    <div className="mt-4 flex flex-wrap gap-1.5">
+                                        <Badge tone="neutral" size="sm">{blueprint.blocks.length} sections</Badge>
+                                        <Badge tone="neutral" size="sm">{blueprint.duration_minutes} min</Badge>
+                                        <Badge tone="accent" size="sm">
                                             Pass {blueprint.scoring_config?.pass_percentage ?? 55}%
-                                        </span>
+                                        </Badge>
                                     </div>
-                                </div>
+                                </Card>
                             ))}
                         </div>
-                    ) : null}
+                    )}
                 </div>
             </div>
         </ProtectedRoute>

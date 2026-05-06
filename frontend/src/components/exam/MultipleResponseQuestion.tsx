@@ -42,24 +42,24 @@ export default function MultipleResponseQuestion({ item }: MultipleResponseQuest
 
     return (
         <div className="space-y-3">
-            <p className="text-sm text-gray-400 italic mb-2">Select all that apply</p>
+            <p className="text-sm text-shell-muted italic mb-2">Select all that apply</p>
             {choices.map((choice, idx) => {
                 const isSelected = selectedIndices.includes(idx);
                 return (
                     <label
                         key={idx}
                         className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all duration-150 ${isSelected
-                                ? 'border-indigo-500 bg-indigo-500/10 ring-1 ring-indigo-500/50'
-                                : 'border-gray-700 bg-gray-900/50 hover:bg-gray-700/30 hover:border-gray-600'
+                                ? 'border-brand bg-brand/10 ring-1 ring-brand/50'
+                                : 'border-shell-border-deep bg-shell-surface/50 hover:bg-shell-input-alt/30 hover:border-shell-border-deep'
                             }`}
                     >
                         <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => handleToggle(idx)}
-                            className="w-5 h-5 rounded text-indigo-600 bg-gray-700 border-gray-600 focus:ring-indigo-600 focus:ring-offset-0"
+                            className="w-5 h-5 rounded text-brand bg-shell-input-alt border-shell-border-deep focus:ring-brand focus:ring-offset-0"
                         />
-                        <span className="text-gray-200">{choice.text}</span>
+                        <span className="text-foreground">{choice.text}</span>
                     </label>
                 );
             })}

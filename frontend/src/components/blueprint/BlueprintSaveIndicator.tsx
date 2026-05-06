@@ -20,7 +20,7 @@ export default function BlueprintSaveIndicator() {
 
     if (saveStatus === 'idle') {
         return (
-            <div className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500" aria-live="polite">
+            <div className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim" aria-live="polite">
                 Ready
             </div>
         );
@@ -30,7 +30,7 @@ export default function BlueprintSaveIndicator() {
         return (
             <div className="flex items-center gap-3 text-cyan-300" aria-live="polite">
                 <span className="h-3 w-3 rounded-full border-2 border-cyan-300 border-t-transparent animate-spin" />
-                <span className="text-xs font-semibold uppercase tracking-[0.24em]">Saving blueprint</span>
+                <span className="text-xs font-semibold uppercase tracking-medium">Saving blueprint</span>
             </div>
         );
     }
@@ -41,17 +41,17 @@ export default function BlueprintSaveIndicator() {
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20">
                     <span className="text-sm font-bold">✓</span>
                 </span>
-                <span className="text-xs font-semibold uppercase tracking-[0.24em]">Blueprint saved</span>
+                <span className="text-xs font-semibold uppercase tracking-medium">Blueprint saved</span>
             </div>
         );
     }
 
     return (
-        <div className="flex items-center gap-3 text-rose-300 motion-safe:animate-[ov-shake_0.35s_ease-in-out]" aria-live="polite">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-500/20">
+        <div className="flex items-center gap-3 text-danger motion-safe:animate-[ov-shake_0.35s_ease-in-out]" aria-live="polite">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-danger-bg)]">
                 <span className="text-sm font-bold">!</span>
             </span>
-            <span className="text-xs font-semibold uppercase tracking-[0.24em]">
+            <span className="text-xs font-semibold uppercase tracking-medium">
                 {error || 'Save failed'}
             </span>
         </div>

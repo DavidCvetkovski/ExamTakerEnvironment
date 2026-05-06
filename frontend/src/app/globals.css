@@ -169,8 +169,8 @@
   --color-shell-surface-deep: #f5ecd9;
   --color-shell-input: #fffaee;
   --color-shell-input-alt: #f5ecd9;
-  --color-shell-border: #e8dcc7;
-  --color-shell-border-deep: #c9b48d;
+  --color-shell-border: #d4c194;
+  --color-shell-border-deep: #b09767;
   --color-shell-muted: #6e5226;
   --color-shell-muted-dim: #8a6c3e;
   --color-brand: #b8651a;
@@ -190,16 +190,16 @@
 
   --color-warning: #c08220;
   --color-warning-fg: #8a5a0e;
-  --color-warning-bg: rgba(192, 130, 32, 0.10);
+  --color-warning-bg: rgba(192, 130, 32, 0.18);
   --color-warning-border: rgba(192, 130, 32, 0.30);
 
   --color-info: #1055cc;
   --color-info-fg: #0d47ae;
-  --color-info-bg: rgba(16, 85, 204, 0.08);
+  --color-info-bg: rgba(16, 85, 204, 0.18);
   --color-info-border: rgba(16, 85, 204, 0.25);
 
   --color-danger-fg: #8f3411;
-  --color-danger-bg: rgba(178, 71, 31, 0.08);
+  --color-danger-bg: rgba(178, 71, 31, 0.18);
   --color-danger-border: rgba(178, 71, 31, 0.30);
 
   /* ── 7.6 — Warm editor overrides (Stage 6) ── */
@@ -278,7 +278,7 @@
 
   --color-warning: #c87b1a;
   --color-warning-fg: #8a5a0e;
-  --color-warning-bg: rgba(200, 123, 26, 0.10);
+  --color-warning-bg: rgba(200, 123, 26, 0.16);
   --color-warning-border: rgba(200, 123, 26, 0.30);
 
   --color-info: #1769d2;
@@ -287,7 +287,7 @@
   --color-info-border: rgba(23, 105, 210, 0.25);
 
   --color-danger-fg: #84311f;
-  --color-danger-bg: rgba(163, 63, 42, 0.08);
+  --color-danger-bg: rgba(163, 63, 42, 0.16);
   --color-danger-border: rgba(163, 63, 42, 0.30);
   --color-shell-panel-a: #eef5ff;
   --color-shell-panel-b: #e6f1ff;

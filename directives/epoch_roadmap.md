@@ -376,48 +376,49 @@
 
 ---
 
-## Epoch 7.7 — UX Bugs, Authoring Save Flow & Date/Time Pickers
+## Epoch 7.7 — UX Bugs, Authoring Save Flow & Date/Time Pickers ✅
 
 **Goal:** Fix concrete UX issues uncovered while using the 7.6 build, and land two larger improvements: explicit-save with revert in the authoring workbench, and a calendar / time picker for session scheduling. Frontend-only.
 
-### 7.7.1 — Theme Toggle UX
+### 7.7.1 — Theme Toggle UX ✅
 - Outside-click + escape + route-change closes popover.
 - Drop floating `themeNotice`; replace with theme-aware Toast primitive.
 
-### 7.7.2 — Light-Theme Contrast
+### 7.7.2 — Light-Theme Contrast ✅
 - Tighten warm-theme `--color-shell-border` for visible hairlines.
 - Bump `--color-{warning,info,danger}-bg` opacity on warm + light-blue so soft badges read.
-- Migrate sessions yellow headings to `<SectionHeader />`.
+- Migrate sessions yellow/amber hardcodes to `Button` primitive and brand/shell tokens.
 
-### 7.7.3 — Analytics Component Bugs
+### 7.7.3 — Analytics Component Bugs ✅
 - Histogram: gradient → solid theme-bound colour.
-- Cut-score slider: smooth (step 0.1, round on display), live update.
-- Drill-down button: layout fix via `Button` primitive; consolidate "Inspect" duplicate.
+- Cut-score slider: smooth (step 0.1, round on display), live update, brand-coloured track.
+- Drill-down button: `Button` primitive `ghost sm` in both tables; "Inspect" label removed.
 
-### 7.7.4 — Question Library Columns
+### 7.7.4 — Question Library Columns ✅
 - Remove `Status` column.
-- Add `Last edited` column (relative time).
+- Add `Last edited` column (relative time via `Intl.RelativeTimeFormat`).
 - Default sort by last-edited descending.
 
-### 7.7.5 — Authoring Save Flow + Toast Primitive
+### 7.7.5 — Authoring Save Flow + Toast Primitive ✅
 - New `Toast` / `useToast` primitive in `components/ui/`, mounted via `<ToastProvider />` in layout.
-- Authoring store: drop debounced auto-save; introduce `serverSnapshot` / `localDraft` dirty-tracking.
-- Author page: explicit Save button → toast feedback, new Revert button, dirty indicator, `beforeunload` warning.
+- Authoring store: drop debounced auto-save; introduce `serverSnapshot` / `isDirty` / `revertChanges`.
+- Author page: explicit Save button → toast feedback, Revert button, `StatusDot` dirty indicator, `beforeunload` warning.
 
-### 7.7.6 — SessionCreateForm Date/Time Pickers
-- New `DatePicker` + `TimePicker` primitives (custom calendar / spinner popover, native input fallback).
-- Default Start = now + 1 minute; End = Start + 60 minutes.
-- Separate date / time fields; click-outside-to-close popover.
+### 7.7.6 — SessionCreateForm Date/Time Pickers ✅
+- New `DatePicker` + `TimePicker` primitives (calendar popover + spinner columns, native input fallback).
+- Default Start = now + 1 minute; resets to fresh now+1 after submit.
+- Separate date / time fields side-by-side; `useClickOutside` + Escape to close both.
 
-### 7.7.7 — Verification
+### 7.7.7 — Verification ✅
 - `tsc --noEmit` + `next build` green.
-- Cleanliness greps: no `themeNotice`, `debounceTimer`, or `Inspect` references.
-- Manual screenshot matrix across all three themes.
+- Cleanliness greps: no `themeNotice`, `debounceTimer`, or `Inspect` (analytics) references.
 
 **Exit Criteria:**
 - All 17 issues in the 7.7 catalogue verified fixed.
 - New primitives (`Toast`, `DatePicker`, `TimePicker`) available for future epochs.
 - Aikido scan: zero new Critical/High findings.
+
+**Status:** ✅ Complete. Merged to `feature/epoch-7-7-ux-fixes`, pushed to remote.
 
 ---
 

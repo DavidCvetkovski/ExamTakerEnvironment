@@ -14,63 +14,123 @@
 - Network:       http://192.168.1.134:3000
 
 ✓ Starting...
-✓ Ready in 466ms
- GET /login 200 in 478ms (compile: 394ms, render: 84ms)
- GET / 200 in 54ms (compile: 30ms, render: 24ms)
+✓ Ready in 459ms
+⨯ ./frontend/src/components/layout/ThemeToggle.tsx:8:1
+Export Button doesn't exist in target module
+[0m [90m  6 |[39m [36mimport[39m { [33mThemePreference[39m[33m,[39m useAuthStore[33m,[39m [33mUserPublic[39m } [36mfrom[39m [32m'@/stores/useAuthStore'[39m[33m;[39m
+ [90m  7 |[39m [36mimport[39m { useClickOutside } [36mfrom[39m [32m'@/hooks/useClickOutside'[39m[33m;[39m
+[31m[1m>[22m[39m[90m  8 |[39m [36mimport[39m { [33mButton[39m } [36mfrom[39m [32m'@/components/ui/Button'[39m[33m;[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m  9 |[39m
+ [90m 10 |[39m [36mconst[39m [33mTHEMES[39m[33m:[39m [33mArray[39m[33m<[39m{ label[33m:[39m string[33m;[39m value[33m:[39m [33mThemePreference[39m }[33m>[39m [33m=[39m [
+ [90m 11 |[39m     { label[33m:[39m [32m'Dark'[39m[33m,[39m value[33m:[39m [32m'dark'[39m }[33m,[39m[0m
+
+The export Button was not found in module [project]/frontend/src/components/ui/Button.tsx [app-client] (ecmascript).
+Did you mean to import default?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./frontend/src/components/layout/ThemeToggle.tsx [Client Component Browser]
+    ./frontend/src/components/layout/GlobalHeader.tsx [Client Component Browser]
+    ./frontend/src/components/layout/GlobalHeader.tsx [Server Component]
+    ./frontend/src/app/layout.tsx [Server Component]
+
+  Client Component SSR:
+    ./frontend/src/components/layout/ThemeToggle.tsx [Client Component SSR]
+    ./frontend/src/components/layout/GlobalHeader.tsx [Client Component SSR]
+    ./frontend/src/components/layout/GlobalHeader.tsx [Server Component]
+    ./frontend/src/app/layout.tsx [Server Component]
+
+
+
+./frontend/src/components/layout/ThemeToggle.tsx:8:1
+Export Button doesn't exist in target module
+[0m [90m  6 |[39m [36mimport[39m { [33mThemePreference[39m[33m,[39m useAuthStore[33m,[39m [33mUserPublic[39m } [36mfrom[39m [32m'@/stores/useAuthStore'[39m[33m;[39m
+ [90m  7 |[39m [36mimport[39m { useClickOutside } [36mfrom[39m [32m'@/hooks/useClickOutside'[39m[33m;[39m
+[31m[1m>[22m[39m[90m  8 |[39m [36mimport[39m { [33mButton[39m } [36mfrom[39m [32m'@/components/ui/Button'[39m[33m;[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m  9 |[39m
+ [90m 10 |[39m [36mconst[39m [33mTHEMES[39m[33m:[39m [33mArray[39m[33m<[39m{ label[33m:[39m string[33m;[39m value[33m:[39m [33mThemePreference[39m }[33m>[39m [33m=[39m [
+ [90m 11 |[39m     { label[33m:[39m [32m'Dark'[39m[33m,[39m value[33m:[39m [32m'dark'[39m }[33m,[39m[0m
+
+The export Button was not found in module [project]/frontend/src/components/ui/Button.tsx [app-ssr] (ecmascript).
+Did you mean to import default?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./frontend/src/components/layout/ThemeToggle.tsx [Client Component Browser]
+    ./frontend/src/components/layout/GlobalHeader.tsx [Client Component Browser]
+    ./frontend/src/components/layout/GlobalHeader.tsx [Server Component]
+    ./frontend/src/app/layout.tsx [Server Component]
+
+  Client Component SSR:
+    ./frontend/src/components/layout/ThemeToggle.tsx [Client Component SSR]
+    ./frontend/src/components/layout/GlobalHeader.tsx [Client Component SSR]
+    ./frontend/src/components/layout/GlobalHeader.tsx [Server Component]
+    ./frontend/src/app/layout.tsx [Server Component]
+
+
+ GET /login 500 in 519ms (compile: 484ms, render: 36ms)
+⨯ ./frontend/src/components/layout/ThemeToggle.tsx:8:1
+Export Button doesn't exist in target module
+[0m [90m  6 |[39m [36mimport[39m { [33mThemePreference[39m[33m,[39m useAuthStore[33m,[39m [33mUserPublic[39m } [36mfrom[39m [32m'@/stores/useAuthStore'[39m[33m;[39m
+ [90m  7 |[39m [36mimport[39m { useClickOutside } [36mfrom[39m [32m'@/hooks/useClickOutside'[39m[33m;[39m
+[31m[1m>[22m[39m[90m  8 |[39m [36mimport[39m { [33mButton[39m } [36mfrom[39m [32m'@/components/ui/Button'[39m[33m;[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m  9 |[39m
+ [90m 10 |[39m [36mconst[39m [33mTHEMES[39m[33m:[39m [33mArray[39m[33m<[39m{ label[33m:[39m string[33m;[39m value[33m:[39m [33mThemePreference[39m }[33m>[39m [33m=[39m [
+ [90m 11 |[39m     { label[33m:[39m [32m'Dark'[39m[33m,[39m value[33m:[39m [32m'dark'[39m }[33m,[39m[0m
+
+The export Button was not found in module [project]/frontend/src/components/ui/Button.tsx [app-client] (ecmascript).
+Did you mean to import default?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./frontend/src/components/layout/ThemeToggle.tsx [Client Component Browser]
+    ./frontend/src/components/layout/GlobalHeader.tsx [Client Component Browser]
+    ./frontend/src/components/layout/GlobalHeader.tsx [Server Component]
+    ./frontend/src/app/layout.tsx [Server Component]
+
+  Client Component SSR:
+    ./frontend/src/components/layout/ThemeToggle.tsx [Client Component SSR]
+    ./frontend/src/components/layout/GlobalHeader.tsx [Client Component SSR]
+    ./frontend/src/components/layout/GlobalHeader.tsx [Server Component]
+    ./frontend/src/app/layout.tsx [Server Component]
+
+
+
+./frontend/src/components/layout/ThemeToggle.tsx:8:1
+Export Button doesn't exist in target module
+[0m [90m  6 |[39m [36mimport[39m { [33mThemePreference[39m[33m,[39m useAuthStore[33m,[39m [33mUserPublic[39m } [36mfrom[39m [32m'@/stores/useAuthStore'[39m[33m;[39m
+ [90m  7 |[39m [36mimport[39m { useClickOutside } [36mfrom[39m [32m'@/hooks/useClickOutside'[39m[33m;[39m
+[31m[1m>[22m[39m[90m  8 |[39m [36mimport[39m { [33mButton[39m } [36mfrom[39m [32m'@/components/ui/Button'[39m[33m;[39m
+ [90m    |[39m [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m  9 |[39m
+ [90m 10 |[39m [36mconst[39m [33mTHEMES[39m[33m:[39m [33mArray[39m[33m<[39m{ label[33m:[39m string[33m;[39m value[33m:[39m [33mThemePreference[39m }[33m>[39m [33m=[39m [
+ [90m 11 |[39m     { label[33m:[39m [32m'Dark'[39m[33m,[39m value[33m:[39m [32m'dark'[39m }[33m,[39m[0m
+
+The export Button was not found in module [project]/frontend/src/components/ui/Button.tsx [app-ssr] (ecmascript).
+Did you mean to import default?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./frontend/src/components/layout/ThemeToggle.tsx [Client Component Browser]
+    ./frontend/src/components/layout/GlobalHeader.tsx [Client Component Browser]
+    ./frontend/src/components/layout/GlobalHeader.tsx [Server Component]
+    ./frontend/src/app/layout.tsx [Server Component]
+
+  Client Component SSR:
+    ./frontend/src/components/layout/ThemeToggle.tsx [Client Component SSR]
+    ./frontend/src/components/layout/GlobalHeader.tsx [Client Component SSR]
+    ./frontend/src/components/layout/GlobalHeader.tsx [Server Component]
+    ./frontend/src/app/layout.tsx [Server Component]
+
+
+ GET / 500 in 49ms (compile: 46ms, render: 3ms)
 ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
 Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
- GET /login 200 in 9ms (compile: 1240µs, render: 8ms)
- GET /sessions 200 in 31ms (compile: 25ms, render: 6ms)
- GET /blueprint 200 in 61ms (compile: 51ms, render: 10ms)
- GET /blueprint?id=f041ea6a-783e-4443-b80e-b543d996217e 200 in 26ms (compile: 5ms, render: 20ms)
- GET /sessions 200 in 25ms (compile: 5ms, render: 21ms)
- GET /blueprint 200 in 13ms (compile: 2ms, render: 11ms)
- GET /items 200 in 67ms (compile: 53ms, render: 14ms)
- GET /author 200 in 72ms (compile: 62ms, render: 10ms)
- GET /grading 200 in 74ms (compile: 63ms, render: 11ms)
- GET /analytics 200 in 63ms (compile: 49ms, render: 13ms)
- GET /analytics/tests/f041ea6a-783e-4443-b80e-b543d996217e 200 in 223ms (compile: 214ms, render: 9ms)
- GET /analytics/items/3b9c2622-5a99-4025-ae91-8a0a16724768?fromTest=f041ea6a-783e-4443-b80e-b543d996217e 200 in 243ms (compile: 234ms, render: 9ms)
- GET /grading 200 in 25ms (compile: 7ms, render: 18ms)
- GET /grading/0eda8daf-efe8-4d1a-a8b2-0c0f9668d9d0 200 in 192ms (compile: 182ms, render: 10ms)
- GET /author 200 in 24ms (compile: 4ms, render: 20ms)
- GET /blueprint 200 in 24ms (compile: 4ms, render: 20ms)
- GET /items 200 in 23ms (compile: 4ms, render: 20ms)
- GET /blueprint 200 in 22ms (compile: 4ms, render: 18ms)
- GET /blueprint?id=6f6c5e96-db2c-4a3b-a041-ee5b35a7ac65 200 in 24ms (compile: 3ms, render: 21ms)
- GET /blueprint 200 in 26ms (compile: 8ms, render: 18ms)
- GET /grading 200 in 23ms (compile: 6ms, render: 17ms)
- GET /analytics 200 in 21ms (compile: 5ms, render: 16ms)
- GET /analytics/tests/c2a17ccc-9a8e-44d3-96f2-bc81b4285483 200 in 30ms (compile: 9ms, render: 22ms)
- GET /blueprint 200 in 25ms (compile: 8ms, render: 17ms)
- GET /analytics 200 in 20ms (compile: 3ms, render: 17ms)
- GET /analytics/tests/c2a17ccc-9a8e-44d3-96f2-bc81b4285483 200 in 28ms (compile: 10ms, render: 19ms)
- GET /analytics/items/6b01af91-c8ce-41ec-a085-6652f8749129?fromTest=c2a17ccc-9a8e-44d3-96f2-bc81b4285483 200 in 28ms (compile: 10ms, render: 18ms)
- GET /analytics/tests/c2a17ccc-9a8e-44d3-96f2-bc81b4285483 200 in 27ms (compile: 9ms, render: 18ms)
- GET /grading 200 in 22ms (compile: 4ms, render: 18ms)
- GET /author 200 in 23ms (compile: 5ms, render: 18ms)
- GET /items 200 in 22ms (compile: 4ms, render: 18ms)
- GET /author?lo_id=200024c5-a5e9-46c9-bff4-a7f780a701b1 200 in 22ms (compile: 3ms, render: 19ms)
- GET /items 200 in 24ms (compile: 5ms, render: 19ms)
- GET /author?lo_id=200024c5-a5e9-46c9-bff4-a7f780a701b1 200 in 21ms (compile: 4ms, render: 17ms)
- GET /items 200 in 20ms (compile: 4ms, render: 16ms)
- GET /author 200 in 21ms (compile: 4ms, render: 17ms)
- GET /items 200 in 24ms (compile: 3ms, render: 21ms)
- GET /author 200 in 22ms (compile: 4ms, render: 19ms)
- GET /items 200 in 19ms (compile: 3ms, render: 16ms)
- GET /author?lo_id=3b9c2622-5a99-4025-ae91-8a0a16724768 200 in 18ms (compile: 4ms, render: 14ms)
- GET /items 200 in 24ms (compile: 8ms, render: 17ms)
- GET /sessions 200 in 16ms (compile: 3ms, render: 13ms)
- GET /blueprint 200 in 21ms (compile: 4ms, render: 17ms)
- GET /items 200 in 19ms (compile: 3ms, render: 16ms)
- GET /author 200 in 22ms (compile: 4ms, render: 18ms)
- GET /grading 200 in 19ms (compile: 4ms, render: 15ms)
- GET /analytics 200 in 21ms (compile: 2ms, render: 19ms)
- GET /sessions 200 in 20ms (compile: 3ms, render: 17ms)
- GET / 200 in 28ms (compile: 5ms, render: 22ms)
- GET /login 200 in 24ms (compile: 5ms, render: 19ms)
- GET /sessions 200 in 34ms (compile: 5ms, render: 29ms)
- GET /sessions 200 in 15ms (compile: 2ms, render: 12ms)
- GET / 200 in 24ms (compile: 4ms, render: 20ms)
- GET /login 200 in 26ms (compile: 3ms, render: 23ms)
- GET /my-exams 200 in 248ms (compile: 238ms, render: 11ms)
+✓ Compiled in 235ms

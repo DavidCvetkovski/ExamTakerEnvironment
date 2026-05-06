@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import type { TestDefinition } from '@/stores/useBlueprintStore';
 import type { Course } from '@/stores/useCourseStore';
-import { Button } from '@/components/ui';
+import { Button, DatePicker, Field, TimePicker } from '@/components/ui';
 
 interface SessionCreateFormProps {
     courses: Course[];
@@ -19,22 +19,8 @@ interface SessionCreateFormProps {
     isAdmin?: boolean;
 }
 
-function toDateTimeLocalValue(date: Date): string {
-    const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-    return localDate.toISOString().slice(0, 16);
-}
-
-function getNextQuarterHourLocalValue(reference = new Date()): string {
-    const nextSlot = new Date(reference);
-    nextSlot.setSeconds(0, 0);
-
-    const currentMinutes = nextSlot.getMinutes();
-    const remainder = currentMinutes % 15;
-    if (remainder !== 0) {
-        nextSlot.setMinutes(currentMinutes + (15 - remainder));
-    }
-
-    return toDateTimeLocalValue(nextSlot);
+function defaultStartsAt(): Date {
+    return new Date(Date.now() + 60_000);
 }
 
 export default function SessionCreateForm({
@@ -47,23 +33,19 @@ export default function SessionCreateForm({
 }: SessionCreateFormProps) {
     const [courseId, setCourseId] = useState('');
     const [testDefinitionId, setTestDefinitionId] = useState('');
-    const [startsAt, setStartsAt] = useState('');
+    const [startsAt, setStartsAt] = useState<Date>(defaultStartsAt);
     const [timeZone, setTimeZone] = useState('');
     const [courseCode, setCourseCode] = useState('');
     const [courseTitle, setCourseTitle] = useState('');
     const [courseBusy, setCourseBusy] = useState(false);
 
     useEffect(() => {
-        setStartsAt((currentValue) => currentValue || getNextQuarterHourLocalValue());
         setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
     }, []);
 
     const handleCreateCourse = async (event: React.FormEvent) => {
         event.preventDefault();
-        if (!courseCode.trim() || !courseTitle.trim()) {
-            return;
-        }
-
+        if (!courseCode.trim() || !courseTitle.trim()) return;
         setCourseBusy(true);
         try {
             await onCreateCourse({ code: courseCode.trim(), title: courseTitle.trim() });
@@ -76,21 +58,18 @@ export default function SessionCreateForm({
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
-        if (!courseId || !testDefinitionId || !startsAt) {
-            return;
-        }
-
+        if (!courseId || !testDefinitionId || !startsAt) return;
         await onSubmit({
             course_id: courseId,
             test_definition_id: testDefinitionId,
-            starts_at: new Date(startsAt).toISOString(),
+            starts_at: startsAt.toISOString(),
         });
-        setStartsAt(getNextQuarterHourLocalValue());
+        setStartsAt(defaultStartsAt());
     };
 
     return (
         <div className={isAdmin ? 'grid gap-6 xl:grid-cols-[1.2fr_0.8fr]' : 'mx-auto max-w-3xl'}>
-            <form onSubmit={handleSubmit} className="rounded-card-md border border-white/10 bg-shell-surface-deep p-6 shadow-2xl shadow-black/30">
+            <form onSubmit={handleSubmit} className="rounded-card-md border border-shell-border bg-shell-surface-deep p-6 shadow-card">
                 <div className="mb-6">
                     <p className="text-xs font-semibold uppercase tracking-wide text-shell-muted-dim">Session Manager</p>
                     <h2 className="mt-2 text-3xl font-black text-foreground">Schedule an Exam Window</h2>
@@ -106,7 +85,7 @@ export default function SessionCreateForm({
                             aria-label="Course"
                             value={courseId}
                             onChange={(event) => setCourseId(event.target.value)}
-                            className="w-full rounded-2xl border border-white/10 bg-shell-input px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand"
+                            className="w-full rounded-2xl border border-shell-border bg-shell-input px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand"
                             required
                         >
                             <option value="">Select a course</option>
@@ -124,7 +103,7 @@ export default function SessionCreateForm({
                             aria-label="Blueprint"
                             value={testDefinitionId}
                             onChange={(event) => setTestDefinitionId(event.target.value)}
-                            className="w-full rounded-2xl border border-white/10 bg-shell-input px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand"
+                            className="w-full rounded-2xl border border-shell-border bg-shell-input px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand"
                             required
                         >
                             <option value="">Select a blueprint</option>
@@ -137,21 +116,36 @@ export default function SessionCreateForm({
                     </label>
                 </div>
 
-                <label className="mt-4 block space-y-2">
-                    <span className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim">Start date and time</span>
-                    <input
-                        aria-label="Start date and time"
-                        type="datetime-local"
-                        value={startsAt}
-                        onChange={(event) => setStartsAt(event.target.value)}
-                        step={900}
-                        className="w-full rounded-2xl border border-white/10 bg-shell-input px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand"
-                        required
-                    />
-                    <p className="text-xs text-shell-muted mt-1 italic">
-                        ↳ All times are scheduled based on your timezone{timeZone ? ` (Current: ${timeZone})` : ''}
-                    </p>
-                </label>
+                <div className="mt-4 space-y-3">
+                    <div>
+                        <span className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim">Start date and time</span>
+                        <div className="mt-2 grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-2">
+                            <Field label="" className="min-w-0">
+                                <DatePicker
+                                    value={startsAt}
+                                    onChange={(d) => setStartsAt((prev) => {
+                                        const next = new Date(d);
+                                        next.setHours(prev.getHours(), prev.getMinutes(), 0, 0);
+                                        return next;
+                                    })}
+                                    min={new Date()}
+                                />
+                            </Field>
+                            <Field label="" className="min-w-0">
+                                <TimePicker
+                                    value={startsAt}
+                                    onChange={setStartsAt}
+                                    step={5}
+                                />
+                            </Field>
+                        </div>
+                        {timeZone && (
+                            <p className="mt-1.5 text-xs text-shell-muted italic">
+                                ↳ Scheduled in your timezone ({timeZone})
+                            </p>
+                        )}
+                    </div>
+                </div>
 
                 <div className="mt-6">
                     <Button type="submit" variant="primary" size="lg" fullWidth disabled={isSubmitting} loading={isSubmitting}>
@@ -161,8 +155,8 @@ export default function SessionCreateForm({
             </form>
 
             {isAdmin && (
-                <form onSubmit={handleCreateCourse} className="rounded-card-md border border-shell-border-deep bg-shell-panel-c p-6 shadow-xl shadow-black/20">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-foreground">Course Setup</p>
+                <form onSubmit={handleCreateCourse} className="rounded-card-md border border-shell-border-deep bg-shell-panel-c p-6 shadow-card">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-shell-muted-dim">Course Setup</p>
                     <h3 className="mt-2 text-2xl font-black text-foreground">Create a New Course</h3>
                     <p className="mt-2 text-sm text-shell-muted-dim">
                         Courses gate exam visibility. Enrollments are managed separately once the course exists.
@@ -176,7 +170,7 @@ export default function SessionCreateForm({
                                 value={courseCode}
                                 onChange={(event) => setCourseCode(event.target.value)}
                                 placeholder="e.g. BIO101"
-                                className="w-full rounded-2xl border border-white/10 bg-shell-input-alt px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand"
+                                className="w-full rounded-2xl border border-shell-border bg-shell-input-alt px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand"
                             />
                         </label>
                         <label className="space-y-2 block">
@@ -186,7 +180,7 @@ export default function SessionCreateForm({
                                 value={courseTitle}
                                 onChange={(event) => setCourseTitle(event.target.value)}
                                 placeholder="Introductory Biology"
-                                className="w-full rounded-2xl border border-white/10 bg-shell-input-alt px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand"
+                                className="w-full rounded-2xl border border-shell-border bg-shell-input-alt px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand"
                             />
                         </label>
                     </div>

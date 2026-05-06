@@ -317,6 +317,110 @@
 
 ---
 
+## Epoch 7.5 — Design Tokens, Theming & Maintainability Pass ✅
+
+**Goal:** Consolidate cross-cutting visual decisions into a single governed token layer, ship a user-controlled theme toggle, and decompose oversized backend service files. No new product surface.
+
+### 7.5.1 — Token Foundation
+- Colour, typography, geometry, motion, and elevation tokens defined in `globals.css` via Tailwind v4 `@theme inline`.
+- Three themes: `dark` (default), `warm` (student default), `light-blue` (extension proof).
+
+### 7.5.2 — Component Migration
+- All arbitrary Tailwind values (`bg-[#...]`, `text-[Xpx]`, `tracking-[Xem]`, `rounded-[Xpx]`, `shadow-[...]`, literal `cubic-bezier`) replaced with token-bound utilities.
+- Editor CSS files migrated to `var(--color-editor-*)` references.
+
+### 7.5.3 — Theme Architecture
+- `ThemeProvider` resolves active theme from user preference → role default → root default.
+- User-controlled toggle in global header. Choice persisted on `users.theme_preference` column.
+
+### 7.5.4 — Backend Decomposition
+- `psychometrics_service.py`, `analytics_pdf_service.py`, and `grading_service.py` split into focused sub-modules behind re-export facades. Import paths unchanged.
+
+### 7.5.5 — Named-Color Migration (Stage 12 Addendum)
+- Surface-purpose named Tailwind colours (`bg-gray-*`, `text-gray-*`, `bg-white` in branded contexts) migrated to `shell-*` / `student-*` tokens so the theme toggle visibly affects every admin surface (grading, analytics, global header). Status-colour utilities (`text-red-*`, `text-blue-*`, focus rings) remain as named utilities per scope.
+
+**Exit Criteria:**
+- Theme toggle switches colours on every page and shared shell (header, sidebar) for every role.
+- Zero arbitrary Tailwind values in `.tsx` / `.ts` files.
+- Pixel-identical default appearance per role pre/post migration.
+- Aikido scan: zero new Critical/High findings.
+
+---
+
+## Epoch 7.6 — Visual Polish & Component System ✅
+
+**Goal:** Make the application visually polished and consistent on top of the Epoch 7.5 token foundation. Frontend-only; zero new product surface.
+
+### 7.6.1 — Component Primitives
+- New `src/components/ui/` directory: `Button`, `Card`, `Input`, `Select`, `Badge`, `Table`, `PageHeader`, `EmptyState`.
+- Every page consumes primitives instead of inline class strings. One canonical look per element type.
+
+### 7.6.2 — Typography & Spacing Hierarchy
+- Composite typography role tokens: `--text-h1`, `--text-h2`, `--text-h3`, `--text-body`, `--text-meta`.
+- Page-rhythm spacing tokens: `--space-section`, `--space-block`, `--space-inline`.
+
+### 7.6.3 — Theme Architecture Cleanup
+- Remove role-based JSX branching (`isStudentShell ? '...' : '...'`); let `data-theme` differentiate instead.
+- Migrate `text-slate-*` / `bg-slate-*` leaks to tokens.
+- Add `[data-theme="warm"]` overrides for `--color-editor-*` so the editor themes correctly across all three palettes.
+
+### 7.6.4 — Polish Pass
+- Card elevation, table zebra striping, standardised hover/focus transitions, consistent radii.
+
+**Exit Criteria:**
+- Zero `isStudentShell` ternaries in `src/`.
+- Zero raw branded `<button>` / `<input>` / table strings outside `src/components/ui/`.
+- Editor visually matches active shell on all three themes.
+- All thirteen authenticated pages screenshot-verified across `dark`, `warm`, `light-blue`.
+- Aikido scan: zero new Critical/High findings.
+
+---
+
+## Epoch 7.7 — UX Bugs, Authoring Save Flow & Date/Time Pickers
+
+**Goal:** Fix concrete UX issues uncovered while using the 7.6 build, and land two larger improvements: explicit-save with revert in the authoring workbench, and a calendar / time picker for session scheduling. Frontend-only.
+
+### 7.7.1 — Theme Toggle UX
+- Outside-click + escape + route-change closes popover.
+- Drop floating `themeNotice`; replace with theme-aware Toast primitive.
+
+### 7.7.2 — Light-Theme Contrast
+- Tighten warm-theme `--color-shell-border` for visible hairlines.
+- Bump `--color-{warning,info,danger}-bg` opacity on warm + light-blue so soft badges read.
+- Migrate sessions yellow headings to `<SectionHeader />`.
+
+### 7.7.3 — Analytics Component Bugs
+- Histogram: gradient → solid theme-bound colour.
+- Cut-score slider: smooth (step 0.1, round on display), live update.
+- Drill-down button: layout fix via `Button` primitive; consolidate "Inspect" duplicate.
+
+### 7.7.4 — Question Library Columns
+- Remove `Status` column.
+- Add `Last edited` column (relative time).
+- Default sort by last-edited descending.
+
+### 7.7.5 — Authoring Save Flow + Toast Primitive
+- New `Toast` / `useToast` primitive in `components/ui/`, mounted via `<ToastProvider />` in layout.
+- Authoring store: drop debounced auto-save; introduce `serverSnapshot` / `localDraft` dirty-tracking.
+- Author page: explicit Save button → toast feedback, new Revert button, dirty indicator, `beforeunload` warning.
+
+### 7.7.6 — SessionCreateForm Date/Time Pickers
+- New `DatePicker` + `TimePicker` primitives (custom calendar / spinner popover, native input fallback).
+- Default Start = now + 1 minute; End = Start + 60 minutes.
+- Separate date / time fields; click-outside-to-close popover.
+
+### 7.7.7 — Verification
+- `tsc --noEmit` + `next build` green.
+- Cleanliness greps: no `themeNotice`, `debounceTimer`, or `Inspect` references.
+- Manual screenshot matrix across all three themes.
+
+**Exit Criteria:**
+- All 17 issues in the 7.7 catalogue verified fixed.
+- New primitives (`Toast`, `DatePicker`, `TimePicker`) available for future epochs.
+- Aikido scan: zero new Critical/High findings.
+
+---
+
 ## Epoch 8 — Media Management & Resource Library
 
 **Goal:** Enable rich media uploads, build a reusable resource library, and support CDN-backed delivery for scalable media serving.

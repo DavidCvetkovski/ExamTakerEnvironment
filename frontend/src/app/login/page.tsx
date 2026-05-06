@@ -61,22 +61,22 @@ function LoginPageInner() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-shell-bg flex items-center justify-center text-white">
+            <div className="min-h-screen bg-shell-bg flex items-center justify-center text-foreground">
                 Loading...
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-shell-bg flex items-center justify-center font-sans text-white">
+        <div className="min-h-screen bg-shell-bg flex items-center justify-center font-sans text-foreground">
             <div className="w-full max-w-md bg-shell-surface p-8 space-y-6">
                 <h1 className="text-2xl font-bold text-center">OpenVision SSO</h1>
                 <div className="bg-shell-bg border border-shell-border p-4 text-xs space-y-2">
                     <p className="text-eyebrow-sm font-bold uppercase tracking-wider text-blue-400">Test Credentials</p>
                     <div className="grid grid-cols-1 gap-1 text-shell-muted">
-                        <p><span className="w-24 inline-block">Admin:</span> <code className="text-white">admin_e2e@vu.nl / adminpass123</code></p>
-                        <p><span className="w-24 inline-block">Constructor:</span> <code className="text-white">constructor_e2e@vu.nl / conpass123</code></p>
-                        <p><span className="w-24 inline-block">Student:</span> <code className="text-white">student_e2e@vu.nl / studentpass123</code></p>
+                        <p><span className="w-24 inline-block">Admin:</span> <code className="text-foreground">admin_e2e@vu.nl / adminpass123</code></p>
+                        <p><span className="w-24 inline-block">Constructor:</span> <code className="text-foreground">constructor_e2e@vu.nl / conpass123</code></p>
+                        <p><span className="w-24 inline-block">Student:</span> <code className="text-foreground">student_e2e@vu.nl / studentpass123</code></p>
                     </div>
                 </div>
 
@@ -95,7 +95,7 @@ function LoginPageInner() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
-                            className="bg-shell-bg border border-shell-border p-2 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                            className="bg-shell-bg border border-shell-border p-2 text-foreground focus:outline-none focus:border-blue-500 transition-colors"
                         />
                     </div>
 
@@ -107,7 +107,7 @@ function LoginPageInner() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
-                            className="bg-shell-bg border border-shell-border p-2 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                            className="bg-shell-bg border border-shell-border p-2 text-foreground focus:outline-none focus:border-blue-500 transition-colors"
                         />
                     </div>
 

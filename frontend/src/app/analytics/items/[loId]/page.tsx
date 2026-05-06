@@ -52,8 +52,8 @@ export default function ItemAnalyticsDetailPage() {
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <div className="min-h-screen bg-gray-950 text-gray-100">
-                <div className="border-b border-gray-800 bg-gray-900 px-6 py-5">
+            <div className="min-h-screen bg-shell-bg text-foreground">
+                <div className="border-b border-shell-border bg-shell-surface px-6 py-5">
                     <div className="mx-auto max-w-6xl">
                         <Link
                             href={sourceTestId ? `/analytics/tests/${sourceTestId}` : '/analytics'}
@@ -62,34 +62,34 @@ export default function ItemAnalyticsDetailPage() {
                             ← Back to Test
                         </Link>
                         <div className="mt-4">
-                            <p className="text-eyebrow font-semibold uppercase tracking-medium text-gray-500">
+                            <p className="text-eyebrow font-semibold uppercase tracking-medium text-shell-muted-dim">
                                 Item Analytics
                             </p>
-                            <h1 className="mt-2 text-3xl font-bold text-white">{previewTitle}</h1>
-                            <p className="mt-2 text-sm text-gray-500">Learning Object {loId}</p>
+                            <h1 className="mt-2 text-3xl font-bold text-foreground">{previewTitle}</h1>
+                            <p className="mt-2 text-sm text-shell-muted-dim">Learning Object {loId}</p>
                         </div>
                     </div>
                 </div>
 
                 <div className="mx-auto max-w-6xl px-6 py-6">
                     {error ? (
-                        <div className="mb-6 flex items-start justify-between gap-4 rounded-xl border border-rose-800 bg-rose-900/20 px-4 py-3 text-sm text-rose-200">
+                        <div className="mb-6 flex items-start justify-between gap-4 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-danger">
                             <span>{error}</span>
-                            <button onClick={clearError} className="text-rose-300 hover:text-white">Close</button>
+                            <button onClick={clearError} className="text-danger hover:text-foreground">Close</button>
                         </div>
                     ) : null}
 
                     {!history && status === 'loading' ? (
-                        <div className="flex items-center justify-center py-24 text-gray-500">
+                        <div className="flex items-center justify-center py-24 text-shell-muted-dim">
                             <div className="mr-3 h-6 w-6 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
                             Loading item history...
                         </div>
                     ) : null}
 
                     {history && history.entries.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-gray-800 bg-gray-900/50 px-6 py-16 text-center">
-                            <p className="text-lg font-semibold text-white">No item analytics yet</p>
-                            <p className="mt-2 text-sm text-gray-500">
+                        <div className="rounded-xl border border-dashed border-shell-border bg-shell-surface/50 px-6 py-16 text-center">
+                            <p className="text-lg font-semibold text-foreground">No item analytics yet</p>
+                            <p className="mt-2 text-sm text-shell-muted-dim">
                                 This item has not appeared in any published analytics snapshot.
                             </p>
                         </div>
@@ -99,8 +99,8 @@ export default function ItemAnalyticsDetailPage() {
                         <div className="space-y-6">
                             <section>
                                 <div className="mb-3">
-                                    <h2 className="text-lg font-semibold text-white">Version Trend</h2>
-                                    <p className="text-sm text-gray-500">P-value and D-value progression across the recorded item history.</p>
+                                    <h2 className="text-lg font-semibold text-foreground">Version Trend</h2>
+                                    <p className="text-sm text-shell-muted-dim">P-value and D-value progression across the recorded item history.</p>
                                 </div>
                                 <PDValueTrendChart entries={history.entries} />
                             </section>
@@ -108,8 +108,8 @@ export default function ItemAnalyticsDetailPage() {
                             {latestItemStats && latestItemStats.question_type !== 'ESSAY' && latestItemStats.distractors.length > 0 ? (
                                 <section>
                                     <div className="mb-3">
-                                        <h2 className="text-lg font-semibold text-white">Latest Distractor Breakdown</h2>
-                                        <p className="text-sm text-gray-500">
+                                        <h2 className="text-lg font-semibold text-foreground">Latest Distractor Breakdown</h2>
+                                        <p className="text-sm text-shell-muted-dim">
                                             Response share for the loaded source test, {sourceHistoryEntry?.test_title ?? 'the latest test'}.
                                         </p>
                                     </div>
@@ -119,21 +119,21 @@ export default function ItemAnalyticsDetailPage() {
 
                             <section>
                                 <div className="mb-3">
-                                    <h2 className="text-lg font-semibold text-white">Flags Timeline</h2>
-                                    <p className="text-sm text-gray-500">A quick scan of which revisions attracted quality flags.</p>
+                                    <h2 className="text-lg font-semibold text-foreground">Flags Timeline</h2>
+                                    <p className="text-sm text-shell-muted-dim">A quick scan of which revisions attracted quality flags.</p>
                                 </div>
-                                <div className="rounded-xl border border-gray-800 bg-gray-900 px-5 py-5">
+                                <div className="rounded-xl border border-shell-border bg-shell-surface px-5 py-5">
                                     <div className="space-y-4">
                                         {history.entries.map((entry) => (
                                             <div
                                                 key={`${entry.item_version_id}-${entry.test_definition_id}`}
-                                                className="flex flex-col gap-3 border-b border-gray-800 pb-4 last:border-b-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                                                className="flex flex-col gap-3 border-b border-shell-border pb-4 last:border-b-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
                                             >
                                                 <div>
-                                                    <p className="text-sm font-semibold text-white">
+                                                    <p className="text-sm font-semibold text-foreground">
                                                         Version {entry.version_number ?? '—'} · {entry.test_title}
                                                     </p>
-                                                    <p className="mt-1 text-xs text-gray-500">
+                                                    <p className="mt-1 text-xs text-shell-muted-dim">
                                                         {entry.computed_at ? new Date(entry.computed_at).toLocaleString() : 'No timestamp'}
                                                     </p>
                                                 </div>
@@ -143,7 +143,7 @@ export default function ItemAnalyticsDetailPage() {
                                                             <FlagBadge key={`${entry.item_version_id}-${flag.code}`} code={flag.code} />
                                                         ))
                                                     ) : (
-                                                        <span className="text-xs text-gray-500">No flags</span>
+                                                        <span className="text-xs text-shell-muted-dim">No flags</span>
                                                     )}
                                                 </div>
                                             </div>
@@ -154,8 +154,8 @@ export default function ItemAnalyticsDetailPage() {
 
                             <section>
                                 <div className="mb-3">
-                                    <h2 className="text-lg font-semibold text-white">Per-Version Detail</h2>
-                                    <p className="text-sm text-gray-500">Snapshot metrics for each recorded version/test pairing.</p>
+                                    <h2 className="text-lg font-semibold text-foreground">Per-Version Detail</h2>
+                                    <p className="text-sm text-shell-muted-dim">Snapshot metrics for each recorded version/test pairing.</p>
                                 </div>
                                 <div className="grid gap-4 lg:grid-cols-2">
                                     {history.entries.map((entry, index) => (

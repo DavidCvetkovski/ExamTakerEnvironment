@@ -37,11 +37,11 @@ export default function QuestionRenderer({ item, questionIndex, totalQuestions }
     const contentHtml = toExamContentHtml(item.content);
 
     return (
-        <section className="bg-gray-800 border border-gray-700 rounded-2xl overflow-hidden shadow-sm">
+        <section className="bg-shell-input border border-shell-border-deep rounded-2xl overflow-hidden shadow-sm">
             {/* Question Header */}
-            <div className="bg-gray-700/50 px-6 py-3 border-b border-gray-700 flex justify-between items-center">
+            <div className="bg-shell-input-alt/50 px-6 py-3 border-b border-shell-border-deep flex justify-between items-center">
                 <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-gray-400 uppercase tracking-widest">
+                    <span className="text-sm font-semibold text-shell-muted uppercase tracking-widest">
                         Question {questionIndex + 1} of {totalQuestions}
                     </span>
                 </div>
@@ -49,7 +49,7 @@ export default function QuestionRenderer({ item, questionIndex, totalQuestions }
                     onClick={handleToggleFlag}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${isFlagged
                             ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                            : 'bg-gray-600/50 text-gray-400 border border-gray-600 hover:bg-gray-600 hover:text-gray-300'
+                            : 'bg-gray-600/50 text-shell-muted border border-shell-border-deep hover:bg-gray-600 hover:text-shell-muted'
                         }`}
                     title={isFlagged ? 'Unflag this question' : 'Flag for review'}
                 >
@@ -79,7 +79,7 @@ export default function QuestionRenderer({ item, questionIndex, totalQuestions }
                         <EssayQuestion item={item} questionIndex={questionIndex} />
                     )}
                     {!['MULTIPLE_CHOICE', 'MULTIPLE_RESPONSE', 'ESSAY'].includes(item.question_type) && (
-                        <div className="text-gray-500 italic p-4 border border-gray-700 rounded-xl">
+                        <div className="text-shell-muted-dim italic p-4 border border-shell-border-deep rounded-xl">
                             Unsupported question type: {item.question_type}
                         </div>
                     )}

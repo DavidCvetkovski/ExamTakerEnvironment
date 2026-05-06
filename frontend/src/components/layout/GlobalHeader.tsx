@@ -4,52 +4,56 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import ThemeToggle from '@/components/layout/ThemeToggle';
+import { Badge, cn } from '@/components/ui';
 
 export default function GlobalHeader() {
     const pathname = usePathname();
     const { isAuthenticated, user, logout } = useAuthStore();
 
-    // Do not show header on login page or exam delivery pages
     if (!isAuthenticated || pathname === '/login' || pathname.startsWith('/exam/')) {
         return null;
     }
 
-    const navLinks = user?.role === 'STUDENT'
-        ? [{ name: 'My Exams', href: '/my-exams' }]
-        : [
-            { name: 'Session Manager', href: '/sessions' },
-            { name: 'Test Blueprints', href: '/blueprint' },
-            { name: 'Question Library', href: '/items' },
-            { name: 'Authoring Workbench', href: '/author' },
-            { name: 'Grading', href: '/grading' },
-            { name: 'Analytics', href: '/analytics' },
-        ];
+    const navLinks =
+        user?.role === 'STUDENT'
+            ? [{ name: 'My Exams', href: '/my-exams' }]
+            : [
+                  { name: 'Sessions', href: '/sessions' },
+                  { name: 'Blueprints', href: '/blueprint' },
+                  { name: 'Library', href: '/items' },
+                  { name: 'Authoring', href: '/author' },
+                  { name: 'Grading', href: '/grading' },
+                  { name: 'Analytics', href: '/analytics' },
+              ];
 
-    const isStudentShell = user?.role === 'STUDENT';
+    const navLinkClass = (active: boolean) =>
+        cn(
+            'relative px-3 py-1.5 rounded-md text-meta font-medium tracking-tight',
+            'transition-colors duration-[var(--duration-fast)] ease-[var(--ease-standard)]',
+            active
+                ? 'text-foreground bg-shell-input-alt'
+                : 'text-shell-muted hover:text-foreground hover:bg-shell-input-alt/60'
+        );
 
     return (
-        <header className={`${isStudentShell ? 'border-b border-student-border bg-student-bg text-slate-900' : 'bg-gray-900 text-white border-b border-gray-800'} shadow-md shrink-0`}>
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between h-16 items-center">
-                    <div className="flex items-center space-x-8">
-                        <div className="flex-shrink-0 flex items-center">
-                            <span className={`font-bold text-xl tracking-tight ${isStudentShell ? 'text-student-primary' : 'text-blue-400'}`}>OpenVision</span>
-                        </div>
-                        <nav className="hidden md:flex space-x-1">
+        <header className="sticky top-0 z-40 bg-shell-surface border-b border-shell-border backdrop-blur-sm">
+            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex items-center justify-between h-14">
+                    <div className="flex items-center gap-8 min-w-0">
+                        <Link href="/" className="flex items-center gap-2 shrink-0 group">
+                            <span className="inline-block w-2 h-2 rounded-full bg-brand transition-transform duration-[var(--duration-normal)] group-hover:scale-125" />
+                            <span className="font-semibold text-h3 tracking-tight text-foreground">
+                                OpenVision
+                            </span>
+                        </Link>
+                        <nav className="hidden md:flex items-center gap-0.5">
                             {navLinks.map((link) => {
                                 const isActive = pathname.startsWith(link.href);
                                 return (
                                     <Link
                                         key={link.name}
                                         href={link.href}
-                                        className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${isStudentShell
-                                                ? isActive
-                                                    ? 'bg-student-primary text-white'
-                                                    : 'text-slate-700 hover:bg-student-hover-wash hover:text-student-primary'
-                                                : isActive
-                                                    ? 'bg-gray-800 text-white'
-                                                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                                            }`}
+                                        className={navLinkClass(isActive)}
                                     >
                                         {link.name}
                                     </Link>
@@ -57,44 +61,39 @@ export default function GlobalHeader() {
                             })}
                         </nav>
                     </div>
-                    <div className="flex items-center space-x-4">
+
+                    <div className="flex items-center gap-3">
                         <ThemeToggle />
-                        <div className={`text-sm hidden sm:block ${isStudentShell ? 'text-slate-500' : 'text-gray-400'}`}>
-                            <span className={`font-medium ${isStudentShell ? 'text-slate-800' : 'text-gray-200'}`}>{user?.email}</span>
-                            <span className={`ml-2 px-2 py-0.5 rounded text-xs ${isStudentShell ? 'border border-student-border-alt bg-white' : 'bg-gray-800 border border-gray-700'}`}>
+                        <div className="hidden sm:flex items-center gap-2">
+                            <span className="text-meta text-shell-muted-dim">{user?.email}</span>
+                            <Badge tone="neutral" size="sm">
                                 {user?.role}
-                            </span>
+                            </Badge>
                         </div>
                         <button
                             onClick={logout}
-                            className={`text-sm font-medium px-3 py-2 rounded-md transition-colors ${isStudentShell
-                                    ? 'text-student-logout hover:text-student-logout-dark hover:bg-student-logout-wash'
-                                    : 'text-red-400 hover:text-red-300 hover:bg-red-900/20'
-                                }`}
+                            className={cn(
+                                'text-meta font-medium px-2.5 py-1.5 rounded-md',
+                                'text-danger',
+                                'transition-colors duration-[var(--duration-fast)]',
+                                'hover:bg-[var(--color-danger-bg)]'
+                            )}
                         >
-                            Sign Out
+                            Sign out
                         </button>
                     </div>
                 </div>
             </div>
 
-            {/* Mobile navigation */}
-            <div className={`md:hidden border-t ${isStudentShell ? 'border-student-border bg-student-bg' : 'border-gray-800 bg-gray-900/50'}`}>
-                <div className="px-2 pt-2 pb-3 space-y-1 flex justify-around overflow-x-auto">
+            <div className="md:hidden border-t border-shell-border">
+                <div className="px-2 py-2 flex justify-around overflow-x-auto">
                     {navLinks.map((link) => {
                         const isActive = pathname.startsWith(link.href);
                         return (
                             <Link
                                 key={link.name}
                                 href={link.href}
-                                className={`px-3 py-2 rounded-md text-xs font-medium whitespace-nowrap ${isStudentShell
-                                        ? isActive
-                                            ? 'bg-student-primary text-white'
-                                            : 'text-slate-600 hover:bg-student-hover-wash hover:text-student-primary'
-                                        : isActive
-                                            ? 'bg-gray-800 text-white'
-                                            : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                    }`}
+                                className={navLinkClass(isActive)}
                             >
                                 {link.name}
                             </Link>

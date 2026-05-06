@@ -45,7 +45,7 @@ export default function ThemeToggle() {
             </button>
 
             {isOpen ? (
-                <div className="absolute right-0 top-12 z-20 min-w-44 rounded-xl border border-white/10 bg-slate-950/95 p-2 shadow-2xl backdrop-blur">
+                <div className="absolute right-0 top-12 z-20 min-w-44 rounded-xl border border-white/10 bg-shell-bg/95 p-2 shadow-2xl backdrop-blur">
                     {THEMES.map((theme) => {
                         const isActive = activeTheme === theme.value;
                         return (
@@ -65,7 +65,7 @@ export default function ThemeToggle() {
                                 className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                                     isActive
                                         ? 'bg-blue-600 text-white'
-                                        : 'text-gray-200 hover:bg-white/5'
+                                        : 'text-foreground hover:bg-white/5'
                                 }`}
                             >
                                 <span>{theme.label}</span>
@@ -80,7 +80,7 @@ export default function ThemeToggle() {
                 {themeNotice ?? ''}
             </div>
             {themeNotice ? (
-                <p className="absolute right-0 top-24 whitespace-nowrap text-xs text-gray-300">
+                <p className="absolute right-0 top-24 whitespace-nowrap text-xs text-shell-muted">
                     {themeNotice}
                 </p>
             ) : null}

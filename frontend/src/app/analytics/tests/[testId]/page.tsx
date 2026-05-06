@@ -84,19 +84,19 @@ export default function TestAnalyticsDashboardPage() {
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <div className="min-h-screen bg-gray-950 text-gray-100">
-                <div className="border-b border-gray-800 bg-gray-900 px-6 py-5">
+            <div className="min-h-screen bg-shell-bg text-foreground">
+                <div className="border-b border-shell-border bg-shell-surface px-6 py-5">
                     <div className="mx-auto max-w-7xl">
                         <Link href="/analytics" className="text-sm text-blue-300 hover:text-blue-200">
                             ← Back to Analytics
                         </Link>
                         <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                             <div>
-                                <p className="text-eyebrow font-semibold uppercase tracking-medium text-gray-500">
+                                <p className="text-eyebrow font-semibold uppercase tracking-medium text-shell-muted-dim">
                                     Test Dashboard
                                 </p>
-                                <h1 className="mt-2 text-3xl font-bold text-white">{testTitle}</h1>
-                                <p className="mt-2 text-sm text-gray-400">
+                                <h1 className="mt-2 text-3xl font-bold text-foreground">{testTitle}</h1>
+                                <p className="mt-2 text-sm text-shell-muted">
                                     {bundle
                                         ? `${bundle.test.total_sessions} published sessions · computed ${
                                             bundle.test.computed_at ? new Date(bundle.test.computed_at).toLocaleString() : 'recently'
@@ -108,7 +108,7 @@ export default function TestAnalyticsDashboardPage() {
                                 <button
                                     onClick={() => { void handleDownloadPdf(); }}
                                     disabled={!bundle}
-                                    className="rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm font-semibold text-gray-200 hover:bg-gray-700 disabled:opacity-40"
+                                    className="rounded-lg border border-shell-border-deep bg-shell-input px-4 py-2 text-sm font-semibold text-foreground hover:bg-shell-input-alt disabled:opacity-40"
                                 >
                                     ↓ Download PDF
                                 </button>
@@ -125,9 +125,9 @@ export default function TestAnalyticsDashboardPage() {
 
                 <div className="mx-auto max-w-7xl px-6 py-6">
                     {error ? (
-                        <div className="mb-6 flex items-start justify-between gap-4 rounded-xl border border-rose-800 bg-rose-900/20 px-4 py-3 text-sm text-rose-200">
+                        <div className="mb-6 flex items-start justify-between gap-4 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-danger">
                             <span>{error}</span>
-                            <button onClick={clearError} className="text-rose-300 hover:text-white">Close</button>
+                            <button onClick={clearError} className="text-danger hover:text-foreground">Close</button>
                         </div>
                     ) : null}
 
@@ -138,16 +138,16 @@ export default function TestAnalyticsDashboardPage() {
                     ) : null}
 
                     {!bundle && status === 'loading' ? (
-                        <div className="flex items-center justify-center py-24 text-gray-500">
+                        <div className="flex items-center justify-center py-24 text-shell-muted-dim">
                             <div className="mr-3 h-6 w-6 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
                             Loading analytics dashboard...
                         </div>
                     ) : null}
 
                     {!bundle && status !== 'loading' ? (
-                        <div className="rounded-xl border border-dashed border-gray-800 bg-gray-900/50 px-6 py-16 text-center">
-                            <p className="text-lg font-semibold text-white">No analytics snapshot yet</p>
-                            <p className="mt-2 text-sm text-gray-500">
+                        <div className="rounded-xl border border-dashed border-shell-border bg-shell-surface/50 px-6 py-16 text-center">
+                            <p className="text-lg font-semibold text-foreground">No analytics snapshot yet</p>
+                            <p className="mt-2 text-sm text-shell-muted-dim">
                                 Publish graded results first, then recompute analytics for this test.
                             </p>
                         </div>
@@ -169,8 +169,8 @@ export default function TestAnalyticsDashboardPage() {
                             <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
                                 <section>
                                     <div className="mb-3">
-                                        <h2 className="text-lg font-semibold text-white">Score Distribution</h2>
-                                        <p className="text-sm text-gray-500">Latest published session percentages grouped into score bands.</p>
+                                        <h2 className="text-lg font-semibold text-foreground">Score Distribution</h2>
+                                        <p className="text-sm text-shell-muted-dim">Latest published session percentages grouped into score bands.</p>
                                     </div>
                                     <HistogramChart buckets={bundle.test.distribution} />
                                 </section>
@@ -187,8 +187,8 @@ export default function TestAnalyticsDashboardPage() {
 
                             <section>
                                 <div className="mb-3">
-                                    <h2 className="text-lg font-semibold text-white">Flagged Items</h2>
-                                    <p className="text-sm text-gray-500">Questions that look too easy, too hard, or weakly discriminating.</p>
+                                    <h2 className="text-lg font-semibold text-foreground">Flagged Items</h2>
+                                    <p className="text-sm text-shell-muted-dim">Questions that look too easy, too hard, or weakly discriminating.</p>
                                 </div>
                                 <FlaggedItemsTable
                                     items={flaggedItems}
@@ -199,8 +199,8 @@ export default function TestAnalyticsDashboardPage() {
 
                             <section>
                                 <div className="mb-3">
-                                    <h2 className="text-lg font-semibold text-white">All Items</h2>
-                                    <p className="text-sm text-gray-500">Inspect the full test set and filter by quality flags.</p>
+                                    <h2 className="text-lg font-semibold text-foreground">All Items</h2>
+                                    <p className="text-sm text-shell-muted-dim">Inspect the full test set and filter by quality flags.</p>
                                 </div>
                                 <AllItemsTable
                                     items={bundle.items}

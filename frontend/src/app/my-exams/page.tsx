@@ -9,6 +9,7 @@ import StudentExamCard from '@/components/student/StudentExamCard';
 import { useExamStore } from '@/stores/useExamStore';
 import { useStudentSessionsStore } from '@/stores/useStudentSessionsStore';
 import { useResultsStore } from '@/stores/useResultsStore';
+import { Badge, Card, EmptyState, PageHeader, SectionHeader } from '@/components/ui';
 
 export default function MyExamsPage() {
     const router = useRouter();
@@ -21,47 +22,46 @@ export default function MyExamsPage() {
         fetchMyResults();
     }, [fetchSessions, fetchMyResults]);
 
-    const currentSessions = sessions.filter((session) => session.can_join);
-    const upcomingSessions = sessions.filter((session) => !session.can_join);
+    const currentSessions = sessions.filter((s) => s.can_join);
+    const upcomingSessions = sessions.filter((s) => !s.can_join);
 
     return (
         <ProtectedRoute allowedRoles={['STUDENT']}>
-            <div className="min-h-screen bg-[image:var(--gradient-student-page)] px-4 py-10 text-slate-900 sm:px-6 lg:px-8">
-                <div className="mx-auto max-w-6xl space-y-10">
-                    <section className="rounded-card-xl border border-student-border bg-[image:var(--gradient-student-hero)] p-8 shadow-warm-hero-lg">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-student-accent">Student Portal</p>
-                        <h1 className="mt-3 text-5xl font-black tracking-tight text-slate-900">My Exams</h1>
-                        <p className="mt-4 max-w-2xl text-base text-slate-600">
-                            This space only shows the exams you can take. Join live sessions, track upcoming windows, and return here after submission.
-                        </p>
-                    </section>
+            <div className="min-h-screen bg-shell-bg text-foreground">
+                <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-10">
+                    <PageHeader
+                        eyebrow="Student portal"
+                        title="My Exams"
+                        subtitle="Join live sessions, track upcoming windows, and review your results."
+                    />
 
                     {error && (
-                        <div className="rounded-2xl border border-rose-300 bg-rose-50 px-5 py-4 text-sm text-rose-700">
+                        <div className="mb-6 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] px-4 py-3 text-meta">
                             {error}
                         </div>
                     )}
 
-                    <section className="space-y-4">
-                        <div className="flex items-end justify-between gap-4">
-                            <div>
-                                <p className="text-xs font-semibold uppercase tracking-wide text-student-primary">Current</p>
-                                <h2 className="mt-2 text-3xl font-black">Joinable right now</h2>
-                            </div>
-                            {isLoading && <p className="text-sm text-slate-500">Refreshing...</p>}
-                        </div>
+                    <section className="space-y-4 mb-10">
+                        <SectionHeader
+                            eyebrow="Current"
+                            title="Joinable right now"
+                            actions={isLoading ? <span className="text-meta text-shell-muted-dim">Refreshing…</span> : undefined}
+                        />
                         <div className="grid gap-5 lg:grid-cols-2">
                             {currentSessions.length === 0 ? (
-                                <div className="rounded-card-md border border-dashed border-student-border-alt bg-white/70 px-6 py-10 text-sm text-slate-500">
-                                    No current exam sessions are open for you right now.
-                                </div>
+                                <EmptyState
+                                    title="Nothing live"
+                                    description="No current exam sessions are open for you right now."
+                                    variant="compact"
+                                    className="lg:col-span-2"
+                                />
                             ) : (
                                 currentSessions.map((session) => (
                                     <StudentExamCard
                                         key={session.id}
                                         session={session}
-                                        onJoin={async (selectedSession) => {
-                                            const attemptId = await joinScheduledSession(selectedSession.id);
+                                        onJoin={async (selected) => {
+                                            const attemptId = await joinScheduledSession(selected.id);
                                             router.push(`/exam/${attemptId}`);
                                         }}
                                     />
@@ -70,16 +70,16 @@ export default function MyExamsPage() {
                         </div>
                     </section>
 
-                    <section className="space-y-4">
-                        <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-student-accent">Upcoming</p>
-                            <h2 className="mt-2 text-3xl font-black">Scheduled later</h2>
-                        </div>
+                    <section className="space-y-4 mb-10">
+                        <SectionHeader eyebrow="Upcoming" title="Scheduled later" />
                         <div className="grid gap-5 lg:grid-cols-2">
                             {upcomingSessions.length === 0 ? (
-                                <div className="rounded-card-md border border-dashed border-student-border-alt bg-white/70 px-6 py-10 text-sm text-slate-500">
-                                    No future exam sessions are scheduled for you.
-                                </div>
+                                <EmptyState
+                                    title="Nothing scheduled"
+                                    description="No future exam sessions are scheduled for you."
+                                    variant="compact"
+                                    className="lg:col-span-2"
+                                />
                             ) : (
                                 upcomingSessions.map((session) => (
                                     <StudentExamCard
@@ -91,53 +91,46 @@ export default function MyExamsPage() {
                             )}
                         </div>
                     </section>
-                    {/* ── My Results section ── */}
+
                     {(myResults.length > 0 || myResultsLoading) && (
                         <section className="space-y-4">
-                            <div>
-                                <p className="text-xs font-semibold uppercase tracking-wide text-student-primary">Results</p>
-                                <h2 className="mt-2 text-3xl font-black">My Grades</h2>
-                            </div>
+                            <SectionHeader eyebrow="Results" title="My grades" />
                             {myResultsLoading ? (
-                                <div className="text-sm text-slate-500">Loading results…</div>
+                                <div className="text-meta text-shell-muted-dim">Loading results…</div>
                             ) : (
                                 <div className="grid gap-4 lg:grid-cols-2">
-                                    {myResults.map(result => (
-                                        <Link
-                                            key={result.session_id}
-                                            href={`/my-results/${result.session_id}`}
-                                            className="block rounded-card border border-student-border bg-white/80 p-5 shadow-sm transition-all hover:border-student-primary/40 hover:shadow-md"
-                                        >
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div>
-                                                    <p className="font-bold text-slate-900 text-sm">
-                                                        {result.test_title ?? 'Exam Result'}
-                                                    </p>
-                                                    {result.submitted_at && (
-                                                        <p className="text-xs text-slate-500 mt-0.5">
-                                                            Submitted {new Date(result.submitted_at).toLocaleDateString()}
+                                    {myResults.map((result) => (
+                                        <Link key={result.session_id} href={`/my-results/${result.session_id}`} className="block">
+                                            <Card variant="surface" padding="md" interactive>
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="min-w-0">
+                                                        <p className="font-semibold text-foreground text-h3">
+                                                            {result.test_title ?? 'Exam result'}
                                                         </p>
-                                                    )}
+                                                        {result.submitted_at && (
+                                                            <p className="text-meta text-shell-muted-dim mt-0.5">
+                                                                Submitted {new Date(result.submitted_at).toLocaleDateString()}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <div className="text-right shrink-0">
+                                                        <p className="text-h1 text-foreground tabular-nums">
+                                                            {result.percentage.toFixed(1)}%
+                                                        </p>
+                                                        <p className="text-meta text-shell-muted-dim tabular-nums">
+                                                            {result.total_points} / {result.max_points} pts
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div className="text-right shrink-0">
-                                                    <p className="text-lg font-black text-slate-900">{result.percentage.toFixed(1)}%</p>
-                                                    <p className="text-xs text-slate-500">
-                                                        {result.total_points} / {result.max_points} pts
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            {result.letter_grade && (
-                                                <div className="mt-3 flex items-center gap-2">
-                                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                                                        result.passed
-                                                            ? 'bg-emerald-100 text-emerald-700'
-                                                            : 'bg-rose-100 text-rose-700'
-                                                    }`}>
-                                                        {result.letter_grade}
-                                                    </span>
-                                                    <span className="text-xs font-medium text-student-primary">View Details →</span>
-                                                </div>
-                                            )}
+                                                {result.letter_grade && (
+                                                    <div className="mt-3 flex items-center gap-2">
+                                                        <Badge tone={result.passed ? 'success' : 'danger'} size="sm">
+                                                            {result.letter_grade}
+                                                        </Badge>
+                                                        <span className="text-meta font-medium text-brand">View details →</span>
+                                                    </div>
+                                                )}
+                                            </Card>
                                         </Link>
                                     ))}
                                 </div>

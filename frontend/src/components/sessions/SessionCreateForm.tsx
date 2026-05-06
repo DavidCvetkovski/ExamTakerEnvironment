@@ -92,20 +92,20 @@ export default function SessionCreateForm({
             <form onSubmit={handleSubmit} className="rounded-card-md border border-white/10 bg-shell-surface-deep p-6 shadow-2xl shadow-black/30">
                 <div className="mb-6">
                     <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300">Session Manager</p>
-                    <h2 className="mt-2 text-3xl font-black text-white">Schedule an Exam Window</h2>
-                    <p className="mt-2 max-w-xl text-sm text-slate-400">
+                    <h2 className="mt-2 text-3xl font-black text-foreground">Schedule an Exam Window</h2>
+                    <p className="mt-2 max-w-xl text-sm text-shell-muted-dim">
                         Choose the course, lock a blueprint, and define the exact exam start time. Students only see sessions for courses they are enrolled in.
                     </p>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                     <label className="space-y-2">
-                        <span className="text-xs font-semibold uppercase tracking-medium text-slate-400">Course</span>
+                        <span className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim">Course</span>
                         <select
                             aria-label="Course"
                             value={courseId}
                             onChange={(event) => setCourseId(event.target.value)}
-                            className="w-full rounded-2xl border border-white/10 bg-shell-input px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400"
+                            className="w-full rounded-2xl border border-white/10 bg-shell-input px-4 py-3 text-sm text-foreground outline-none transition focus:border-cyan-400"
                             required
                         >
                             <option value="">Select a course</option>
@@ -118,12 +118,12 @@ export default function SessionCreateForm({
                     </label>
 
                     <label className="space-y-2">
-                        <span className="text-xs font-semibold uppercase tracking-medium text-slate-400">Blueprint</span>
+                        <span className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim">Blueprint</span>
                         <select
                             aria-label="Blueprint"
                             value={testDefinitionId}
                             onChange={(event) => setTestDefinitionId(event.target.value)}
-                            className="w-full rounded-2xl border border-white/10 bg-shell-input px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400"
+                            className="w-full rounded-2xl border border-white/10 bg-shell-input px-4 py-3 text-sm text-foreground outline-none transition focus:border-cyan-400"
                             required
                         >
                             <option value="">Select a blueprint</option>
@@ -137,14 +137,14 @@ export default function SessionCreateForm({
                 </div>
 
                 <label className="mt-4 block space-y-2">
-                    <span className="text-xs font-semibold uppercase tracking-medium text-slate-400">Start date and time</span>
+                    <span className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim">Start date and time</span>
                     <input
                         aria-label="Start date and time"
                         type="datetime-local"
                         value={startsAt}
                         onChange={(event) => setStartsAt(event.target.value)}
                         step={900}
-                        className="w-full rounded-2xl border border-white/10 bg-shell-input px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400"
+                        className="w-full rounded-2xl border border-white/10 bg-shell-input px-4 py-3 text-sm text-foreground outline-none transition focus:border-cyan-400"
                         required
                     />
                     <p className="text-xs text-sky-400/80 mt-1 italic">
@@ -155,7 +155,7 @@ export default function SessionCreateForm({
                 <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="mt-6 inline-flex items-center justify-center rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black uppercase tracking-tight text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="mt-6 inline-flex items-center justify-center rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-black uppercase tracking-tight text-foreground transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     {isSubmitting ? 'Scheduling...' : 'Schedule Session'}
                 </button>
@@ -164,30 +164,30 @@ export default function SessionCreateForm({
             {isAdmin && (
                 <form onSubmit={handleCreateCourse} className="rounded-card-md border border-shell-border-deep bg-shell-panel-c p-6 shadow-xl shadow-black/20">
                     <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">Course Setup</p>
-                    <h3 className="mt-2 text-2xl font-black text-white">Create a New Course</h3>
-                    <p className="mt-2 text-sm text-slate-400">
+                    <h3 className="mt-2 text-2xl font-black text-foreground">Create a New Course</h3>
+                    <p className="mt-2 text-sm text-shell-muted-dim">
                         Courses gate exam visibility. Enrollments are managed separately once the course exists.
                     </p>
 
                     <div className="mt-6 space-y-4">
                         <label className="space-y-2 block">
-                            <span className="text-xs font-semibold uppercase tracking-medium text-slate-400">Course code</span>
+                            <span className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim">Course code</span>
                             <input
                                 aria-label="Course code"
                                 value={courseCode}
                                 onChange={(event) => setCourseCode(event.target.value)}
                                 placeholder="e.g. BIO101"
-                                className="w-full rounded-2xl border border-white/10 bg-shell-input-alt px-4 py-3 text-sm text-white outline-none transition focus:border-amber-400"
+                                className="w-full rounded-2xl border border-white/10 bg-shell-input-alt px-4 py-3 text-sm text-foreground outline-none transition focus:border-amber-400"
                             />
                         </label>
                         <label className="space-y-2 block">
-                            <span className="text-xs font-semibold uppercase tracking-medium text-slate-400">Course title</span>
+                            <span className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim">Course title</span>
                             <input
                                 aria-label="Course title"
                                 value={courseTitle}
                                 onChange={(event) => setCourseTitle(event.target.value)}
                                 placeholder="Introductory Biology"
-                                className="w-full rounded-2xl border border-white/10 bg-shell-input-alt px-4 py-3 text-sm text-white outline-none transition focus:border-amber-400"
+                                className="w-full rounded-2xl border border-white/10 bg-shell-input-alt px-4 py-3 text-sm text-foreground outline-none transition focus:border-amber-400"
                             />
                         </label>
                     </div>

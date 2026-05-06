@@ -1,15 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --color-shell-bg: #1a1a1a;
-  --color-shell-surface: #242424;
+  --color-shell-bg: #0f1115;
+  --color-shell-surface: #1a1d23;
   --color-shell-surface-deep: #111827;
   --color-shell-input: #0b1220;
-  --color-shell-input-alt: #08111d;
-  --color-shell-border: #333333;
-  --color-shell-border-deep: #223149;
-  --color-shell-muted: #a1a1aa;
-  --color-shell-muted-dim: #555555;
+  --color-shell-input-alt: #161a21;
+  --color-shell-border: #2a2f38;
+  --color-shell-border-deep: #3a4151;
+  --color-shell-muted: #b8bcc6;
+  --color-shell-muted-dim: #8b919c;
+  --color-brand: #60a5fa;
+  --color-danger: #f87171;
   --color-shell-panel-a: #0d1321;
   --color-shell-panel-b: #08101b;
   --color-shell-panel-c: #0c1628;
@@ -99,20 +101,124 @@
   --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
   --ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
 
+  /* ── 7.6 — Typography role tokens (Tailwind v4 paired) ── */
+  --text-display: 40px;
+  --text-display--line-height: 46px;
+  --text-display--letter-spacing: -0.025em;
+  --text-display--font-weight: 700;
+
+  --text-h1: 28px;
+  --text-h1--line-height: 34px;
+  --text-h1--letter-spacing: -0.018em;
+  --text-h1--font-weight: 700;
+
+  --text-h2: 20px;
+  --text-h2--line-height: 26px;
+  --text-h2--letter-spacing: -0.01em;
+  --text-h2--font-weight: 600;
+
+  --text-h3: 15px;
+  --text-h3--line-height: 22px;
+  --text-h3--letter-spacing: 0;
+  --text-h3--font-weight: 600;
+
+  --text-body: 14px;
+  --text-body--line-height: 22px;
+
+  --text-meta: 12px;
+  --text-meta--line-height: 18px;
+
+  /* ── 7.6 — Spacing rhythm ── */
+  --space-section: 48px;
+  --space-block: 24px;
+  --space-inline: 12px;
+
+  /* ── 7.6 — Universal elevation tokens (re-tinted per theme below) ── */
+  --shadow-card: 0 1px 0 0 rgba(0, 0, 0, 0.04), 0 8px 24px -12px rgba(0, 0, 0, 0.32);
+  --shadow-card-hover: 0 1px 0 0 rgba(0, 0, 0, 0.06), 0 16px 40px -16px rgba(0, 0, 0, 0.40);
+  --shadow-elevated: 0 1px 0 0 rgba(0, 0, 0, 0.08), 0 24px 60px -20px rgba(0, 0, 0, 0.50);
+  --shadow-inset: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+
+  /* ── 7.6 — Status palette tokens (theme-adaptive) ── */
+  --color-success: #34d399;
+  --color-success-fg: #6ee7b7;
+  --color-success-bg: rgba(52, 211, 153, 0.12);
+  --color-success-border: rgba(52, 211, 153, 0.30);
+
+  --color-warning: #fbbf24;
+  --color-warning-fg: #fcd34d;
+  --color-warning-bg: rgba(251, 191, 36, 0.12);
+  --color-warning-border: rgba(251, 191, 36, 0.30);
+
+  --color-info: #60a5fa;
+  --color-info-fg: #93c5fd;
+  --color-info-bg: rgba(96, 165, 250, 0.12);
+  --color-info-border: rgba(96, 165, 250, 0.30);
+
+  --color-danger-fg: #fca5a5;
+  --color-danger-bg: rgba(248, 113, 113, 0.10);
+  --color-danger-border: rgba(248, 113, 113, 0.30);
+
   --color-background: var(--color-shell-bg);
   --color-foreground: #ffffff;
 }
 
 [data-theme="warm"] {
-  --color-shell-bg: #fffaf0;
-  --color-shell-surface: #fffdf9;
-  --color-shell-surface-deep: #fffdf9;
-  --color-shell-input: #fffaf4;
-  --color-shell-input-alt: #f8f3ea;
+  --color-shell-bg: #fbf3e3;
+  --color-shell-surface: #fffdf7;
+  --color-shell-surface-deep: #f5ecd9;
+  --color-shell-input: #fffaee;
+  --color-shell-input-alt: #f5ecd9;
   --color-shell-border: #e8dcc7;
-  --color-shell-border-deep: #d8c7aa;
-  --color-shell-muted: #8a6c3e;
-  --color-shell-muted-dim: #5e77aa;
+  --color-shell-border-deep: #c9b48d;
+  --color-shell-muted: #6e5226;
+  --color-shell-muted-dim: #8a6c3e;
+  --color-brand: #b8651a;
+  --color-danger: #b2471f;
+
+  /* ── 7.6 — Theme-adapted elevation (warmer, softer) ── */
+  --shadow-card: 0 1px 0 0 rgba(120, 80, 30, 0.06), 0 10px 28px -14px rgba(120, 80, 30, 0.18);
+  --shadow-card-hover: 0 1px 0 0 rgba(120, 80, 30, 0.08), 0 20px 44px -18px rgba(120, 80, 30, 0.24);
+  --shadow-elevated: 0 1px 0 0 rgba(120, 80, 30, 0.10), 0 32px 68px -22px rgba(120, 80, 30, 0.28);
+  --shadow-inset: inset 0 0 0 1px rgba(255, 250, 238, 0.6);
+
+  /* ── 7.6 — Theme-adapted status palette (warmer tones) ── */
+  --color-success: #2f8f5d;
+  --color-success-fg: #156341;
+  --color-success-bg: rgba(47, 143, 93, 0.10);
+  --color-success-border: rgba(47, 143, 93, 0.30);
+
+  --color-warning: #c08220;
+  --color-warning-fg: #8a5a0e;
+  --color-warning-bg: rgba(192, 130, 32, 0.10);
+  --color-warning-border: rgba(192, 130, 32, 0.30);
+
+  --color-info: #1055cc;
+  --color-info-fg: #0d47ae;
+  --color-info-bg: rgba(16, 85, 204, 0.08);
+  --color-info-border: rgba(16, 85, 204, 0.25);
+
+  --color-danger-fg: #8f3411;
+  --color-danger-bg: rgba(178, 71, 31, 0.08);
+  --color-danger-border: rgba(178, 71, 31, 0.30);
+
+  /* ── 7.6 — Warm editor overrides (Stage 6) ── */
+  --color-editor-bg: #fffdf7;
+  --color-editor-toolbar: #f5ecd9;
+  --color-editor-border: #e8dcc7;
+  --color-editor-btn-border: #d8c7aa;
+  --color-editor-btn-hover: #f0e3c8;
+  --color-editor-accent: #b8651a;
+  --color-editor-text: #3d2e15;
+  --color-editor-correct: #2f8f5d;
+  --color-editor-placeholder: #a89572;
+  --color-editor-remove: #b2471f;
+  --color-editor-essay-surface: #fffdf7;
+  --color-editor-essay-input: #fffaee;
+  --color-editor-focus: #1055cc;
+  --color-editor-code-bg: #f5ecd9;
+  --color-editor-code-border: #d8c7aa;
+  --color-editor-code-text: #3d2e15;
   --color-shell-panel-a: #fffdf9;
   --color-shell-panel-b: #fffaf4;
   --color-shell-panel-c: #f8f3ea;
@@ -146,15 +252,43 @@
 }
 
 [data-theme="light-blue"] {
-  --color-shell-bg: #f4f8ff;
+  --color-shell-bg: #e6eff9;
   --color-shell-surface: #ffffff;
-  --color-shell-surface-deep: #eef5ff;
-  --color-shell-input: #f8fbff;
-  --color-shell-input-alt: #edf6ff;
-  --color-shell-border: #c7d9f2;
-  --color-shell-border-deep: #9fbce4;
-  --color-shell-muted: #52657f;
-  --color-shell-muted-dim: #7c8da3;
+  --color-shell-surface-deep: #d8e5f3;
+  --color-shell-input: #f4f8fd;
+  --color-shell-input-alt: #e6eff9;
+  --color-shell-border: #b9cde5;
+  --color-shell-border-deep: #7fa2cf;
+  --color-shell-muted: #3f5470;
+  --color-shell-muted-dim: #5a6c87;
+  --color-brand: #1769d2;
+  --color-danger: #a33f2a;
+
+  /* ── 7.6 — Theme-adapted elevation (cooler, crystalline) ── */
+  --shadow-card: 0 1px 0 0 rgba(40, 70, 120, 0.06), 0 10px 28px -14px rgba(40, 70, 120, 0.18);
+  --shadow-card-hover: 0 1px 0 0 rgba(40, 70, 120, 0.08), 0 20px 44px -18px rgba(40, 70, 120, 0.22);
+  --shadow-elevated: 0 1px 0 0 rgba(40, 70, 120, 0.10), 0 32px 68px -22px rgba(40, 70, 120, 0.26);
+  --shadow-inset: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+
+  /* ── 7.6 — Theme-adapted status palette ── */
+  --color-success: #16a36a;
+  --color-success-fg: #136247;
+  --color-success-bg: rgba(22, 163, 106, 0.10);
+  --color-success-border: rgba(22, 163, 106, 0.30);
+
+  --color-warning: #c87b1a;
+  --color-warning-fg: #8a5a0e;
+  --color-warning-bg: rgba(200, 123, 26, 0.10);
+  --color-warning-border: rgba(200, 123, 26, 0.30);
+
+  --color-info: #1769d2;
+  --color-info-fg: #0f56ad;
+  --color-info-bg: rgba(23, 105, 210, 0.08);
+  --color-info-border: rgba(23, 105, 210, 0.25);
+
+  --color-danger-fg: #84311f;
+  --color-danger-bg: rgba(163, 63, 42, 0.08);
+  --color-danger-border: rgba(163, 63, 42, 0.30);
   --color-shell-panel-a: #eef5ff;
   --color-shell-panel-b: #e6f1ff;
   --color-shell-panel-c: #f0f7ff;
@@ -216,6 +350,8 @@
   --color-shell-border-deep: var(--color-shell-border-deep);
   --color-shell-muted: var(--color-shell-muted);
   --color-shell-muted-dim: var(--color-shell-muted-dim);
+  --color-brand: var(--color-brand);
+  --color-danger: var(--color-danger);
   --color-shell-panel-a: var(--color-shell-panel-a);
   --color-shell-panel-b: var(--color-shell-panel-b);
   --color-shell-panel-c: var(--color-shell-panel-c);
@@ -256,6 +392,26 @@
   --text-eyebrow-xs: var(--font-size-eyebrow-xs);
   --text-eyebrow-sm: var(--font-size-eyebrow-sm);
   --text-eyebrow: var(--font-size-eyebrow);
+  --text-display: var(--text-display);
+  --text-display--line-height: var(--text-display--line-height);
+  --text-display--letter-spacing: var(--text-display--letter-spacing);
+  --text-display--font-weight: var(--text-display--font-weight);
+  --text-h1: var(--text-h1);
+  --text-h1--line-height: var(--text-h1--line-height);
+  --text-h1--letter-spacing: var(--text-h1--letter-spacing);
+  --text-h1--font-weight: var(--text-h1--font-weight);
+  --text-h2: var(--text-h2);
+  --text-h2--line-height: var(--text-h2--line-height);
+  --text-h2--letter-spacing: var(--text-h2--letter-spacing);
+  --text-h2--font-weight: var(--text-h2--font-weight);
+  --text-h3: var(--text-h3);
+  --text-h3--line-height: var(--text-h3--line-height);
+  --text-h3--letter-spacing: var(--text-h3--letter-spacing);
+  --text-h3--font-weight: var(--text-h3--font-weight);
+  --text-body: var(--text-body);
+  --text-body--line-height: var(--text-body--line-height);
+  --text-meta: var(--text-meta);
+  --text-meta--line-height: var(--text-meta--line-height);
   --tracking-eyebrow: var(--tracking-eyebrow);
   --tracking-tight: var(--tracking-tight);
   --tracking-medium: var(--tracking-medium);
@@ -275,6 +431,28 @@
   --shadow-warm-card: var(--shadow-warm-card);
   --shadow-warm-hero-md: var(--shadow-warm-hero-md);
   --shadow-warm-hero-lg: var(--shadow-warm-hero-lg);
+  --shadow-card: var(--shadow-card);
+  --shadow-card-hover: var(--shadow-card-hover);
+  --shadow-elevated: var(--shadow-elevated);
+  --shadow-inset: var(--shadow-inset);
+  --color-success: var(--color-success);
+  --color-success-fg: var(--color-success-fg);
+  --color-success-bg: var(--color-success-bg);
+  --color-success-border: var(--color-success-border);
+  --color-warning: var(--color-warning);
+  --color-warning-fg: var(--color-warning-fg);
+  --color-warning-bg: var(--color-warning-bg);
+  --color-warning-border: var(--color-warning-border);
+  --color-info: var(--color-info);
+  --color-info-fg: var(--color-info-fg);
+  --color-info-bg: var(--color-info-bg);
+  --color-info-border: var(--color-info-border);
+  --color-danger-fg: var(--color-danger-fg);
+  --color-danger-bg: var(--color-danger-bg);
+  --color-danger-border: var(--color-danger-border);
+  --space-section: var(--space-section);
+  --space-block: var(--space-block);
+  --space-inline: var(--space-inline);
   --duration-fast: var(--duration-fast);
   --duration-normal: var(--duration-normal);
   --duration-slow: var(--duration-slow);
@@ -296,6 +474,55 @@ body {
   background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-body), sans-serif;
+  font-feature-settings: "ss01", "cv01", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── 7.6 — Editorial typography helpers ── */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.eyebrow {
+  font-size: var(--font-size-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-shell-muted-dim);
+}
+
+/* Hairline divider — 1px, theme-aware, used between table rows */
+.divide-hairline > :not(:last-child) {
+  border-bottom: 1px solid var(--color-shell-border);
+}
+
+/* Quiet zebra striping for tables (Stage 7) */
+.table-zebra tbody tr:nth-child(even) {
+  background-color: color-mix(in oklab, var(--color-shell-input) 60%, transparent);
+}
+
+.table-zebra tbody tr {
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.table-zebra tbody tr:hover {
+  background-color: color-mix(in oklab, var(--color-brand) 8%, var(--color-shell-surface));
+  box-shadow: inset 2px 0 0 0 var(--color-brand);
+}
+
+/* ── 7.6 — Focus ring (consistent across all primitives) ── */
+.focus-ring {
+  outline: none;
+  transition: box-shadow var(--duration-fast) var(--ease-standard),
+              border-color var(--duration-fast) var(--ease-standard);
+}
+
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-shell-bg),
+              0 0 0 4px color-mix(in oklab, var(--color-brand) 50%, transparent);
 }
 
 @keyframes ov-shake {

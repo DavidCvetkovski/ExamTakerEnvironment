@@ -109,10 +109,10 @@ export default function ExamPage() {
     // Loading & Error states
     if (isLoading && !currentSession) {
         return (
-            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+            <div className="min-h-screen bg-shell-surface flex items-center justify-center">
                 <div className="text-center space-y-4">
-                    <div className="w-8 h-8 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mx-auto" />
-                    <p className="text-gray-400">Loading exam session...</p>
+                    <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin mx-auto" />
+                    <p className="text-shell-muted">Loading exam session…</p>
                 </div>
             </div>
         );
@@ -120,9 +120,9 @@ export default function ExamPage() {
 
     if (error) {
         return (
-            <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-8 max-w-md text-center">
-                    <p className="text-red-400 font-semibold">{error}</p>
+            <div className="min-h-screen bg-shell-surface flex items-center justify-center">
+                <div className="bg-[var(--color-danger-bg)] border border-[var(--color-danger-border)] rounded-xl p-8 max-w-md text-center">
+                    <p className="text-[var(--color-danger-fg)] font-semibold">{error}</p>
                 </div>
             </div>
         );
@@ -146,37 +146,38 @@ export default function ExamPage() {
 
     return (
         <ProtectedRoute allowedRoles={['STUDENT', 'CONSTRUCTOR', 'ADMIN']}>
-            <div className="min-h-screen bg-gray-900 text-gray-100 flex flex-col pb-16">
+            <div className="min-h-screen bg-shell-surface text-foreground flex flex-col pb-16">
                 {/* Header / Timer Bar */}
-                <header className="sticky top-0 z-10 bg-gray-800 border-b border-gray-700 px-6 py-4 flex justify-between items-center shadow-lg">
+                <header className="sticky top-0 z-10 bg-shell-surface border-b border-shell-border px-6 py-4 flex justify-between items-center shadow-[var(--shadow-card)]">
                     <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-xl">
+                        <div className="w-9 h-9 bg-brand rounded-md flex items-center justify-center font-semibold text-white text-meta">
                             OV
                         </div>
-                        <h1 className="text-lg font-bold">Exam Session</h1>
+                        <h1 className="text-h3 font-semibold">Exam session</h1>
                         <SaveIndicator />
                     </div>
 
-                    <div className="flex items-center gap-8">
+                    <div className="flex items-center gap-6">
                         <div className="text-right">
-                            <p className="text-xs text-gray-400 uppercase tracking-wider">Time Remaining</p>
+                            <p className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim">Time remaining</p>
                             <p
-                                className={`text-xl font-mono font-bold ${isExpired
-                                        ? 'text-red-500'
+                                className={`text-h2 font-mono font-semibold tabular-nums ${
+                                    isExpired
+                                        ? 'text-danger'
                                         : timeLeft.startsWith('0m') || timeLeft.startsWith('1m') || timeLeft.startsWith('2m')
-                                            ? 'text-amber-400 animate-pulse'
-                                            : 'text-indigo-400'
-                                    }`}
+                                        ? 'text-[var(--color-warning-fg)] animate-pulse'
+                                        : 'text-brand'
+                                }`}
                             >
                                 {timeLeft}
                             </p>
                         </div>
                         <button
-                            className="bg-indigo-600 hover:bg-indigo-500 px-6 py-2 rounded-lg font-semibold transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="bg-brand text-white px-5 py-2 rounded-md font-medium text-meta transition-[filter] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={() => setShowReview(true)}
                             disabled={isExpired}
                         >
-                            Submit Exam
+                            Submit exam
                         </button>
                     </div>
                 </header>
@@ -184,14 +185,14 @@ export default function ExamPage() {
                 {/* Main Question Area */}
                 <main className="flex-1 max-w-4xl w-full mx-auto p-8">
                     {isExpired ? (
-                        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-8 text-center">
-                            <h2 className="text-xl font-bold text-red-400">Time Expired</h2>
-                            <p className="text-gray-400 mt-2">
+                        <div className="bg-[var(--color-danger-bg)] border border-[var(--color-danger-border)] rounded-xl p-8 text-center">
+                            <h2 className="text-h2 text-[var(--color-danger-fg)]">Time expired</h2>
+                            <p className="text-shell-muted mt-2 text-meta">
                                 Your exam time has ended. All saved answers have been recorded.
                             </p>
                             <Link
                                 href={currentSession.return_path}
-                                className="mt-6 inline-flex rounded-xl border border-gray-600 px-4 py-2 text-sm font-semibold text-gray-200 transition hover:bg-gray-800"
+                                className="mt-6 inline-flex rounded-md border border-shell-border-deep px-4 py-2 text-meta font-medium text-foreground transition hover:bg-shell-input-alt"
                             >
                                 Back to Home
                             </Link>
@@ -209,7 +210,7 @@ export default function ExamPage() {
                                 <button
                                     onClick={() => navigateTo(currentQuestionIndex - 1)}
                                     disabled={currentQuestionIndex === 0}
-                                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-gray-600 text-gray-300 hover:bg-gray-700 transition-colors font-medium disabled:opacity-30 disabled:cursor-not-allowed"
+                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-shell-border bg-shell-surface text-foreground hover:bg-shell-input-alt hover:border-shell-border-deep transition-colors font-medium text-meta disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                                         <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
@@ -217,14 +218,14 @@ export default function ExamPage() {
                                     Previous
                                 </button>
 
-                                <span className="text-sm text-gray-500">
+                                <span className="text-sm text-shell-muted-dim">
                                     {currentQuestionIndex + 1} / {totalQuestions}
                                 </span>
 
                                 <button
                                     onClick={() => navigateTo(currentQuestionIndex + 1)}
                                     disabled={currentQuestionIndex === totalQuestions - 1}
-                                    className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-brand text-white font-medium text-meta transition-[filter] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
                                 >
                                     Next
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">

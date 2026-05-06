@@ -7,7 +7,6 @@ import { useParams, useSearchParams } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import DistractorBars from '@/components/analytics/DistractorBars';
 import PDValueTrendChart from '@/components/analytics/PDValueTrendChart';
-import VersionCard from '@/components/analytics/VersionCard';
 import FlagBadge from '@/components/analytics/FlagBadge';
 import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
@@ -117,56 +116,6 @@ export default function ItemAnalyticsDetailPage() {
                                 </section>
                             ) : null}
 
-                            <section>
-                                <div className="mb-3">
-                                    <h2 className="text-lg font-semibold text-foreground">Flags Timeline</h2>
-                                    <p className="text-sm text-shell-muted-dim">A quick scan of which revisions attracted quality flags.</p>
-                                </div>
-                                <div className="rounded-xl border border-shell-border bg-shell-surface px-5 py-5">
-                                    <div className="space-y-4">
-                                        {history.entries.map((entry) => (
-                                            <div
-                                                key={`${entry.item_version_id}-${entry.test_definition_id}`}
-                                                className="flex flex-col gap-3 border-b border-shell-border pb-4 last:border-b-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
-                                            >
-                                                <div>
-                                                    <p className="text-sm font-semibold text-foreground">
-                                                        Version {entry.version_number ?? '—'} · {entry.test_title}
-                                                    </p>
-                                                    <p className="mt-1 text-xs text-shell-muted-dim">
-                                                        {entry.computed_at ? new Date(entry.computed_at).toLocaleString() : 'No timestamp'}
-                                                    </p>
-                                                </div>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {entry.flags.length > 0 ? (
-                                                        entry.flags.map((flag) => (
-                                                            <FlagBadge key={`${entry.item_version_id}-${flag.code}`} code={flag.code} />
-                                                        ))
-                                                    ) : (
-                                                        <span className="text-xs text-shell-muted-dim">No flags</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </section>
-
-                            <section>
-                                <div className="mb-3">
-                                    <h2 className="text-lg font-semibold text-foreground">Per-Version Detail</h2>
-                                    <p className="text-sm text-shell-muted-dim">Snapshot metrics for each recorded version/test pairing.</p>
-                                </div>
-                                <div className="grid gap-4 lg:grid-cols-2">
-                                    {history.entries.map((entry, index) => (
-                                        <VersionCard
-                                            key={`${entry.item_version_id}-${entry.test_definition_id}`}
-                                            entry={entry}
-                                            isLatest={index === history.entries.length - 1}
-                                        />
-                                    ))}
-                                </div>
-                            </section>
                         </div>
                     ) : null}
                 </div>

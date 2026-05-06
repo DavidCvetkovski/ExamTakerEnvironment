@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import CancelSessionModal from '@/components/sessions/CancelSessionModal';
 import CourseEnrollmentDrawer from '@/components/sessions/CourseEnrollmentDrawer';
 import ScheduledSessionsTable from '@/components/sessions/ScheduledSessionsTable';
 import SessionCreateForm from '@/components/sessions/SessionCreateForm';
+import { useToast } from '@/components/ui';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import { useCourseStore } from '@/stores/useCourseStore';
@@ -14,6 +16,7 @@ import { useSessionManagerStore } from '@/stores/useSessionManagerStore';
 
 export default function SessionsPage() {
     const router = useRouter();
+    const { toast } = useToast();
     const { user, isAuthenticated, isLoading: authLoading } = useAuthStore();
     const { blueprints, fetchBlueprints } = useBlueprintStore();
     const {
@@ -40,6 +43,7 @@ export default function SessionsPage() {
     } = useSessionManagerStore();
 
     const [drawerCourseId, setDrawerCourseId] = useState<string | null>(null);
+    const [cancelTarget, setCancelTarget] = useState<string | null>(null);
 
     useEffect(() => {
         if (authLoading || !isAuthenticated || !user) {
@@ -58,6 +62,15 @@ export default function SessionsPage() {
 
     const selectedCourse = courses.find((course) => course.id === drawerCourseId) || null;
 
+    const handleSchedule = async (payload: {
+        course_id: string;
+        test_definition_id: string;
+        starts_at: string;
+    }) => {
+        await createScheduledSession(payload);
+        toast({ tone: 'success', title: 'Session scheduled', description: 'Students can join at the set start time.' });
+    };
+
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
             <div className="min-h-screen bg-shell-bg text-foreground">
@@ -68,7 +81,7 @@ export default function SessionsPage() {
                         isSubmitting={coursesLoading || sessionsLoading}
                         isAdmin={user?.role === 'ADMIN'}
                         onCreateCourse={createCourse}
-                        onSubmit={createScheduledSession}
+                        onSubmit={handleSchedule}
                     />
 
                     {(coursesError || sessionsError) && (
@@ -80,7 +93,7 @@ export default function SessionsPage() {
                     <ScheduledSessionsTable
                         sessions={scheduledSessions}
                         isBusy={sessionsLoading}
-                        onCancel={cancelScheduledSession}
+                        onRequestCancel={(id) => setCancelTarget(id)}
                         onManageEnrollments={async (courseId) => {
                             setDrawerCourseId(courseId);
                             await fetchEnrollments(courseId);
@@ -101,6 +114,17 @@ export default function SessionsPage() {
                     onClose={() => setDrawerCourseId(null)}
                     onAddEnrollment={addEnrollment}
                     onRemoveEnrollment={removeEnrollment}
+                />
+
+                <CancelSessionModal
+                    sessionId={cancelTarget}
+                    onConfirm={async (id) => {
+                        await cancelScheduledSession(id);
+                        setCancelTarget(null);
+                        toast({ tone: 'success', title: 'Session cancelled' });
+                    }}
+                    onClose={() => setCancelTarget(null)}
+                    isBusy={sessionsLoading}
                 />
             </div>
         </ProtectedRoute>

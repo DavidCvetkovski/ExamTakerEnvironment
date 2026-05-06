@@ -91,10 +91,7 @@ export default function GradingDashboard() {
     }
 
     const isAdmin = user?.role === 'ADMIN';
-    const allFullyGraded = gradingOverview.length > 0 &&
-        gradingOverview.every(s => s.grading_status === 'FULLY_GRADED');
-    const allPublished = gradingOverview.length > 0 &&
-        gradingOverview.every(s => s.is_published);
+    const anyPublished = gradingOverview.some(s => s.is_published);
 
     const filtered = gradingOverview
         .filter(s => filterStatus === 'ALL' || s.grading_status === filterStatus)
@@ -220,7 +217,7 @@ export default function GradingDashboard() {
                                 </Button>
                             )}
 
-                            {isAdmin && (allPublished ? (
+                            {isAdmin && (anyPublished ? (
                                 <Button
                                     variant="warning"
                                     size="sm"
@@ -235,8 +232,6 @@ export default function GradingDashboard() {
                                     size="sm"
                                     onClick={() => selectedTestId && publishResults(selectedTestId)}
                                     loading={publishStatus === 'publishing'}
-                                    disabled={!allFullyGraded}
-                                    title={!allFullyGraded ? 'All sessions must be fully graded before publishing' : ''}
                                 >
                                     Publish results
                                 </Button>

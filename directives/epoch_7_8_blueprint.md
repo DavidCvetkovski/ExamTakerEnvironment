@@ -9,16 +9,16 @@
 
 ## Progress Checklist
 
-- [ ] Stage 1 — Navigation Architecture & State Persistence
-- [ ] Stage 2 — Sessions Page Overhaul (3 sections, timers, cancel confirmation)
-- [ ] Stage 3 — TimePicker Redesign (fix scroll bug, desktop-friendly)
-- [ ] Stage 4 — Sessions Form Polish (course display, creation feedback, bulk enrollment)
-- [ ] Stage 5 — Blueprint Creation Polish (modal theming, breakdown layout, label cleanup)
-- [ ] Stage 6 — Grading & Publishing Flow Fix
-- [ ] Stage 7 — Analytics Fixes (theme buttons, column audit, tag contrast)
-- [ ] Stage 8 — Question Library Filters + Authoring Partial Points
-- [ ] Stage 9 — Theme & Button Audit (Practice, Enrollments, student grade view)
-- [ ] Stage 10 — Verification
+- [x] Stage 1 — Navigation Architecture & State Persistence
+- [x] Stage 2 — Sessions Page Overhaul (3 sections, timers, cancel confirmation)
+- [x] Stage 3 — TimePicker Redesign (fix scroll bug, desktop-friendly)
+- [x] Stage 4 — Sessions Form Polish (course display, creation feedback, bulk enrollment)
+- [x] Stage 5 — Blueprint Creation Polish (modal theming, breakdown layout, label cleanup)
+- [x] Stage 6 — Grading & Publishing Flow Fix
+- [x] Stage 7 — Analytics Fixes (theme buttons, column audit, tag contrast)
+- [x] Stage 8 — Question Library Filters + Authoring Partial Points
+- [x] Stage 9 — Theme & Button Audit (Practice, Enrollments, student grade view)
+- [x] Stage 10 — Verification (tsc ✅, next build ✅)
 - [x] Issue #30 — Sign out bug (hotfixed, not a full stage)
 
 ---

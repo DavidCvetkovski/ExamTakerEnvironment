@@ -8,19 +8,16 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import StudentExamCard from '@/components/student/StudentExamCard';
 import { useExamStore } from '@/stores/useExamStore';
 import { useStudentSessionsStore } from '@/stores/useStudentSessionsStore';
-import { useResultsStore } from '@/stores/useResultsStore';
-import { Badge, Card, EmptyState, PageHeader, SectionHeader } from '@/components/ui';
+import { EmptyState, PageHeader, SectionHeader } from '@/components/ui';
 
 export default function MyExamsPage() {
     const router = useRouter();
     const { sessions, isLoading, error, fetchSessions } = useStudentSessionsStore();
     const joinScheduledSession = useExamStore((state) => state.joinScheduledSession);
-    const { myResults, myResultsLoading, fetchMyResults } = useResultsStore();
 
     useEffect(() => {
         fetchSessions();
-        fetchMyResults();
-    }, [fetchSessions, fetchMyResults]);
+    }, [fetchSessions]);
 
     const currentSessions = sessions.filter((s) => s.can_join);
     const upcomingSessions = sessions.filter((s) => !s.can_join);
@@ -92,51 +89,14 @@ export default function MyExamsPage() {
                         </div>
                     </section>
 
-                    {(myResults.length > 0 || myResultsLoading) && (
-                        <section className="space-y-4">
-                            <SectionHeader eyebrow="Results" title="My grades" />
-                            {myResultsLoading ? (
-                                <div className="text-meta text-shell-muted-dim">Loading results…</div>
-                            ) : (
-                                <div className="grid gap-4 lg:grid-cols-2">
-                                    {myResults.map((result) => (
-                                        <Link key={result.session_id} href={`/my-results/${result.session_id}`} className="block">
-                                            <Card variant="surface" padding="md" interactive>
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div className="min-w-0">
-                                                        <p className="font-semibold text-foreground text-h3">
-                                                            {result.test_title ?? 'Exam result'}
-                                                        </p>
-                                                        {result.submitted_at && (
-                                                            <p className="text-meta text-shell-muted-dim mt-0.5">
-                                                                Submitted {new Date(result.submitted_at).toLocaleDateString()}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-right shrink-0">
-                                                        <p className="text-h1 text-foreground tabular-nums">
-                                                            {result.percentage.toFixed(1)}%
-                                                        </p>
-                                                        <p className="text-meta text-shell-muted-dim tabular-nums">
-                                                            {result.total_points} / {result.max_points} pts
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                {result.letter_grade && (
-                                                    <div className="mt-3 flex items-center gap-2">
-                                                        <Badge tone={result.passed ? 'success' : 'danger'} size="sm">
-                                                            {result.letter_grade}
-                                                        </Badge>
-                                                        <span className="text-meta font-medium text-brand">View details →</span>
-                                                    </div>
-                                                )}
-                                            </Card>
-                                        </Link>
-                                    ))}
-                                </div>
-                            )}
-                        </section>
-                    )}
+                    <div className="mt-4">
+                        <Link
+                            href="/my-grades"
+                            className="inline-flex items-center gap-1.5 text-meta font-medium text-brand hover:underline"
+                        >
+                            Looking for past results? See My Grades →
+                        </Link>
+                    </div>
                 </div>
             </div>
         </ProtectedRoute>

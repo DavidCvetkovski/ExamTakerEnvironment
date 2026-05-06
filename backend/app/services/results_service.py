@@ -282,23 +282,40 @@ async def export_results_csv(test_definition_id: str) -> str:
 # Student-facing result views
 # ─────────────────────────────────────────────
 
-async def get_student_published_results(student_id: str) -> List[Dict[str, Any]]:
-    """Return all published results for a specific student."""
+async def get_student_published_results(
+    student_id: str,
+    include_unpublished: bool = False,
+) -> List[Dict[str, Any]]:
+    """
+    Return results for a specific student.
+
+    By default returns only published results. When ``include_unpublished`` is true,
+    submitted-but-unpublished session results are also included so the student-facing
+    "My Grades" tab can surface a pending-grading section.
+    """
+    where: Dict[str, Any] = {"student_id": student_id}
+    if not include_unpublished:
+        where["is_published"] = True
+
     results = await prisma.session_results.find_many(
-        where={"student_id": student_id, "is_published": True},
-        include={"test_definitions": True},
+        where=where,
+        include={"test_definitions": True, "exam_sessions": True},
         order={"created_at": "desc"},
     )
     return [
         {
             "session_id": r.session_id,
+            "test_definition_id": r.test_definition_id,
             "test_title": r.test_definitions.title if r.test_definitions else None,
             "total_points": r.total_points,
             "max_points": r.max_points,
             "percentage": r.percentage,
             "letter_grade": r.letter_grade,
             "passed": r.passed,
+            "grading_status": r.grading_status,
+            "is_published": r.is_published,
             "published_at": r.published_at,
+            "submitted_at": getattr(r.exam_sessions, "submitted_at", None) if getattr(r, "exam_sessions", None) else None,
         }
         for r in results
     ]

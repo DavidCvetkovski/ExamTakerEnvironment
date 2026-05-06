@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import type { TestDefinition } from '@/stores/useBlueprintStore';
 import type { Course } from '@/stores/useCourseStore';
-import { Button, DatePicker, Field, TimePicker } from '@/components/ui';
+import { Button, DatePicker, Field, TimePicker, useToast } from '@/components/ui';
 
 interface SessionCreateFormProps {
     courses: Course[];
@@ -38,6 +38,7 @@ export default function SessionCreateForm({
     const [courseCode, setCourseCode] = useState('');
     const [courseTitle, setCourseTitle] = useState('');
     const [courseBusy, setCourseBusy] = useState(false);
+    const { toast } = useToast();
 
     useEffect(() => {
         setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
@@ -47,10 +48,15 @@ export default function SessionCreateForm({
         event.preventDefault();
         if (!courseCode.trim() || !courseTitle.trim()) return;
         setCourseBusy(true);
+        const title = courseTitle.trim();
         try {
-            await onCreateCourse({ code: courseCode.trim(), title: courseTitle.trim() });
+            await onCreateCourse({ code: courseCode.trim(), title });
             setCourseCode('');
             setCourseTitle('');
+            toast({ tone: 'success', title: 'Course created', description: title });
+        } catch (err) {
+            toast({ tone: 'danger', title: 'Failed to create course',
+                    description: err instanceof Error ? err.message : 'Check your connection.' });
         } finally {
             setCourseBusy(false);
         }
@@ -91,7 +97,7 @@ export default function SessionCreateForm({
                             <option value="">Select a course</option>
                             {courses.map((course) => (
                                 <option key={course.id} value={course.id}>
-                                    {course.code} - {course.title}
+                                    {course.title}
                                 </option>
                             ))}
                         </select>

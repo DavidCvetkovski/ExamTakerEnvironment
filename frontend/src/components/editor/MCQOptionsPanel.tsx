@@ -11,7 +11,7 @@ interface MCQOption {
 }
 
 export default function MCQOptionsPanel() {
-    const { questionType, options, updateOptions } = useAuthoringStore();
+    const { questionType, options, updateOptions, partialPoints, setPartialPoints } = useAuthoringStore();
 
     if (questionType !== 'MULTIPLE_CHOICE' && questionType !== 'MULTIPLE_RESPONSE') return null;
 
@@ -72,6 +72,20 @@ export default function MCQOptionsPanel() {
             <button className="add-option-btn" onClick={addOption}>
                 + Add Option
             </button>
+            {questionType === 'MULTIPLE_RESPONSE' && (
+                <label className="flex items-center gap-3 cursor-pointer mt-3 px-1">
+                    <input
+                        type="checkbox"
+                        checked={partialPoints}
+                        onChange={(e) => setPartialPoints(e.target.checked)}
+                        className="w-4 h-4 accent-brand"
+                    />
+                    <span className="text-meta text-foreground">Partial credit</span>
+                    <span className="text-meta text-shell-muted-dim">
+                        (award proportional marks per correct option selected)
+                    </span>
+                </label>
+            )}
         </div>
     );
 }

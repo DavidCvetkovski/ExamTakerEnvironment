@@ -48,6 +48,7 @@ interface AuthoringState {
     metadataTags: Record<string, unknown>;
     serverSnapshot: DraftSnapshot | null;
     isDirty: boolean;
+    partialPoints: boolean;
 
     setLearningObjectId: (id: string) => void;
     setQuestionType: (type: 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY') => void;
@@ -58,6 +59,7 @@ interface AuthoringState {
     saveDraft: () => Promise<void>;
     revertChanges: () => void;
     fetchLatestVersion: (loId: string) => Promise<void>;
+    setPartialPoints: (on: boolean) => void;
 }
 
 function computeIsDirty(state: AuthoringState): boolean {
@@ -82,6 +84,7 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
     metadataTags: {},
     serverSnapshot: null,
     isDirty: false,
+    partialPoints: true,
 
     setLearningObjectId: (id) => set({ learningObjectId: id }),
 
@@ -152,7 +155,8 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
             if (state.questionType === 'MULTIPLE_CHOICE' || state.questionType === 'MULTIPLE_RESPONSE') {
                 optionsPayload = {
                     question_type: state.questionType,
-                    choices: Array.isArray(state.options) ? state.options : []
+                    choices: Array.isArray(state.options) ? state.options : [],
+                    ...(state.questionType === 'MULTIPLE_RESPONSE' ? { partial_credit: state.partialPoints } : {}),
                 };
             } else {
                 const essayOpts = Array.isArray(state.options)
@@ -268,4 +272,6 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
             set({ saveStatus: 'ERROR' });
         }
     },
+
+    setPartialPoints: (on) => set({ partialPoints: on }),
 }));

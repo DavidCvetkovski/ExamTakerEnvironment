@@ -27,7 +27,6 @@ export default function GlobalHeader() {
                   { name: 'Sessions', href: '/sessions' },
                   { name: 'Blueprints', href: '/blueprint' },
                   { name: 'Library', href: '/items' },
-                  { name: 'Authoring', href: '/author' },
                   { name: 'Grading', href: '/grading' },
                   { name: 'Analytics', href: '/analytics' },
               ];

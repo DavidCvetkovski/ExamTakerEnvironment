@@ -110,7 +110,6 @@ export default function AllItemsTable({
                         <tr>
                             <th className="px-4 py-3 text-left">Item</th>
                             <th className="px-4 py-3 text-left">Type</th>
-                            <th className="px-4 py-3 text-left">Version</th>
                             <th className="px-4 py-3 text-left">P</th>
                             <th className="px-4 py-3 text-left">D</th>
                             <th className="px-4 py-3 text-left">Responses</th>
@@ -128,7 +127,6 @@ export default function AllItemsTable({
                                 <td className="px-4 py-4 text-shell-muted">
                                     {item.question_type?.replaceAll('_', ' ') ?? '—'}
                                 </td>
-                                <td className="px-4 py-4 text-shell-muted">v{item.version_number ?? '—'}</td>
                                 <td className="px-4 py-4 text-shell-muted tabular-nums">{formatMetric(item.p_value)}</td>
                                 <td className="px-4 py-4 text-shell-muted tabular-nums">{formatMetric(item.d_value)}</td>
                                 <td className="px-4 py-4 text-shell-muted tabular-nums">{item.n_responses}</td>

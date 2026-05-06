@@ -163,7 +163,7 @@ export default function SessionCreateForm({
 
             {isAdmin && (
                 <form onSubmit={handleCreateCourse} className="rounded-card-md border border-shell-border-deep bg-shell-panel-c p-6 shadow-xl shadow-black/20">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">Course Setup</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-foreground">Course Setup</p>
                     <h3 className="mt-2 text-2xl font-black text-foreground">Create a New Course</h3>
                     <p className="mt-2 text-sm text-shell-muted-dim">
                         Courses gate exam visibility. Enrollments are managed separately once the course exists.

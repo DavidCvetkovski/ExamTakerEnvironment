@@ -36,7 +36,7 @@ export default function CourseEnrollmentDrawer({
             <div className="h-full w-full max-w-xl overflow-y-auto border-l border-white/10 bg-shell-panel-b p-6 shadow-2xl shadow-black/40">
                 <div className="flex items-start justify-between gap-4">
                     <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-amber-300">Course Enrollments</p>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-foreground">Course Enrollments</p>
                         <h3 className="mt-2 text-3xl font-black text-foreground">{course.code}</h3>
                         <p className="mt-1 text-sm text-shell-muted-dim">{course.title}</p>
                     </div>

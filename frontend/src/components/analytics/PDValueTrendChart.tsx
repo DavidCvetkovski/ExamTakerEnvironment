@@ -16,7 +16,7 @@ export default function PDValueTrendChart({ entries }: { entries: ItemHistoryEnt
 
     if (entries.length === 0 || validValues.length === 0) {
         return (
-            <div className="rounded-xl border border-dashed border-gray-800 bg-gray-900/50 px-4 py-10 text-center text-sm text-gray-500">
+            <div className="rounded-xl border border-dashed border-shell-border bg-shell-surface/50 px-4 py-10 text-center text-sm text-shell-muted-dim">
                 No objective-item history is available yet.
             </div>
         );
@@ -36,8 +36,8 @@ export default function PDValueTrendChart({ entries }: { entries: ItemHistoryEnt
         .filter((point): point is { x: number; y: number } => point !== null);
 
     return (
-        <div className="rounded-xl border border-gray-800 bg-gray-900 px-5 py-5">
-            <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-gray-400">
+        <div className="rounded-xl border border-shell-border bg-shell-surface px-5 py-5">
+            <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-shell-muted">
                 <span className="inline-flex items-center gap-2">
                     <span className="h-2.5 w-2.5 rounded-full bg-cyan-400" />
                     P-value

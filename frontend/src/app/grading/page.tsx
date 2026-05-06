@@ -5,44 +5,51 @@ import { useRouter } from 'next/navigation';
 import { useGradingStore, GradingStatus } from '@/stores/useGradingStore';
 import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import { useAuthStore } from '@/stores/useAuthStore';
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+import {
+    Badge,
+    Button,
+    EmptyState,
+    PageHeader,
+    Select,
+    StatCard,
+    Table,
+    TableContainer,
+    TBody,
+    TD,
+    TH,
+    THead,
+    TR,
+    cn,
+} from '@/components/ui';
 
 function statusBadge(status: GradingStatus) {
-    const map: Record<GradingStatus, { label: string; cls: string }> = {
-        UNGRADED:         { label: 'Ungraded',         cls: 'bg-gray-700 text-gray-300' },
-        AUTO_GRADED:      { label: 'Auto-graded',      cls: 'bg-blue-900/60 text-blue-300' },
-        PARTIALLY_GRADED: { label: 'Partial',          cls: 'bg-amber-900/60 text-amber-300' },
-        FULLY_GRADED:     { label: 'Fully graded',     cls: 'bg-emerald-900/60 text-emerald-300' },
+    const map: Record<GradingStatus, { label: string; tone: 'neutral' | 'info' | 'warning' | 'success' }> = {
+        UNGRADED: { label: 'Ungraded', tone: 'neutral' },
+        AUTO_GRADED: { label: 'Auto-graded', tone: 'info' },
+        PARTIALLY_GRADED: { label: 'Partial', tone: 'warning' },
+        FULLY_GRADED: { label: 'Fully graded', tone: 'success' },
     };
-    const { label, cls } = map[status] ?? { label: status, cls: 'bg-gray-700 text-gray-300' };
-    return (
-        <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${cls}`}>
-            {label}
-        </span>
-    );
+    const cfg = map[status] ?? { label: status, tone: 'neutral' as const };
+    return <Badge tone={cfg.tone} size="sm">{cfg.label}</Badge>;
 }
 
 function ProgressBar({ done, total }: { done: number; total: number }) {
     const pct = total > 0 ? Math.round((done / total) * 100) : 0;
     return (
-        <div className="flex items-center gap-2">
-            <div className="flex-1 bg-gray-700 rounded-full h-1.5">
+        <div className="flex items-center gap-2.5">
+            <div className="flex-1 h-1 bg-shell-input-alt rounded-full overflow-hidden">
                 <div
-                    className="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
+                    className="h-full bg-brand rounded-full transition-all duration-[var(--duration-slow)]"
                     style={{ width: `${pct}%` }}
                 />
             </div>
-            <span className="text-xs text-gray-400 w-14 text-right">{done}/{total}</span>
+            <span className="text-meta text-shell-muted-dim tabular-nums w-14 text-right">{done}/{total}</span>
         </div>
     );
 }
 
 function formatStudentLabel(email: string | null): string {
-    if (!email) {
-        return 'Student Submission';
-    }
-
+    if (!email) return 'Student Submission';
     const localPart = email.split('@')[0] ?? email;
     return localPart
         .split(/[._-]+/)
@@ -50,8 +57,6 @@ function formatStudentLabel(email: string | null): string {
         .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
         .join(' ');
 }
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function GradingDashboard() {
     const router = useRouter();
@@ -68,27 +73,18 @@ export default function GradingDashboard() {
     const [filterStatus, setFilterStatus] = useState<GradingStatus | 'ALL'>('ALL');
     const [sortKey, setSortKey] = useState<'student' | 'status' | 'percentage'>('student');
 
-    useEffect(() => {
-        fetchBlueprints();
-    }, [fetchBlueprints]);
-
+    useEffect(() => { fetchBlueprints(); }, [fetchBlueprints]);
     useEffect(() => {
         if (selectedTestId) fetchGradingOverview(selectedTestId);
     }, [selectedTestId, fetchGradingOverview]);
-
     useEffect(() => {
-        if (selectedTestId || blueprints.length === 0) {
-            return;
-        }
-
+        if (selectedTestId || blueprints.length === 0) return;
         const defaultBlueprint = blueprints.find(
-            (blueprint) => blueprint.title === 'Shuffle Lab: Numbers in Motion'
+            (b) => b.title === 'Shuffle Lab: Numbers in Motion'
         ) ?? blueprints[0];
-
         setSelectedTestId(defaultBlueprint.id);
     }, [blueprints, selectedTestId, setSelectedTestId]);
 
-    // Redirect if not instructor
     if (user?.role === 'STUDENT') {
         router.replace('/my-exams');
         return null;
@@ -105,9 +101,7 @@ export default function GradingDashboard() {
         .sort((a, b) => {
             if (sortKey === 'status') return a.grading_status.localeCompare(b.grading_status);
             if (sortKey === 'percentage') return b.percentage - a.percentage;
-            const ae = formatStudentLabel(a.student_email);
-            const be = formatStudentLabel(b.student_email);
-            return ae.localeCompare(be);
+            return formatStudentLabel(a.student_email).localeCompare(formatStudentLabel(b.student_email));
         });
 
     const stats = {
@@ -119,227 +113,212 @@ export default function GradingDashboard() {
             : 0,
     };
 
+    const filters: { key: GradingStatus | 'ALL'; label: string }[] = [
+        { key: 'ALL', label: 'All' },
+        { key: 'UNGRADED', label: 'Ungraded' },
+        { key: 'PARTIALLY_GRADED', label: 'Partial' },
+        { key: 'FULLY_GRADED', label: 'Fully graded' },
+    ];
+
     return (
-        <div className="min-h-screen bg-gray-950 text-gray-100">
-            {/* ── Header bar ── */}
-            <div className="bg-gray-900 border-b border-gray-800 px-6 py-4">
-                <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center gap-4">
-                    <div className="flex-1">
-                        <h1 className="text-xl font-bold text-white">Grading Dashboard</h1>
-                        <p className="text-sm text-gray-400 mt-0.5">Review exam submissions and manage result publication</p>
-                    </div>
+        <div className="min-h-screen bg-shell-bg text-foreground">
+            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <PageHeader
+                    eyebrow="Educator workspace"
+                    title="Grading Dashboard"
+                    subtitle="Review exam submissions, finalise marks, and publish results."
+                    actions={
+                        <Select
+                            value={selectedTestId ?? ''}
+                            onChange={(e) => setSelectedTestId(e.target.value)}
+                            inputSize="md"
+                            className="min-w-[280px]"
+                        >
+                            <option value="">— Select a test —</option>
+                            {blueprints.map((b) => (
+                                <option key={b.id} value={b.id}>{b.title}</option>
+                            ))}
+                        </Select>
+                    }
+                />
 
-                    {/* Test selector */}
-                    <select
-                        id="test-selector"
-                        value={selectedTestId ?? ''}
-                        onChange={e => {
-                            setSelectedTestId(e.target.value);
-                        }}
-                        className="min-w-input bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
-                    >
-                        <option value="">— Select a test —</option>
-                        {blueprints.map(b => (
-                            <option key={b.id} value={b.id}>{b.title}</option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-
-            <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
-                {/* Error banner */}
                 {error && (
-                    <div className="bg-red-900/30 border border-red-700 text-red-300 rounded-lg px-4 py-3 flex justify-between items-start text-sm">
+                    <div className="mb-6 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] px-4 py-3 flex justify-between items-start text-meta">
                         <span>{error}</span>
-                        <button onClick={clearError} className="ml-4 text-red-400 hover:text-red-200">✕</button>
+                        <button onClick={clearError} className="ml-4 opacity-70 hover:opacity-100">✕</button>
                     </div>
                 )}
 
                 {!selectedTestId ? (
-                    <div className="flex flex-col items-center justify-center py-24 text-gray-500">
-                        <div className="text-5xl mb-4">📋</div>
-                        <p className="text-lg font-medium">Loading grading queue…</p>
-                    </div>
+                    <EmptyState
+                        title="No test selected"
+                        description="Choose a test blueprint from the dropdown above to load its grading queue."
+                    />
                 ) : (
-                    <>
-                        {/* ── Stats bar ── */}
+                    <div className="space-y-6">
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                            {[
-                                { label: 'Total Submissions', value: stats.total, color: 'text-white' },
-                                { label: 'Fully Graded', value: `${stats.fullyGraded} / ${stats.total}`, color: 'text-emerald-400' },
-                                { label: 'Published', value: stats.published, color: 'text-blue-400' },
-                                { label: 'Average Score', value: `${stats.avgPct}%`, color: 'text-amber-400' },
-                            ].map(({ label, value, color }) => (
-                                <div key={label} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-                                    <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
-                                    <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
-                                </div>
-                            ))}
+                            <StatCard label="Total submissions" value={stats.total} />
+                            <StatCard
+                                label="Fully graded"
+                                value={`${stats.fullyGraded} / ${stats.total}`}
+                                tone="success"
+                            />
+                            <StatCard label="Published" value={stats.published} tone="info" />
+                            <StatCard
+                                label="Average score"
+                                value={`${stats.avgPct}%`}
+                                tone="warning"
+                            />
                         </div>
 
-                        {/* ── Action bar ── */}
-                        <div className="flex flex-wrap items-center gap-3">
-                            {/* Filter */}
-                            <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-lg p-1">
-                                {(['ALL', 'UNGRADED', 'PARTIALLY_GRADED', 'FULLY_GRADED'] as const).map(s => (
+                        <div className="flex flex-wrap items-center gap-2">
+                            <div className="inline-flex items-center gap-0.5 bg-shell-surface border border-shell-border rounded-md p-0.5">
+                                {filters.map((f) => (
                                     <button
-                                        key={s}
-                                        onClick={() => setFilterStatus(s)}
-                                        className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                                            filterStatus === s
-                                                ? 'bg-blue-600 text-white'
-                                                : 'text-gray-400 hover:text-white'
-                                        }`}
+                                        key={f.key}
+                                        onClick={() => setFilterStatus(f.key)}
+                                        className={cn(
+                                            'px-3 py-1 rounded text-meta font-medium transition-colors',
+                                            filterStatus === f.key
+                                                ? 'bg-brand text-white'
+                                                : 'text-shell-muted hover:text-foreground'
+                                        )}
                                     >
-                                        {s === 'ALL' ? 'All' : s.replace('_', ' ')}
+                                        {f.label}
                                     </button>
                                 ))}
                             </div>
 
-                            {/* Sort */}
-                            <select
+                            <Select
                                 value={sortKey}
-                                onChange={e => setSortKey(e.target.value as typeof sortKey)}
-                                className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-xs text-gray-300 focus:outline-none focus:border-blue-500"
+                                onChange={(e) => setSortKey(e.target.value as typeof sortKey)}
+                                inputSize="sm"
+                                className="w-auto min-w-[140px]"
                             >
                                 <option value="student">Sort: Student</option>
                                 <option value="status">Sort: Status</option>
                                 <option value="percentage">Sort: Score</option>
-                            </select>
+                            </Select>
 
                             <div className="flex-1" />
 
-                            {/* Blind mode toggle */}
-                            <button
+                            <Button
+                                variant={blindMode ? 'primary' : 'secondary'}
+                                size="sm"
                                 onClick={toggleBlindMode}
-                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
-                                    blindMode
-                                        ? 'bg-purple-900/40 border-purple-700 text-purple-300'
-                                        : 'bg-gray-900 border-gray-700 text-gray-400 hover:text-white'
-                                }`}
                             >
-                                🕶 {blindMode ? 'Blind ON' : 'Blind Mode'}
-                            </button>
+                                {blindMode ? 'Blind ON' : 'Blind mode'}
+                            </Button>
 
-                            {/* CSV export (admin only) */}
                             {isAdmin && (
-                                <button
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
                                     onClick={() => selectedTestId && exportCsv(selectedTestId)}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium bg-gray-900 border border-gray-700 text-gray-300 hover:text-white hover:border-gray-600 transition-colors"
                                 >
-                                    ↓ Export CSV
-                                </button>
+                                    Export CSV
+                                </Button>
                             )}
 
-                            {/* Publish / unpublish (admin only) */}
-                            {isAdmin && (
-                                allPublished ? (
-                                    <button
-                                        onClick={() => selectedTestId && unpublishResults(selectedTestId)}
-                                        disabled={publishStatus === 'publishing'}
-                                        className="px-4 py-2 rounded-lg text-xs font-semibold bg-amber-700 hover:bg-amber-600 text-white disabled:opacity-50 transition-colors"
-                                    >
-                                        {publishStatus === 'publishing' ? 'Working…' : 'Unpublish Results'}
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={() => selectedTestId && publishResults(selectedTestId)}
-                                        disabled={!allFullyGraded || publishStatus === 'publishing'}
-                                        title={!allFullyGraded ? 'All sessions must be fully graded before publishing' : ''}
-                                        className="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-700 hover:bg-emerald-600 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                        {publishStatus === 'publishing' ? 'Publishing…' : 'Publish Results'}
-                                    </button>
-                                )
-                            )}
+                            {isAdmin && (allPublished ? (
+                                <Button
+                                    variant="warning"
+                                    size="sm"
+                                    onClick={() => selectedTestId && unpublishResults(selectedTestId)}
+                                    loading={publishStatus === 'publishing'}
+                                >
+                                    Unpublish results
+                                </Button>
+                            ) : (
+                                <Button
+                                    variant="success"
+                                    size="sm"
+                                    onClick={() => selectedTestId && publishResults(selectedTestId)}
+                                    loading={publishStatus === 'publishing'}
+                                    disabled={!allFullyGraded}
+                                    title={!allFullyGraded ? 'All sessions must be fully graded before publishing' : ''}
+                                >
+                                    Publish results
+                                </Button>
+                            ))}
                         </div>
 
-                        {/* ── Overview table ── */}
                         {overviewLoading ? (
-                            <div className="flex items-center justify-center py-16 text-gray-500">
-                                <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-3" />
+                            <div className="flex items-center justify-center py-16 text-shell-muted-dim text-meta">
+                                <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin mr-3" />
                                 Loading sessions…
                             </div>
                         ) : filtered.length === 0 ? (
-                            <div className="text-center py-16 text-gray-500">
-                                No sessions match the current filter.
-                            </div>
+                            <EmptyState title="No matches" description="No sessions match the current filter." variant="compact" />
                         ) : (
-                            <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-                                <table className="min-w-full text-sm">
-                                    <thead className="bg-gray-800/60 text-gray-400 text-xs uppercase tracking-wide">
-                                        <tr>
-                                            <th className="px-5 py-3 text-left">Student</th>
-                                            <th className="px-5 py-3 text-left">Status</th>
-                                            <th className="px-5 py-3 text-left">Progress</th>
-                                            <th className="px-5 py-3 text-right">Score</th>
-                                            <th className="px-5 py-3 text-center">Published</th>
-                                            <th className="px-5 py-3 text-right">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-800">
+                            <TableContainer>
+                                <Table>
+                                    <THead>
+                                        <TR>
+                                            <TH>Student</TH>
+                                            <TH>Status</TH>
+                                            <TH>Progress</TH>
+                                            <TH align="right">Score</TH>
+                                            <TH align="center">Published</TH>
+                                            <TH align="right">Action</TH>
+                                        </TR>
+                                    </THead>
+                                    <TBody>
                                         {filtered.map((session, index) => (
-                                            <tr
-                                                key={session.session_id}
-                                                className="hover:bg-gray-800/40 transition-colors"
-                                            >
-                                                <td className="px-5 py-4">
+                                            <TR key={session.session_id}>
+                                                <TD>
                                                     {blindMode ? (
-                                                        <span className="text-purple-400 text-xs font-semibold uppercase tracking-eyebrow">
+                                                        <span className="text-brand text-eyebrow font-semibold uppercase tracking-eyebrow">
                                                             Submission {String(index + 1).padStart(2, '0')}
                                                         </span>
                                                     ) : (
                                                         <div>
-                                                            <p className="text-white font-medium text-sm">
+                                                            <div className="text-foreground font-medium">
                                                                 {formatStudentLabel(session.student_email)}
-                                                            </p>
+                                                            </div>
                                                             {session.submitted_at && (
-                                                                <p className="text-gray-500 text-xs">
-                                                                    Submitted {new Date(session.submitted_at).toLocaleString()}
-                                                                </p>
+                                                                <div className="text-shell-muted-dim text-meta mt-0.5">
+                                                                    {new Date(session.submitted_at).toLocaleString()}
+                                                                </div>
                                                             )}
                                                         </div>
                                                     )}
-                                                </td>
-                                                <td className="px-5 py-4">
-                                                    {statusBadge(session.grading_status)}
-                                                </td>
-                                                <td className="min-w-table-cell px-5 py-4">
-                                                    <ProgressBar
-                                                        done={session.questions_graded}
-                                                        total={session.questions_total}
-                                                    />
-                                                </td>
-                                                <td className="px-5 py-4 text-right">
-                                                    <div className="text-white font-semibold">
+                                                </TD>
+                                                <TD>{statusBadge(session.grading_status)}</TD>
+                                                <TD className="min-w-table-cell">
+                                                    <ProgressBar done={session.questions_graded} total={session.questions_total} />
+                                                </TD>
+                                                <TD align="right" numeric>
+                                                    <div className="text-foreground font-semibold">
                                                         {session.percentage.toFixed(1)}%
                                                     </div>
-                                                    <div className="text-gray-500 text-xs">
+                                                    <div className="text-shell-muted-dim text-meta">
                                                         {session.total_points} / {session.max_points} pts
                                                     </div>
-                                                </td>
-                                                <td className="px-5 py-4 text-center">
+                                                </TD>
+                                                <TD align="center">
                                                     {session.is_published ? (
-                                                        <span className="text-emerald-400 text-lg">✓</span>
+                                                        <span className="text-[var(--color-success-fg)]">●</span>
                                                     ) : (
-                                                        <span className="text-gray-600">–</span>
+                                                        <span className="text-shell-muted-dim">—</span>
                                                     )}
-                                                </td>
-                                                <td className="px-5 py-4 text-right">
-                                                    <button
+                                                </TD>
+                                                <TD align="right">
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="sm"
                                                         onClick={() => router.push(`/grading/${session.session_id}`)}
-                                                        className="px-3 py-1.5 bg-blue-700 hover:bg-blue-600 text-white text-xs font-medium rounded-lg transition-colors"
                                                     >
                                                         Grade →
-                                                    </button>
-                                                </td>
-                                            </tr>
+                                                    </Button>
+                                                </TD>
+                                            </TR>
                                         ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                    </TBody>
+                                </Table>
+                            </TableContainer>
                         )}
-                    </>
+                    </div>
                 )}
             </div>
         </div>

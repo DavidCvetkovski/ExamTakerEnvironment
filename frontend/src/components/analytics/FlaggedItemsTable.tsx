@@ -40,16 +40,16 @@ export default function FlaggedItemsTable({
 
     if (items.length === 0) {
         return (
-            <div className="rounded-xl border border-dashed border-gray-800 bg-gray-900/50 px-4 py-10 text-center text-sm text-gray-500">
+            <div className="rounded-xl border border-dashed border-shell-border bg-shell-surface/50 px-4 py-10 text-center text-sm text-shell-muted-dim">
                 No flagged items on the latest analytics snapshot.
             </div>
         );
     }
 
     return (
-        <div className="rounded-xl border border-gray-800 bg-gray-900 overflow-hidden">
-            <div className="flex flex-wrap items-center gap-2 border-b border-gray-800 px-4 py-3">
-                <p className="text-sm font-semibold text-white">Flagged Items</p>
+        <div className="rounded-xl border border-shell-border bg-shell-surface overflow-hidden">
+            <div className="flex flex-wrap items-center gap-2 border-b border-shell-border px-4 py-3">
+                <p className="text-sm font-semibold text-foreground">Flagged Items</p>
                 <div className="flex-1" />
                 {[
                     { key: 'd', label: 'Sort D' },
@@ -63,7 +63,7 @@ export default function FlaggedItemsTable({
                         className={`rounded-full px-3 py-1 text-xs font-medium ${
                             sortKey === option.key
                                 ? 'bg-blue-600 text-white'
-                                : 'bg-gray-800 text-gray-400 hover:text-white'
+                                : 'bg-shell-input text-shell-muted hover:text-foreground'
                         }`}
                     >
                         {option.label}
@@ -73,7 +73,7 @@ export default function FlaggedItemsTable({
 
             <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
-                    <thead className="bg-gray-950/70 text-eyebrow uppercase tracking-eyebrow text-gray-500">
+                    <thead className="bg-shell-bg/70 text-eyebrow uppercase tracking-eyebrow text-shell-muted-dim">
                         <tr>
                             <th className="px-4 py-3 text-left">Item</th>
                             <th className="px-4 py-3 text-left">Version</th>
@@ -85,14 +85,14 @@ export default function FlaggedItemsTable({
                     </thead>
                     <tbody className="divide-y divide-gray-800">
                         {sortedItems.map((item) => (
-                            <tr key={item.item_version_id} className="hover:bg-gray-800/40">
+                            <tr key={item.item_version_id} className="hover:bg-shell-input/40">
                                 <td className="px-4 py-4">
-                                    <div className="font-medium text-white">{getItemLabel(item.learning_object_id)}</div>
-                                    <div className="mt-1 text-xs text-gray-500">{item.learning_object_id.slice(0, 8)}</div>
+                                    <div className="font-medium text-foreground">{getItemLabel(item.learning_object_id)}</div>
+                                    <div className="mt-1 text-xs text-shell-muted-dim">{item.learning_object_id.slice(0, 8)}</div>
                                 </td>
-                                <td className="px-4 py-4 text-gray-300">v{item.version_number ?? '—'}</td>
-                                <td className="px-4 py-4 text-gray-300">{formatMetric(item.p_value)}</td>
-                                <td className="px-4 py-4 text-gray-300">{formatMetric(item.d_value)}</td>
+                                <td className="px-4 py-4 text-shell-muted">v{item.version_number ?? '—'}</td>
+                                <td className="px-4 py-4 text-shell-muted">{formatMetric(item.p_value)}</td>
+                                <td className="px-4 py-4 text-shell-muted">{formatMetric(item.d_value)}</td>
                                 <td className="px-4 py-4">
                                     <div className="flex flex-wrap gap-2">
                                         {item.flags.map((flag) => (

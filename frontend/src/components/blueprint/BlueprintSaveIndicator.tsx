@@ -20,7 +20,7 @@ export default function BlueprintSaveIndicator() {
 
     if (saveStatus === 'idle') {
         return (
-            <div className="text-xs font-semibold uppercase tracking-medium text-slate-500" aria-live="polite">
+            <div className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim" aria-live="polite">
                 Ready
             </div>
         );
@@ -47,8 +47,8 @@ export default function BlueprintSaveIndicator() {
     }
 
     return (
-        <div className="flex items-center gap-3 text-rose-300 motion-safe:animate-[ov-shake_0.35s_ease-in-out]" aria-live="polite">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-rose-500/20">
+        <div className="flex items-center gap-3 text-danger motion-safe:animate-[ov-shake_0.35s_ease-in-out]" aria-live="polite">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-danger-bg)]">
                 <span className="text-sm font-bold">!</span>
             </span>
             <span className="text-xs font-semibold uppercase tracking-medium">

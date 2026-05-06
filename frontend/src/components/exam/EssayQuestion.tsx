@@ -70,11 +70,11 @@ export default function EssayQuestion({ item }: EssayQuestionProps) {
             <textarea
                 value={localText}
                 onChange={handleChange}
-                className="min-h-essay w-full resize-y rounded-xl border border-gray-700 bg-gray-900 p-4 text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="min-h-essay w-full resize-y rounded-xl border border-shell-border-deep bg-shell-surface p-4 text-foreground placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-brand"
                 placeholder="Type your response here..."
                 rows={8}
             />
-            <div className="flex justify-between text-sm text-gray-400">
+            <div className="flex justify-between text-sm text-shell-muted">
                 <span>
                     {wordCount} word{wordCount !== 1 ? 's' : ''}
                     {maxWords ? ` / ${maxWords} max` : ''}

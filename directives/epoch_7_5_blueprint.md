@@ -712,6 +712,60 @@ All Prisma schemas (other than the single `theme_preference` field), all pre-exi
 
 ---
 
+### Stage 12 — Named Surface-Color Migration (Addendum)
+
+**Goal:** Migrate surface-purpose named Tailwind utilities (`bg-gray-*`, `bg-white` used as branded surface, `text-gray-*` used as body/muted text, `border-gray-*`, `text-slate-*` in shell branches) to `shell-*` / `student-*` tokens so the user-controlled theme toggle from Stage 9 visibly affects every page — not just the surfaces that previously used arbitrary hex values.
+
+**Rationale:** Stages 1–11 carved out an explicit exemption for "named Tailwind utility colours used for semantic/status states." That exemption was correct in spirit but too broad in execution: a number of files use `bg-gray-900` and `text-gray-400` as the *primary surface and body-text colour* of admin pages (grading, analytics) and the global header — not as semantic status. Because those classes resolve to literal hex values rather than CSS custom properties, toggling theme has no visible effect on those surfaces. This stage closes that gap while preserving the original exemption for true status colours (red errors, green success, blue links, focus rings).
+
+**Files to migrate:**
+
+- `src/components/layout/GlobalHeader.tsx` — admin-shell branch only (`bg-gray-900`, `text-gray-300`, `bg-gray-800`, `border-gray-800`, etc.).
+- `src/app/grading/page.tsx`, `src/app/grading/[sessionId]/page.tsx`
+- `src/app/analytics/page.tsx`, `src/app/analytics/tests/[testId]/page.tsx`, `src/app/analytics/items/[loId]/page.tsx`
+- `src/components/analytics/*.tsx` (all files)
+- `src/app/items/page.tsx`, `src/app/blueprint/page.tsx`, `src/app/author/page.tsx`
+- `src/components/blueprint/BlueprintSaveIndicator.tsx`
+- `src/components/sessions/*.tsx`
+- `src/components/exam/*.tsx` (admin/preview branches; student-facing exam UI already uses student tokens)
+- `src/components/student/StudentExamCard.tsx`
+- `src/components/layout/ThemeToggle.tsx`
+
+**Replacement table (surface usage):**
+
+| Named utility | Token replacement |
+|---|---|
+| `bg-gray-950` | `bg-shell-bg` |
+| `bg-gray-900` | `bg-shell-surface` |
+| `bg-gray-800` | `bg-shell-input` |
+| `bg-gray-700` | `bg-shell-input-alt` |
+| `border-gray-800` | `border-shell-border` |
+| `border-gray-700` | `border-shell-border-deep` |
+| `border-gray-600` | `border-shell-border-deep` |
+| `text-white`, `text-gray-100`, `text-gray-200` | `text-foreground` |
+| `text-gray-300`, `text-gray-400` | `text-shell-muted` |
+| `text-gray-500`, `text-gray-600` | `text-shell-muted-dim` |
+| `hover:bg-gray-800` | `hover:bg-shell-input` |
+| `hover:bg-gray-700` | `hover:bg-shell-input-alt` |
+| `hover:text-white` | `hover:text-foreground` |
+
+Opacity suffixes (`/40`, `/50`, `/60`) are preserved on the new utility (Tailwind v4 supports modifier syntax on token-bound colours).
+
+**Out of scope (preserved as-is, per original exemption):**
+
+- `text-red-*`, `text-green-*`, `text-amber-*`, `text-blue-*` and `bg-*-{50,100,500,600}` for status badges, error states, success indicators, links, focus rings.
+- Status-purpose `bg-gray-700 text-gray-300` on a discrete state badge (e.g. `UNGRADED` chip) — these are status, not surface.
+- Slate utilities inside the *student-shell* JSX branch — those branches are a separate cleanup that belongs to a future polish epoch alongside removing role-based JSX branching entirely. The student tokens are already in use on those branches; the slate-* leaks are minor and don't block the toggle from working.
+
+**Exit criteria:**
+
+- Manual test: with an admin user logged in, clicking the theme toggle visibly switches background, surface, border, and body-text colours on `/grading`, `/grading/[id]`, `/analytics`, `/analytics/tests/[id]`, `/analytics/items/[id]`, and the global header.
+- `grep -rEn "bg-gray-(700|800|900|950)|text-gray-(100|200|300|400|500|600)|border-gray-(600|700|800)" src/` returns zero matches outside documented status-purpose exemptions.
+- `npx tsc --noEmit` passes.
+- `next build` exits 0.
+
+---
+
 ## Test Plan (Acceptance Matrix)
 
 | # | Criterion | Verification method |

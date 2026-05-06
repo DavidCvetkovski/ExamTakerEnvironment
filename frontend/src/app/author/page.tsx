@@ -6,6 +6,7 @@ import TipTapEditor from '@/components/editor/TipTapEditor';
 import MCQOptionsPanel from '@/components/editor/MCQOptionsPanel';
 import EssayOptionsPanel from '@/components/editor/EssayOptionsPanel';
 import { useAuthoringStore } from '@/stores/useAuthoringStore';
+import { useLibraryStore } from '@/stores/useLibraryStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Badge, Button, Card, Field, Input, PageHeader, Select, StatusDot, cn, useToast } from '@/components/ui';
 
@@ -32,12 +33,19 @@ function AuthorPageInner() {
         metadataTags, updateMetadataField, isDirty,
     } = useAuthoringStore();
 
+    const setLastEditingLoId = useLibraryStore((s) => s.setLastEditingLoId);
+
     useEffect(() => {
         if (loIdParam && fetchedRef.current !== loIdParam) {
             fetchedRef.current = loIdParam;
-            fetchLatestVersion(loIdParam);
+            setLastEditingLoId(loIdParam);
+            fetchLatestVersion(loIdParam).catch(() => {
+                // If the LO no longer exists, clear the persisted id and bounce to /items
+                setLastEditingLoId(null);
+                router.replace('/items');
+            });
         }
-    }, [loIdParam, fetchLatestVersion]);
+    }, [loIdParam, fetchLatestVersion, setLastEditingLoId, router]);
 
     // Warn on navigation with unsaved changes
     useEffect(() => {
@@ -71,6 +79,7 @@ function AuthorPageInner() {
                 <div className="max-w-4xl mx-auto px-6 py-10">
                     <button
                         onClick={() => {
+                            setLastEditingLoId(null);
                             if (fromBlueprint && blueprintId) {
                                 router.push(`/blueprint?id=${blueprintId}`);
                             } else {

@@ -48,14 +48,21 @@ function formatRelativeTime(dateStr: string): string {
 
 export default function ItemsLibraryPage() {
     const router = useRouter();
-    const { items, isLoading, error, fetchItems, createItem } = useLibraryStore();
+    const { items, isLoading, error, fetchItems, createItem, lastEditingLoId } = useLibraryStore();
     const [isCreating, setIsCreating] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [subjectFilter, setSubjectFilter] = useState('all');
     const [typeFilter, setTypeFilter] = useState<'all' | 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY'>('all');
     const [pointsFilter, setPointsFilter] = useState<'all' | '1' | '2' | '3+'>('all');
 
-    useEffect(() => { fetchItems(); }, [fetchItems]);
+    useEffect(() => {
+        if (lastEditingLoId) {
+            router.replace(`/author?lo_id=${lastEditingLoId}`);
+            return;
+        }
+        fetchItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // run once on mount
 
     const uniqueSubjects = Array.from(
         new Set(items.map((item) => getMetadataString(item.metadata_tags?.topic)).filter((v): v is string => v !== null))

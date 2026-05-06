@@ -1,14 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 import { Badge, cn } from '@/components/ui';
 
 export default function GlobalHeader() {
     const pathname = usePathname();
+    const router = useRouter();
     const { isAuthenticated, user, logout } = useAuthStore();
+
+    const handleSignOut = () => {
+        logout();           // clears state synchronously
+        router.push('/login');  // navigate immediately, don't wait for ProtectedRoute
+    };
 
     if (!isAuthenticated || pathname === '/login' || pathname.startsWith('/exam/')) {
         return null;
@@ -71,7 +77,7 @@ export default function GlobalHeader() {
                             </Badge>
                         </div>
                         <button
-                            onClick={logout}
+                            onClick={handleSignOut}
                             className={cn(
                                 'text-meta font-medium px-2.5 py-1.5 rounded-md',
                                 'text-danger',

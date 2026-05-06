@@ -22,7 +22,7 @@ interface AuthState {
 
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, password: string, role: string) => Promise<void>;
-    logout: () => Promise<void>;
+    logout: () => void;
     refreshToken: () => Promise<void>;
     fetchMe: () => Promise<void>;
     initialize: () => Promise<void>;
@@ -94,20 +94,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
     },
 
-    logout: async () => {
-        try {
-            await api.post('auth/logout');
-        } catch (e) {
-            console.warn("Logout request failed, clearing local state anyway.", e);
-        } finally {
-            set({
-                user: null,
-                accessToken: null,
-                isAuthenticated: false,
-                isLoading: false,
-                themePreference: null,
-            });
-        }
+    logout: () => {
+        // Clear local state immediately — no waiting on network
+        set({
+            user: null,
+            accessToken: null,
+            isAuthenticated: false,
+            isLoading: false,
+            themePreference: null,
+        });
+        // Fire-and-forget: tell the backend to invalidate the refresh token cookie
+        api.post('auth/logout').catch(() => { /* already cleared locally */ });
     },
 
     refreshToken: async () => {

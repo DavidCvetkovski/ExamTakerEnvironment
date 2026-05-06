@@ -19,6 +19,7 @@
 - [ ] Stage 8 — Question Library Filters + Authoring Partial Points
 - [ ] Stage 9 — Theme & Button Audit (Practice, Enrollments, student grade view)
 - [ ] Stage 10 — Verification
+- [x] Issue #30 — Sign out bug (hotfixed, not a full stage)
 
 ---
 
@@ -55,6 +56,25 @@
 | 27 | Practice button unreadable in light themes | 9 |
 | 28 | Enrollments button loses border in light themes | 9 |
 | 29 | Student grade view dark theme broken | 9 |
+| 30 | Sign out bugs out (interceptor loop + no immediate redirect) | ✅ hotfixed |
+
+---
+
+## Issue #30 — Sign Out Bug ✅ Hotfixed
+
+**Root causes (three separate bugs compounding each other):**
+
+1. **401 interceptor loop.** `auth/logout` was not excluded from the response interceptor's retry logic. If the access token had already expired by the time the user clicked Sign out, the interceptor caught the 401 from the logout endpoint, tried to refresh the token, refresh also failed, then called `logout()` again — infinite loop / crash.
+
+2. **Logout waited on the network before clearing state.** The `finally` block in `logout` ran only after `await api.post('auth/logout')` resolved or rejected. If the request hung (e.g. slow network), the UI showed the user as still authenticated for several seconds.
+
+3. **Navigation relied entirely on `ProtectedRoute`'s `useEffect`.** After state was cleared, the redirect to `/login` depended on a child component's effect re-running — which is asynchronous and can be delayed by React's scheduler, causing a visible flash of the authenticated page.
+
+**Files changed:**
+
+- `src/lib/api.ts` — added `auth/logout` to the 401 interceptor exclusion list alongside `auth/refresh` and `auth/login`
+- `src/stores/useAuthStore.ts` — `logout` is now synchronous: clears Zustand state immediately, fires `api.post('auth/logout')` as fire-and-forget (no `await`, no `try/catch` that blocks)
+- `src/components/layout/GlobalHeader.tsx` — `handleSignOut` calls `logout()` then immediately `router.push('/login')` — no dependency on `ProtectedRoute` for navigation
 
 ---
 

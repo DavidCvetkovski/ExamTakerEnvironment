@@ -344,7 +344,7 @@ async def _create_submitted_session(
 
 @pytest.mark.anyio
 async def test_auto_grade_mcq_correct_answer(grading_setup):
-    """Correct MCQ answer yields 1.0 pts, AUTO_GRADED status."""
+    """Correct MCQ answer yields 1.0 pts and FULLY_GRADED (no manual pending)."""
     from app.services.grading_service import auto_grade_session
     from uuid import UUID
     s = grading_setup
@@ -371,7 +371,7 @@ async def test_auto_grade_mcq_correct_answer(grading_setup):
     assert result["graded"] == 1
     assert result["pending_manual"] == 0
     assert result["total_points"] == 1.0
-    assert result["grading_status"] == "AUTO_GRADED"
+    assert result["grading_status"] == "FULLY_GRADED"
 
     # Verify question_grade record
     grade = await prisma.question_grades.find_first(where={"session_id": session_id})
@@ -383,7 +383,7 @@ async def test_auto_grade_mcq_correct_answer(grading_setup):
     # Verify session_result
     sr = await prisma.session_results.find_unique(where={"session_id": session_id})
     assert sr is not None
-    assert sr.grading_status == "AUTO_GRADED"
+    assert sr.grading_status == "FULLY_GRADED"
     assert sr.letter_grade == "Pass"
     assert sr.passed is True
 
@@ -420,7 +420,7 @@ async def test_auto_grade_mcq_correct_answer_from_choices_object_snapshot(gradin
     result = await auto_grade_session(UUID(session_id))
 
     assert result["total_points"] == 1.0
-    assert result["grading_status"] == "AUTO_GRADED"
+    assert result["grading_status"] == "FULLY_GRADED"
 
     grade = await prisma.question_grades.find_first(where={"session_id": session_id})
     assert grade is not None
@@ -496,7 +496,7 @@ async def test_auto_grade_mcq_wrong_answer(grading_setup):
 
     result = await auto_grade_session(UUID(session_id))
     assert result["total_points"] == 0.0
-    assert result["grading_status"] == "AUTO_GRADED"
+    assert result["grading_status"] == "FULLY_GRADED"
 
     grade = await prisma.question_grades.find_first(where={"session_id": session_id})
     assert grade.points_awarded == 0.0

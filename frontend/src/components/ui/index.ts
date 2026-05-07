@@ -6,6 +6,7 @@ export { TableContainer, Table, THead, TBody, TR, TH, TD } from './Table';
 export { default as PageHeader, SectionHeader } from './PageHeader';
 export { default as EmptyState } from './EmptyState';
 export { default as StatCard } from './StatCard';
+export { default as InfoTooltip } from './InfoTooltip';
 export { cn } from './cn';
 export { ToastProvider } from './Toast';
 export { useToast } from './useToast';

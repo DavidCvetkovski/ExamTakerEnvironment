@@ -186,7 +186,7 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
                         )}
                     </div>
                     {isPending && (
-                        <div className="flex items-center gap-2 text-amber-600 text-xs">
+                        <div className="flex items-center gap-2 text-[var(--color-warning-fg)] text-xs">
                             <span>⏳</span>
                             <span>Awaiting manual grading</span>
                         </div>
@@ -286,7 +286,7 @@ export default function MyResultDetailPage() {
                                         </>
                                     ) : (
                                         <>
-                                            <p className="text-2xl font-black text-amber-500">⏳</p>
+                                            <p className="text-2xl font-black text-[var(--color-warning-fg)]">⏳</p>
                                             <p className="text-xs text-shell-muted-dim mt-1">Pending</p>
                                         </>
                                     )}

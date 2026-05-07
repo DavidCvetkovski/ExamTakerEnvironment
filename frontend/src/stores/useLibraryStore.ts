@@ -17,8 +17,10 @@ interface LibraryState {
     items: LearningObjectSummary[];
     isLoading: boolean;
     error: string | null;
+    lastEditingLoId: string | null;
     fetchItems: () => Promise<void>;
     createItem: () => Promise<string>;
+    setLastEditingLoId: (id: string | null) => void;
 }
 
 function getApiErrorMessage(error: unknown, fallback: string): string {
@@ -29,6 +31,9 @@ export const useLibraryStore = create<LibraryState>((set) => ({
     items: [],
     isLoading: false,
     error: null,
+    lastEditingLoId: null,
+
+    setLastEditingLoId: (id) => set({ lastEditingLoId: id }),
 
     fetchItems: async () => {
         set({ isLoading: true, error: null });

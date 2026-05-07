@@ -6,6 +6,7 @@
  * map those to the UI primitive's `tone` taxonomy.
  */
 
+import { ReactNode } from 'react';
 import UIStatCard from '@/components/ui/StatCard';
 
 type Accent = 'blue' | 'emerald' | 'amber' | 'rose' | 'slate';
@@ -24,8 +25,9 @@ interface StatCardProps {
     value: string;
     note?: string;
     accent?: Accent;
+    info?: ReactNode;
 }
 
-export default function StatCard({ label, value, note, accent = 'slate' }: StatCardProps) {
-    return <UIStatCard label={label} value={value} note={note} tone={ACCENT_TO_TONE[accent]} />;
+export default function StatCard({ label, value, note, accent = 'slate', info }: StatCardProps) {
+    return <UIStatCard label={label} value={value} note={note} tone={ACCENT_TO_TONE[accent]} info={info} />;
 }

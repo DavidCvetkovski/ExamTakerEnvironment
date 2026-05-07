@@ -72,7 +72,7 @@ function LoginPageInner() {
             <div className="w-full max-w-md bg-shell-surface p-8 space-y-6">
                 <h1 className="text-2xl font-bold text-center">OpenVision SSO</h1>
                 <div className="bg-shell-bg border border-shell-border p-4 text-xs space-y-2">
-                    <p className="text-eyebrow-sm font-bold uppercase tracking-wider text-blue-400">Test Credentials</p>
+                    <p className="text-eyebrow-sm font-bold uppercase tracking-wider text-brand">Test Credentials</p>
                     <div className="grid grid-cols-1 gap-1 text-shell-muted">
                         <p><span className="w-24 inline-block">Admin:</span> <code className="text-foreground">admin_e2e@vu.nl / adminpass123</code></p>
                         <p><span className="w-24 inline-block">Constructor:</span> <code className="text-foreground">constructor_e2e@vu.nl / conpass123</code></p>
@@ -81,7 +81,7 @@ function LoginPageInner() {
                 </div>
 
                 {error && (
-                    <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 text-sm rounded">
+                    <div className="rounded border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] p-3 text-sm">
                         {error}
                     </div>
                 )}
@@ -95,7 +95,7 @@ function LoginPageInner() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
-                            className="bg-shell-bg border border-shell-border p-2 text-foreground focus:outline-none focus:border-blue-500 transition-colors"
+                            className="bg-shell-bg border border-shell-border p-2 text-foreground focus:outline-none focus:border-brand transition-colors"
                         />
                     </div>
 
@@ -107,14 +107,14 @@ function LoginPageInner() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             required
-                            className="bg-shell-bg border border-shell-border p-2 text-foreground focus:outline-none focus:border-blue-500 transition-colors"
+                            className="bg-shell-bg border border-shell-border p-2 text-foreground focus:outline-none focus:border-brand transition-colors"
                         />
                     </div>
 
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 p-2 text-white mt-4 transition-colors font-medium border border-transparent disabled:cursor-not-allowed"
+                        className="w-full bg-brand hover:brightness-110 disabled:opacity-50 p-2 text-white mt-4 transition-[filter] font-medium border border-transparent disabled:cursor-not-allowed"
                     >
                         {isLoading ? 'Authenticating...' : 'Sign In'}
                     </button>

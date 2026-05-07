@@ -261,17 +261,25 @@ async def export_results_csv(
 # Student-facing result views
 # ─────────────────────────────────────────────
 
-@router.get("/my-results", summary="Get my published exam results")
+@router.get("/my-results", summary="Get my exam results")
 async def get_my_results(
+    include_unpublished: bool = False,
     current_user=Depends(get_current_user),
 ) -> List[Dict[str, Any]]:
     """
-    Student-facing: return all published results for the authenticated student.
-    ADMIN / CONSTRUCTOR requesting this will get an empty list (they should use instructors' endpoints).
+    Student-facing: return exam results for the authenticated student.
+
+    By default only published results are returned. Pass ``include_unpublished=true``
+    to also surface submitted-but-not-yet-published sessions (for the My Grades tab).
+    ADMIN / CONSTRUCTOR requesting this will get an empty list (they should use
+    instructors' endpoints).
     """
     if current_user.role != UserRole.STUDENT.value:
         return []
-    return await results_service.get_student_published_results(str(current_user.id))
+    return await results_service.get_student_published_results(
+        str(current_user.id),
+        include_unpublished=include_unpublished,
+    )
 
 
 @router.get("/my-results/{session_id}", summary="Detailed result for one exam session")

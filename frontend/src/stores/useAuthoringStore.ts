@@ -270,6 +270,10 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
         } catch (error) {
             console.error("Failed to fetch version:", error);
             set({ saveStatus: 'ERROR' });
+            const status = (error as { response?: { status?: number } })?.response?.status;
+            if (status === 404) {
+                throw error;
+            }
         }
     },
 

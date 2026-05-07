@@ -14,6 +14,7 @@ export interface StudentScheduledSession {
     status: 'SCHEDULED' | 'ACTIVE' | 'CLOSED' | 'CANCELED';
     can_join: boolean;
     existing_attempt_id: string | null;
+    existing_attempt_status: 'STARTED' | 'SUBMITTED' | 'EXPIRED' | null;
 }
 
 interface StudentSessionsState {

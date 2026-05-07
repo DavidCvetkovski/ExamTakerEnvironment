@@ -237,7 +237,16 @@ async def list_student_scheduled_sessions(current_user: Any) -> List[Dict[str, A
     results: List[Dict[str, Any]] = []
     for record in current_records:
         existing_attempt = attempts_by_session_id.get(record.id)
-        can_join = record.status == CourseSessionStatus.ACTIVE.value
+        existing_attempt_status = existing_attempt.status if existing_attempt else None
+        is_submitted = existing_attempt_status == "SUBMITTED"
+        is_expired = existing_attempt_status == "EXPIRED"
+        # A session is joinable only when the window is ACTIVE AND the student
+        # either has not started yet or has a STARTED attempt to resume.
+        can_join = (
+            record.status == CourseSessionStatus.ACTIVE.value
+            and not is_submitted
+            and not is_expired
+        )
         results.append(
             {
                 "id": record.id,
@@ -251,6 +260,7 @@ async def list_student_scheduled_sessions(current_user: Any) -> List[Dict[str, A
                 "status": record.status,
                 "can_join": can_join,
                 "existing_attempt_id": existing_attempt.id if existing_attempt else None,
+                "existing_attempt_status": existing_attempt_status,
             }
         )
     return results

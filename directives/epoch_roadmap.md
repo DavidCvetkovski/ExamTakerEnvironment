@@ -446,7 +446,7 @@
 
 ---
 
-## Epoch 7.9 — Light-Theme Hardening, Persistence, Grading Reform & Student Grades Tab
+## Epoch 7.9 — Light-Theme Hardening, Persistence, Grading Reform & Student Grades Tab ✅
 
 **Goal:** Fix 21 concrete UX, theming, hydration, and data-model issues uncovered while using the 7.8 build. Frontend-first; two small backend touches (grading-status collapse, student-session payload extension). No DB migration. No new product surface.
 

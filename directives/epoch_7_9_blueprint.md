@@ -9,17 +9,17 @@
 
 ## Progress Checklist
 
-- [ ] Stage 1 — Light-Theme Tag & Token Audit (DistractorBars, blueprint placeholders, editor headings, blueprint page migration)
-- [ ] Stage 2 — Authoring Bench Toolbar Polish (drop "Status: Ready", prevent button reflow on dirty)
-- [ ] Stage 3 — QuestionPickerModal Detail Cleanup (drop Status row, wrap long content)
-- [ ] Stage 4 — Library / Authoring Persistence (`lastEditingLoId` mirror of blueprint pattern)
-- [ ] Stage 5 — Analytics Information & Cleanup (new `InfoTooltip` primitive, drop Version column from flagged items, fix ugly UUID display)
-- [ ] Stage 6 — Grading Status Reform (`AUTO_GRADED` → `FULLY_GRADED` when pending_manual == 0)
-- [ ] Stage 7 — Student "My Grades" Tab (new nav, new page, surface pending-grading sessions)
-- [ ] Stage 8 — Blueprint Publish/Practice UX & Validation (toasts, duration ≥ 1, button primitives)
-- [ ] Stage 9 — Resume vs. Already-Submitted Distinction (`existing_attempt_status` + `StudentExamCard` states)
-- [ ] Stage 10 — Toast Hydration Fix (mounted-flag pattern in `ToastProvider`)
-- [ ] Stage 11 — Verification (tsc, next build, theme matrix, hydration-error gone)
+- [x] Stage 1 — Light-Theme Tag & Token Audit (DistractorBars, blueprint placeholders, editor headings, blueprint page migration)
+- [x] Stage 2 — Authoring Bench Toolbar Polish (drop "Status: Ready", prevent button reflow on dirty)
+- [x] Stage 3 — QuestionPickerModal Detail Cleanup (drop Status row, wrap long content)
+- [x] Stage 4 — Library / Authoring Persistence (`lastEditingLoId` mirror of blueprint pattern)
+- [x] Stage 5 — Analytics Information & Cleanup (new `InfoTooltip` primitive, drop Version column from flagged items, fix ugly UUID display)
+- [x] Stage 6 — Grading Status Reform (`AUTO_GRADED` → `FULLY_GRADED` when pending_manual == 0)
+- [x] Stage 7 — Student "My Grades" Tab (new nav, new page, surface pending-grading sessions)
+- [x] Stage 8 — Blueprint Publish/Practice UX & Validation (toasts, duration ≥ 1, button primitives)
+- [x] Stage 9 — Resume vs. Already-Submitted Distinction (`existing_attempt_status` + `StudentExamCard` states)
+- [x] Stage 10 — Toast Hydration Fix (mounted-flag pattern in `ToastProvider`)
+- [x] Stage 11 — Verification (tsc ✅, next build ✅, cleanliness greps ✅)
 
 ---
 

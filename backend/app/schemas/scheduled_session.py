@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -49,5 +49,6 @@ class StudentScheduledSessionResponse(BaseModel):
     status: CourseSessionStatus
     can_join: bool
     existing_attempt_id: Optional[UUID] = None
+    existing_attempt_status: Optional[Literal["STARTED", "SUBMITTED", "EXPIRED"]] = None
 
     model_config = ConfigDict(from_attributes=True)

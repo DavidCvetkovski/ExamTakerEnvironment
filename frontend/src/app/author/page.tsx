@@ -6,6 +6,7 @@ import TipTapEditor from '@/components/editor/TipTapEditor';
 import MCQOptionsPanel from '@/components/editor/MCQOptionsPanel';
 import EssayOptionsPanel from '@/components/editor/EssayOptionsPanel';
 import { useAuthoringStore } from '@/stores/useAuthoringStore';
+import { useLibraryStore } from '@/stores/useLibraryStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Badge, Button, Card, Field, Input, PageHeader, Select, StatusDot, cn, useToast } from '@/components/ui';
 
@@ -32,12 +33,19 @@ function AuthorPageInner() {
         metadataTags, updateMetadataField, isDirty,
     } = useAuthoringStore();
 
+    const setLastEditingLoId = useLibraryStore((s) => s.setLastEditingLoId);
+
     useEffect(() => {
         if (loIdParam && fetchedRef.current !== loIdParam) {
             fetchedRef.current = loIdParam;
-            fetchLatestVersion(loIdParam);
+            setLastEditingLoId(loIdParam);
+            fetchLatestVersion(loIdParam).catch(() => {
+                // If the LO no longer exists, clear the persisted id and bounce to /items
+                setLastEditingLoId(null);
+                router.replace('/items');
+            });
         }
-    }, [loIdParam, fetchLatestVersion]);
+    }, [loIdParam, fetchLatestVersion, setLastEditingLoId, router]);
 
     // Warn on navigation with unsaved changes
     useEffect(() => {
@@ -63,7 +71,7 @@ function AuthorPageInner() {
     const statusBadge =
         saveStatus === 'SAVING' ? <Badge tone="warning" size="sm">Saving…</Badge>
         : saveStatus === 'ERROR' ? <Badge tone="danger" size="sm">Save failed</Badge>
-        : <Badge tone="neutral" size="sm">Ready</Badge>;
+        : null;
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
@@ -71,6 +79,7 @@ function AuthorPageInner() {
                 <div className="max-w-4xl mx-auto px-6 py-10">
                     <button
                         onClick={() => {
+                            setLastEditingLoId(null);
                             if (fromBlueprint && blueprintId) {
                                 router.push(`/blueprint?id=${blueprintId}`);
                             } else {
@@ -106,22 +115,7 @@ function AuthorPageInner() {
                     ) : (
                         <div className="space-y-5">
                             <Card variant="surface" padding="md">
-                                <div className="flex flex-wrap items-end gap-4">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim">
-                                            Status
-                                        </span>
-                                        {statusBadge}
-                                        {isDirty && (
-                                            <span className="flex items-center gap-1 text-xs text-[var(--color-warning-fg)]">
-                                                <StatusDot tone="warning" pulse />
-                                                Unsaved changes
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    <div className="flex-1" />
-
+                                <div className="flex flex-wrap items-end gap-4 min-h-[2.5rem]">
                                     <Field label="Subject" className="w-32">
                                         <Input
                                             inputSize="sm"
@@ -154,6 +148,16 @@ function AuthorPageInner() {
                                             <option value="ESSAY">Essay</option>
                                         </Select>
                                     </Field>
+
+                                    <div className="flex-1" />
+
+                                    {isDirty && (
+                                        <span className="inline-flex items-center gap-1.5 text-meta text-[var(--color-warning-fg)]">
+                                            <StatusDot tone="warning" pulse />
+                                            Unsaved
+                                        </span>
+                                    )}
+                                    {statusBadge}
 
                                     <Button
                                         variant="secondary"

@@ -168,14 +168,54 @@ export default function TestAnalyticsDashboardPage() {
                     {bundle ? (
                         <div className="space-y-6">
                             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                                <StatCard label="Mean" value={`${formatMetric(bundle.test.mean)}%`} accent="blue" />
-                                <StatCard label="Median" value={`${formatMetric(bundle.test.median)}%`} accent="emerald" />
-                                <StatCard label="Std Dev" value={formatMetric(bundle.test.std_dev, 2)} accent="amber" />
-                                <StatCard label="Pass Rate" value={`${formatMetric(bundle.test.pass_rate)}%`} accent="rose" />
-                                <StatCard label="Cronbach's Alpha" value={formatMetric(bundle.test.cronbach_alpha, 2)} accent="blue" />
-                                <StatCard label="SEM" value={formatMetric(bundle.test.sem, 2)} accent="amber" />
-                                <StatCard label="Min / Max" value={`${formatMetric(bundle.test.min_score)} / ${formatMetric(bundle.test.max_score)}%`} accent="slate" />
-                                <StatCard label="Flagged Items" value={String(flaggedItems.length)} accent="rose" />
+                                <StatCard
+                                    label="Mean"
+                                    value={`${formatMetric(bundle.test.mean)}%`}
+                                    accent="blue"
+                                    info="Average score across all published sessions, in percent."
+                                />
+                                <StatCard
+                                    label="Median"
+                                    value={`${formatMetric(bundle.test.median)}%`}
+                                    accent="emerald"
+                                    info="The middle score: half of students scored higher, half scored lower. Less sensitive to outliers than the mean."
+                                />
+                                <StatCard
+                                    label="Std Dev"
+                                    value={formatMetric(bundle.test.std_dev, 2)}
+                                    accent="amber"
+                                    info="Spread of scores around the mean. A large value means scores are very different from each other; a small value means most students scored similarly."
+                                />
+                                <StatCard
+                                    label="Pass Rate"
+                                    value={`${formatMetric(bundle.test.pass_rate)}%`}
+                                    accent="rose"
+                                    info="Percentage of students who scored at or above the test's pass threshold."
+                                />
+                                <StatCard
+                                    label="Cronbach's Alpha"
+                                    value={formatMetric(bundle.test.cronbach_alpha, 2)}
+                                    accent="blue"
+                                    info="Internal consistency: how reliably the items measure the same thing. Above 0.7 is acceptable; above 0.8 is good. Below 0.6 means the items don't agree with each other."
+                                />
+                                <StatCard
+                                    label="SEM"
+                                    value={formatMetric(bundle.test.sem, 2)}
+                                    accent="amber"
+                                    info="Standard Error of Measurement. The expected fluctuation in a student's score if they took an equivalent version of this test. Smaller is better."
+                                />
+                                <StatCard
+                                    label="Min / Max"
+                                    value={`${formatMetric(bundle.test.min_score)} / ${formatMetric(bundle.test.max_score)}%`}
+                                    accent="slate"
+                                    info="Lowest and highest scores observed in the published sessions."
+                                />
+                                <StatCard
+                                    label="Flagged Items"
+                                    value={String(flaggedItems.length)}
+                                    accent="rose"
+                                    info="Items the system has flagged as too easy, too hard, or weakly discriminating, based on the most recent analytics snapshot."
+                                />
                             </div>
 
                             <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">

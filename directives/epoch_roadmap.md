@@ -446,6 +446,33 @@
 
 ---
 
+## Epoch 7.9 — Light-Theme Hardening, Persistence, Grading Reform & Student Grades Tab ✅
+
+**Goal:** Fix 21 concrete UX, theming, hydration, and data-model issues uncovered while using the 7.8 build. Frontend-first; two small backend touches (grading-status collapse, student-session payload extension). No DB migration. No new product surface.
+
+### Stages
+1. **Light-Theme Tag & Token Audit** — DistractorBars tags via Badge primitive; blueprint placeholders + raw `bg-white/X` migration; editor h1/h2/h3 stop hardcoding `color: white`
+2. **Authoring Bench Toolbar Polish** — remove redundant "Status: Ready" eyebrow; prevent Save-button reflow when dirty pill appears
+3. **QuestionPickerModal Detail Cleanup** — drop noise Status row from inspect view; wrap long content (no horizontal scroll)
+4. **Library / Authoring Persistence** — `lastEditingLoId` mirror of blueprint pattern; `/items` ↔ `/author` round-trips survive tab switches
+5. **Analytics Information & Cleanup** — new `InfoTooltip` primitive on every metric (Mean / Std Dev / Cronbach's α / SEM / P / D / distractors); drop Version column from FlaggedItemsTable; remove ugly UUID line from item analytics
+6. **Grading Status Reform** — `AUTO_GRADED` collapses into `FULLY_GRADED` when no manual grading is pending (backend) + display fallback (frontend)
+7. **Student "My Grades" Tab** — new nav link, new `/my-grades` page with pending + published sections; remove grade list from `/my-exams`
+8. **Blueprint Publish/Practice UX & Validation** — toast on publish & practice; disable buttons + inline error when duration ≤ 0; migrate Publish/Practice to Button primitives; drop hardcoded title gradient
+9. **Resume vs. Already-Submitted Distinction** — backend adds `existing_attempt_status` to `/student/sessions/`; `StudentExamCard` shows distinct states (Resume / Already submitted / Window expired)
+10. **Toast Hydration Fix** — `ToastProvider` switches to mounted-flag pattern; eliminates SSR/CSR mismatch warning on `/my-exams`
+11. **Verification** — tsc + next build green; cleanliness greps; manual theme matrix; backend pytest green; Aikido scan clean
+
+**Exit Criteria:**
+- All 21 issues in the catalogue (plus folded side polish) verified fixed.
+- `npx tsc --noEmit` + `npx next build` pass.
+- `pytest backend/tests` green; new tests for grading-status reform and student-session payload included.
+- Hydration error gone from `/my-exams` and other SSR'd pages.
+- Theme matrix screenshot-verified across dark / warm / light-blue on every audited screen.
+- Aikido scan: zero new Critical/High findings.
+
+---
+
 ## Epoch 8 — Media Management & Resource Library
 
 **Goal:** Enable rich media uploads, build a reusable resource library, and support CDN-backed delivery for scalable media serving.

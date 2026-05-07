@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useToastStore, ToastItem, ToastTone } from './useToast';
 
@@ -56,8 +56,15 @@ function Toast({ toast }: { toast: ToastItem }) {
 
 export function ToastProvider() {
     const toasts = useToastStore((s) => s.toasts);
+    const [mounted, setMounted] = useState(false);
 
-    if (typeof window === 'undefined') return null;
+    // Defer the portal until after hydration so SSR HTML and the first client
+    // render both produce nothing for this slot — eliminating the mismatch.
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) return null;
 
     return createPortal(
         <div

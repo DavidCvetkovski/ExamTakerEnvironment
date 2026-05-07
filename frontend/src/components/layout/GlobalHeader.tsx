@@ -22,7 +22,10 @@ export default function GlobalHeader() {
 
     const navLinks =
         user?.role === 'STUDENT'
-            ? [{ name: 'My Exams', href: '/my-exams' }]
+            ? [
+                  { name: 'My Exams', href: '/my-exams' },
+                  { name: 'My Grades', href: '/my-grades' },
+              ]
             : [
                   { name: 'Sessions', href: '/sessions' },
                   { name: 'Blueprints', href: '/blueprint' },

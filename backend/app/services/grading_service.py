@@ -170,11 +170,15 @@ async def auto_grade_session(session_id: UUID) -> Dict[str, Any]:
             skip_duplicates=True,
         )
 
-    # Determine overall grading status
+    # Determine overall grading status.
+    # When no manual grading is pending and at least one item was auto-graded,
+    # the session is fully complete — no human action needed.
     questions_total = auto_graded + pending_manual
     questions_graded = auto_graded
-    if pending_manual == 0:
-        grading_status = GradingStatus.AUTO_GRADED.value if auto_graded > 0 else GradingStatus.UNGRADED.value
+    if pending_manual == 0 and auto_graded > 0:
+        grading_status = GradingStatus.FULLY_GRADED.value
+    elif pending_manual == 0:
+        grading_status = GradingStatus.UNGRADED.value
     else:
         grading_status = GradingStatus.PARTIALLY_GRADED.value
 

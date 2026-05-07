@@ -39,6 +39,7 @@ function BlueprintPageInner() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const idFromUrl = searchParams.get('id');
+    const { toast } = useToast();
 
     const [isEditing, setIsEditing] = useState(false);
     const [isStarting, setIsStarting] = useState(false);
@@ -137,24 +138,59 @@ function BlueprintPageInner() {
 
     const handleSave = async () => {
         if (!currentBlueprint) return;
+
+        const minutes = currentBlueprint.duration_minutes;
+        if (!minutes || minutes <= 0) {
+            toast({
+                tone: 'danger',
+                title: 'Cannot publish',
+                description: 'Set a duration of at least 1 minute before publishing.',
+            });
+            return;
+        }
+
         try {
             const id = await saveBlueprint(currentBlueprint);
+            toast({
+                tone: 'success',
+                title: 'Blueprint published',
+                description: currentBlueprint.title?.trim() || 'Untitled blueprint',
+            });
             if (!idFromUrl) {
                 router.push(`/blueprint?id=${id}`);
             }
-        } catch {
-            // Error handled by store
+        } catch (err) {
+            toast({
+                tone: 'danger',
+                title: 'Publish failed',
+                description: err instanceof Error ? err.message : 'Try again.',
+            });
         }
     };
 
     const handleStartPreview = async () => {
         if (!idFromUrl) return;
+
+        const minutes = currentBlueprint?.duration_minutes;
+        if (!minutes || minutes <= 0) {
+            toast({
+                tone: 'danger',
+                title: 'Cannot start practice',
+                description: 'Set a duration of at least 1 minute first.',
+            });
+            return;
+        }
+
         setIsStarting(true);
         try {
             const sessionId = await instantiateSession(idFromUrl);
             router.push(`/exam/${sessionId}`);
         } catch (err) {
-            console.error(err);
+            toast({
+                tone: 'danger',
+                title: 'Practice failed',
+                description: err instanceof Error ? err.message : 'Try again.',
+            });
         } finally {
             setIsStarting(false);
         }
@@ -166,6 +202,9 @@ function BlueprintPageInner() {
     };
 
     const scoringConfig = currentBlueprint?.scoring_config ?? DEFAULT_SCORING_CONFIG;
+    const durationMinutes = currentBlueprint?.duration_minutes;
+    const minutesValid = typeof durationMinutes === 'number' && durationMinutes > 0;
+    const minutesInvalid = durationMinutes !== undefined && (typeof durationMinutes !== 'number' || durationMinutes <= 0);
 
     // --- Stats Calculation ---
     const stats = (() => {
@@ -308,14 +347,24 @@ function BlueprintPageInner() {
                                         <div className="flex items-center">
                                             <input
                                                 type="number"
+                                                min={1}
                                                 value={currentBlueprint?.duration_minutes ?? ''}
                                                 onChange={(e) => saveState({
                                                     duration_minutes: e.target.value === '' ? undefined : parseInt(e.target.value, 10)
                                                 })}
-                                                className="bg-shell-input border border-shell-border rounded-lg py-2 px-3 text-foreground focus:outline-none focus:border-brand w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                className={`bg-shell-input border rounded-lg py-2 px-3 text-foreground focus:outline-none w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                                                    minutesInvalid
+                                                        ? 'border-[var(--color-danger-border)] focus:border-danger'
+                                                        : 'border-shell-border focus:border-brand'
+                                                }`}
                                             />
                                             <span className="ml-3 text-shell-muted-dim text-sm font-medium">minutes</span>
                                         </div>
+                                        {minutesInvalid ? (
+                                            <p className="mt-1.5 text-meta text-[var(--color-danger-fg)]">
+                                                Duration must be at least 1 minute.
+                                            </p>
+                                        ) : null}
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <button
@@ -528,7 +577,7 @@ function BlueprintPageInner() {
                                             variant="secondary"
                                             size="lg"
                                             onClick={handleStartPreview}
-                                            disabled={isStarting}
+                                            disabled={isStarting || !minutesValid}
                                             loading={isStarting}
                                         >
                                             {isStarting ? 'Loading...' : 'Practice Blueprint'}
@@ -538,6 +587,7 @@ function BlueprintPageInner() {
                                         variant="success"
                                         size="lg"
                                         onClick={handleSave}
+                                        disabled={!minutesValid}
                                     >
                                         Publish Blueprint
                                     </Button>

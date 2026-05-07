@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import type { StudentScheduledSession } from '@/stores/useStudentSessionsStore';
 import { Badge, Button, Card } from '@/components/ui';
 
@@ -9,9 +10,28 @@ interface StudentExamCardProps {
 }
 
 export default function StudentExamCard({ session, onJoin }: StudentExamCardProps) {
+    const router = useRouter();
     const startsAt = new Date(session.starts_at);
     const endsAt = new Date(session.ends_at);
-    const canResume = Boolean(session.existing_attempt_id) && session.can_join;
+
+    const status = session.existing_attempt_status;
+    const alreadySubmitted = status === 'SUBMITTED';
+    const alreadyExpired = status === 'EXPIRED';
+    const canResume = status === 'STARTED' && session.can_join;
+    const canJoinFresh = !status && session.can_join;
+
+    let badgeTone: 'success' | 'info' | 'neutral' = 'neutral';
+    let badgeLabel = 'Upcoming';
+    if (alreadySubmitted) {
+        badgeTone = 'info';
+        badgeLabel = 'Submitted';
+    } else if (alreadyExpired) {
+        badgeTone = 'neutral';
+        badgeLabel = 'Window closed';
+    } else if (session.can_join) {
+        badgeTone = 'success';
+        badgeLabel = 'Joinable now';
+    }
 
     return (
         <Card variant="surface" padding="md" className="rounded-2xl">
@@ -23,9 +43,7 @@ export default function StudentExamCard({ session, onJoin }: StudentExamCardProp
                     <h3 className="mt-2 text-h2 text-foreground">{session.test_title}</h3>
                     <p className="mt-1 text-meta text-shell-muted">{session.course_title}</p>
                 </div>
-                <Badge tone={session.can_join ? 'success' : 'neutral'} size="sm">
-                    {session.can_join ? 'Joinable now' : 'Upcoming'}
-                </Badge>
+                <Badge tone={badgeTone} size="sm">{badgeLabel}</Badge>
             </div>
 
             <div className="mt-5 grid gap-4 rounded-lg bg-shell-input/50 border border-shell-border p-4 text-meta md:grid-cols-2">
@@ -40,16 +58,38 @@ export default function StudentExamCard({ session, onJoin }: StudentExamCardProp
             </div>
 
             <div className="mt-5">
-                <Button
-                    variant="primary"
-                    size="lg"
-                    fullWidth
-                    disabled={!session.can_join}
-                    onClick={() => onJoin(session)}
-                    aria-label={`${canResume ? 'Resume' : 'Join'} ${session.test_title}`}
-                >
-                    {canResume ? 'Resume exam' : 'Join exam'}
-                </Button>
+                {alreadySubmitted ? (
+                    <Button
+                        variant="secondary"
+                        size="lg"
+                        fullWidth
+                        onClick={() => router.push('/my-grades')}
+                        aria-label="Already submitted — see My Grades"
+                    >
+                        Already submitted — see My Grades
+                    </Button>
+                ) : alreadyExpired ? (
+                    <Button
+                        variant="ghost"
+                        size="lg"
+                        fullWidth
+                        disabled
+                        aria-label="Window closed"
+                    >
+                        Window closed — exam expired
+                    </Button>
+                ) : (
+                    <Button
+                        variant="primary"
+                        size="lg"
+                        fullWidth
+                        disabled={!canResume && !canJoinFresh}
+                        onClick={() => onJoin(session)}
+                        aria-label={`${canResume ? 'Resume' : 'Join'} ${session.test_title}`}
+                    >
+                        {canResume ? 'Resume exam' : 'Join exam'}
+                    </Button>
+                )}
             </div>
         </Card>
     );

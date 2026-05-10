@@ -17,7 +17,7 @@ const QUICK_REFERENCE = [
     { token: 'LEVEL:', required: false, description: 'Bloom\'s level: Remember, Understand, Apply, Analyze, Evaluate, Create.' },
     { token: 'DIFFICULTY:', required: false, description: 'Easy, Medium, or Hard. Defaults to Medium.' },
     { token: 'POINTS:', required: false, description: 'Integer ≥ 1. Defaults to 1.' },
-    { token: 'TAGS:', required: false, description: 'Comma-separated tag strings.' },
+    { token: 'SUBJECT:', required: false, description: 'Subject/topic area (e.g. Statistics, Calculus). Comma-separated for multiple.' },
     { token: 'A) text *', required: false, description: 'Answer option. Append " *" to mark as correct.' },
     { token: 'MODEL_ANSWER:', required: false, description: 'Opens model answer block for ESSAY. Ends at END_MODEL_ANSWER.' },
 ];
@@ -39,7 +39,7 @@ TYPE: MCQ
 LEVEL: Remember
 DIFFICULTY: Easy
 POINTS: 1
-TAGS: mean, descriptive-statistics
+SUBJECT: Descriptive Statistics
 
 A) 2
 B) 4 *
@@ -53,7 +53,7 @@ TYPE: MCQ_MULTI
 LEVEL: Remember
 DIFFICULTY: Easy
 POINTS: 2
-TAGS: central-tendency
+SUBJECT: Descriptive Statistics
 
 A) Mean *
 B) Range
@@ -72,7 +72,7 @@ TYPE: ESSAY
 LEVEL: Understand
 DIFFICULTY: Medium
 POINTS: 10
-TAGS: central-limit-theorem
+SUBJECT: Inferential Statistics
 
 MODEL_ANSWER:
 The central limit theorem states that the sampling distribution
@@ -86,8 +86,8 @@ const FAQ = [
         a: 'Items are still imported into the selected bank. No draft blueprint is created — the "create blueprint" toggle will produce a blueprint with an auto-generated title.',
     },
     {
-        q: 'Can I import into an existing bank?',
-        a: 'Yes. Select the bank from the dropdown before committing. All imported items are added as new DRAFT versions in that bank.',
+        q: 'Where do imported questions go?',
+        a: 'All imported items are added as new DRAFT versions in your default item bank. Use the Library tab to browse, filter, and edit them.',
     },
     {
         q: 'What happens if I import duplicate questions?',

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { api } from '@/lib/api';
 
 export interface ParseError {
@@ -33,15 +34,8 @@ export interface ImportCommitResult {
     warnings: ParseError[];
 }
 
-export interface ItemBank {
-    id: string;
-    name: string;
-}
-
 interface ImportState {
     rawText: string;
-    bankId: string | null;
-    banks: ItemBank[];
     createBlueprint: boolean;
     previewResult: ImportPreviewResult | null;
     previewLoading: boolean;
@@ -51,9 +45,7 @@ interface ImportState {
     commitError: string | null;
 
     setRawText: (text: string) => void;
-    setBankId: (id: string | null) => void;
     setCreateBlueprint: (v: boolean) => void;
-    fetchBanks: () => Promise<void>;
     fetchPreview: () => Promise<void>;
     commitImport: () => Promise<void>;
     reset: () => void;
@@ -66,72 +58,62 @@ function apiErrorMessage(err: unknown, fallback: string): string {
     return fallback;
 }
 
-export const useImportStore = create<ImportState>((set, get) => ({
-    rawText: '',
-    bankId: null,
-    banks: [],
-    createBlueprint: true,
-    previewResult: null,
-    previewLoading: false,
-    previewError: null,
-    commitStatus: 'idle',
-    commitResult: null,
-    commitError: null,
+export const useImportStore = create<ImportState>()(
+    persist(
+        (set, get) => ({
+            rawText: '',
+            createBlueprint: true,
+            previewResult: null,
+            previewLoading: false,
+            previewError: null,
+            commitStatus: 'idle' as const,
+            commitResult: null,
+            commitError: null,
 
-    setRawText: (text) => set({ rawText: text, previewResult: null, previewError: null }),
-    setBankId: (id) => set({ bankId: id }),
-    setCreateBlueprint: (v) => set({ createBlueprint: v }),
+            setRawText: (text) => set({ rawText: text, previewResult: null, previewError: null }),
+            setCreateBlueprint: (v) => set({ createBlueprint: v }),
 
-    fetchBanks: async () => {
-        try {
-            const res = await api.get<ItemBank[]>('import/banks');
-            const banks = res.data;
-            set({ banks });
-            if (banks.length > 0 && !get().bankId) {
-                set({ bankId: banks[0].id });
-            }
-        } catch {
-            // silently fail — user can still type manually
+            fetchPreview: async () => {
+                const { rawText } = get();
+                if (!rawText.trim()) return;
+                set({ previewLoading: true, previewError: null, previewResult: null });
+                try {
+                    const res = await api.post<ImportPreviewResult>('import/preview', { raw_text: rawText });
+                    set({ previewResult: res.data, previewLoading: false });
+                } catch (err) {
+                    set({ previewError: apiErrorMessage(err, 'Preview failed'), previewLoading: false });
+                }
+            },
+
+            commitImport: async () => {
+                const { rawText, createBlueprint } = get();
+                set({ commitStatus: 'running', commitError: null });
+                try {
+                    const res = await api.post<ImportCommitResult>('import/commit', {
+                        raw_text: rawText,
+                        create_blueprint: createBlueprint,
+                    });
+                    set({ commitStatus: 'completed', commitResult: res.data });
+                } catch (err) {
+                    set({ commitStatus: 'failed', commitError: apiErrorMessage(err, 'Commit failed') });
+                }
+            },
+
+            reset: () => set({
+                rawText: '',
+                createBlueprint: true,
+                previewResult: null,
+                previewLoading: false,
+                previewError: null,
+                commitStatus: 'idle',
+                commitResult: null,
+                commitError: null,
+            }),
+        }),
+        {
+            name: 'openvision-import-draft',
+            storage: createJSONStorage(() => sessionStorage),
+            partialize: (s) => ({ rawText: s.rawText, createBlueprint: s.createBlueprint }),
         }
-    },
-
-    fetchPreview: async () => {
-        const { rawText } = get();
-        if (!rawText.trim()) return;
-        set({ previewLoading: true, previewError: null, previewResult: null });
-        try {
-            const res = await api.post<ImportPreviewResult>('import/preview', { raw_text: rawText });
-            set({ previewResult: res.data, previewLoading: false });
-        } catch (err) {
-            set({ previewError: apiErrorMessage(err, 'Preview failed'), previewLoading: false });
-        }
-    },
-
-    commitImport: async () => {
-        const { rawText, bankId, createBlueprint } = get();
-        if (!bankId) return;
-        set({ commitStatus: 'running', commitError: null });
-        try {
-            const res = await api.post<ImportCommitResult>('import/commit', {
-                raw_text: rawText,
-                bank_id: bankId,
-                create_blueprint: createBlueprint,
-            });
-            set({ commitStatus: 'completed', commitResult: res.data });
-        } catch (err) {
-            set({ commitStatus: 'failed', commitError: apiErrorMessage(err, 'Commit failed') });
-        }
-    },
-
-    reset: () => set({
-        rawText: '',
-        bankId: null,
-        createBlueprint: true,
-        previewResult: null,
-        previewLoading: false,
-        previewError: null,
-        commitStatus: 'idle',
-        commitResult: null,
-        commitError: null,
-    }),
-}));
+    )
+);

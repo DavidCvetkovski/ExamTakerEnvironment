@@ -136,6 +136,7 @@ export default function ExamPage() {
             <SubmissionConfirmation
                 submittedAt={currentSession.submitted_at}
                 returnPath={currentSession.return_path}
+                mode={currentSession.session_mode}
             />
         );
     }

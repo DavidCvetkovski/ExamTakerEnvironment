@@ -1,50 +1,65 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 export default function Home() {
-  return (
-    <div className="min-h-screen bg-shell-bg flex flex-col items-center justify-center p-6 text-center font-sans text-white">
-      <div className="max-w-xl space-y-8">
-        <h1 className="text-5xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
-          OpenVision Ecosystem
-        </h1>
-        <p className="text-lg text-shell-muted">
-          Next-generation academic assessment platform. Fully Decoupled & Verified.
-        </p>
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        const t = setTimeout(() => setMounted(true), 50);
+        return () => clearTimeout(t);
+    }, []);
 
-        <div className="bg-shell-surface border border-shell-border p-8 space-y-4">
-          <h2 className="border-b border-shell-border pb-4 text-xl font-semibold">Test Environment Access</h2>
-          <div className="grid grid-cols-1 gap-4 text-left text-sm">
-            <div className="rounded border border-shell-border bg-shell-bg p-4">
-              <p className="mb-2 text-eyebrow-sm font-bold uppercase text-blue-400">Administrator</p>
-              <p className="flex justify-between"><span>Email:</span> <code className="text-white">admin_e2e@vu.nl</code></p>
-              <p className="flex justify-between"><span>Password:</span> <code className="text-white">adminpass123</code></p>
+    return (
+        <div className="relative min-h-screen bg-shell-bg overflow-hidden flex flex-col items-center justify-center px-6 text-center">
+            {/* Animated background blobs */}
+            <div className="pointer-events-none absolute inset-0" aria-hidden>
+                <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-brand/10 blur-[120px] animate-blob" />
+                <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-brand/8 blur-[100px] animate-blob animation-delay-2000" />
             </div>
 
-            <div className="rounded border border-shell-border bg-shell-bg p-4">
-              <p className="mb-2 text-eyebrow-sm font-bold uppercase text-emerald-400">Constructor</p>
-              <p className="flex justify-between"><span>Email:</span> <code className="text-white">constructor_e2e@vu.nl</code></p>
-              <p className="flex justify-between"><span>Password:</span> <code className="text-white">conpass123</code></p>
-            </div>
+            {/* Content */}
+            <div
+                className={`relative z-10 max-w-2xl transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
+            >
+                {/* Logo mark */}
+                <div className="flex items-center justify-center gap-3 mb-8">
+                    <span className="w-3 h-3 rounded-full bg-brand animate-pulse" />
+                    <span className="text-eyebrow tracking-eyebrow text-shell-muted uppercase text-sm font-semibold">OpenVision</span>
+                </div>
 
-            <div className="rounded border border-shell-border bg-shell-bg p-4">
-              <p className="mb-2 text-eyebrow-sm font-bold uppercase text-amber-400">Student</p>
-              <p className="flex justify-between"><span>Email:</span> <code className="text-white">student_e2e@vu.nl</code></p>
-              <p className="flex justify-between"><span>Password:</span> <code className="text-white">studentpass123</code></p>
-            </div>
-          </div>
+                <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight text-foreground mb-4 leading-tight">
+                    Academic Assessment,<br />
+                    <span className="text-brand">Reimagined.</span>
+                </h1>
 
-          <Link
-            href="/login"
-            className="block w-full bg-blue-600 hover:bg-blue-700 p-4 text-white font-bold transition-all transform hover:scale-[1.02]"
-          >
-            Go to SSO Login
-          </Link>
+                <p className="text-lg text-shell-muted mb-10 leading-relaxed">
+                    Psychometrically sound. Beautifully designed. Built for the modern university.
+                </p>
+
+                <Link
+                    href="/login"
+                    className="inline-flex items-center gap-2 bg-brand hover:bg-brand/90 text-white font-semibold px-8 py-4 rounded-xl text-base transition-all hover:scale-[1.02] hover:shadow-[0_0_32px_var(--color-brand)] focus-ring"
+                >
+                    Sign in to OpenVision →
+                </Link>
+
+                {/* Feature pills */}
+                <div className="mt-12 flex flex-wrap justify-center gap-4 text-sm text-shell-muted">
+                    {[
+                        { icon: '📐', label: 'Adaptive Blueprints' },
+                        { icon: '📊', label: 'Psychometric Analytics' },
+                        { icon: '🔒', label: 'Secure Exam Delivery' },
+                    ].map((f) => (
+                        <span
+                            key={f.label}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-shell-border bg-shell-surface/50"
+                        >
+                            {f.icon} {f.label}
+                        </span>
+                    ))}
+                </div>
+            </div>
         </div>
-
-        <p className="text-xs text-shell-muted-dim">
-          © 2026 OpenVision Advanced Agentic Coding Project.
-        </p>
-      </div>
-    </div>
-  );
+    );
 }

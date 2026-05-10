@@ -1,65 +1,91 @@
-// OpenVision Import Template
-// Lines starting with "//" are comments and are ignored by the parser.
-// Remove or replace placeholder text before pasting into the import page.
-// Full format guide is available in the app under Import > Format Guide (ⓘ).
+// ─────────────────────────────────────────────────────────
+// OPENVISION IMPORT TEMPLATE
+// ─────────────────────────────────────────────────────────
+//
+// QUICK CHEATSHEET
+// ─────────────────────────────
+// #BLUEPRINT     Optional header — sets title, duration, course
+// #BLOCK name    Group questions into sections (optional)
+// #Q text        Start a question (required)
+// TYPE:          MCQ | MCQ_MULTI | ESSAY  (required)
+// LEVEL:         Remember | Understand | Apply | Analyze | Evaluate | Create
+// DIFFICULTY:    Easy | Medium | Hard
+// POINTS:        integer >= 1 (default: 1)
+// SUBJECT:       The topic/subject area (e.g. Statistics, Thermodynamics)
+// A) text        Answer option for MCQ/MCQ_MULTI
+//    Add " *" at the end of the correct option: e.g.  B) Paris *
+// MODEL_ANSWER:  Start model answer block for ESSAY
+// END_MODEL_ANSWER  End model answer block
+// ─────────────────────────────
 
-// ─── BLUEPRINT HEADER (optional) ────────────────────────────────────────────
-// Remove the #BLUEPRINT block if you only want to import questions without
-// creating a draft blueprint.
+
+// ══════════════════════════════════════════════════════════
+// EXAMPLE 1 — Multiple Choice (MCQ)
+// ══════════════════════════════════════════════════════════
 
 #BLUEPRINT
-Title: [Your Exam Title]
-Course: [COURSE101]
+Title: Introduction to Statistics — Midterm
+Course: STA1001
 Duration: 90
-Description: [Brief description of this exam.]
 
-// ─── BLOCK 1 (optional) ─────────────────────────────────────────────────────
-// Use #BLOCK to group questions into named sections.
+#BLOCK Descriptive Statistics
 
-#BLOCK Part A: Multiple Choice
-
----
-
-#Q [Write your first question stem here.]
+#Q What does the standard deviation measure?
 TYPE: MCQ
-LEVEL: Remember
-DIFFICULTY: Easy
-POINTS: 1
-TAGS: [tag1, tag2]
-
-A) [Option A]
-B) [Option B — correct] *
-C) [Option C]
-D) [Option D]
-
----
-
-#Q [A multiple-response question — students select ALL that apply.]
-TYPE: MCQ_MULTI
 LEVEL: Understand
 DIFFICULTY: Medium
 POINTS: 2
-TAGS: [tag1]
+SUBJECT: Statistics
 
-A) [Correct option] *
-B) [Wrong option]
-C) [Another correct option] *
-D) [Wrong option]
+A) The average value of a dataset
+B) The middle value when data is sorted
+C) The spread of values around the mean *
+D) The most frequently occurring value
 
----
 
-#BLOCK Part B: Open Questions
+#Q Which of the following are measures of central tendency? (Select all that apply)
+TYPE: MCQ_MULTI
+LEVEL: Remember
+DIFFICULTY: Easy
+POINTS: 1
+SUBJECT: Statistics
 
----
+A) Mean *
+B) Median *
+C) Mode *
+D) Range
 
-#Q [Write your essay question stem here.]
+
+#BLOCK Inferential Statistics
+
+#Q A researcher obtains a p-value of 0.03 at a significance level of alpha = 0.05. Which conclusion is correct?
+TYPE: MCQ
+LEVEL: Apply
+DIFFICULTY: Hard
+POINTS: 3
+SUBJECT: Hypothesis Testing
+
+A) Fail to reject the null hypothesis — p > alpha
+B) Reject the null hypothesis — p < alpha *
+C) The effect size is large
+D) The study must be repeated
+
+
+// ══════════════════════════════════════════════════════════
+// EXAMPLE 2 — Essay Question
+// ══════════════════════════════════════════════════════════
+
+#Q Explain the difference between Type I and Type II errors in hypothesis testing. Provide one real-world example of each.
 TYPE: ESSAY
 LEVEL: Analyze
 DIFFICULTY: Hard
-POINTS: 10
-TAGS: [tag1]
+POINTS: 5
+SUBJECT: Hypothesis Testing
 
 MODEL_ANSWER:
-[Write the model/expected answer here.
-It can span multiple lines.]
+A Type I error (false positive) occurs when the null hypothesis is true but is incorrectly rejected. Example: concluding a drug is effective when it is not.
+
+A Type II error (false negative) occurs when the null hypothesis is false but is not rejected. Example: concluding a drug has no effect when it actually does.
+
+The probability of a Type I error is alpha (significance level); Type II error probability is beta.
 END_MODEL_ANSWER

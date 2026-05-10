@@ -517,6 +517,33 @@
 
 ---
 
+## Epoch 8.1 — UX Hardening, Blueprint Lifecycle & Home Screen ✅
+
+**Goal:** Fix 23 concrete UX, theming, safety, and visual identity issues uncovered while using the Epoch 8 build. Frontend-first (9 of 10 stages). One backend touch: blueprint immutability guard and lifecycle endpoints (usage, delete, duplicate). No DB migrations.
+
+### Stages
+1. **Import UX Overhaul** — Remove Import from nav; entry points from Library + Blueprints; mode radio cards (questions-only vs questions+blueprint); remove bank selector; rename button to "Import"; SUBJECT: keyword; visible Format Guide button; better template; persist draft; exit warning
+2. **Blueprint Management** — Server-side immutability guard on PATCH/PUT/DELETE; new usage, delete, duplicate endpoints; frontend lock badges; delete with confirm; duplicate; sort dropdown; search input
+3. **Safety Dialogs** — New `useConfirm` hook + `ConfirmDialogModal`; blueprint back button fixed via `viewMode` store field + unsaved confirm; authoring back confirm
+4. **TimePicker 1-Minute Increments** — Default step changed from 5 to 1; explicit override removed from SessionCreateForm
+5. **QuestionPickerModal Fix** — `line-clamp-3` instead of `truncate`; flex layout with `shrink-0` Add button always visible
+6. **Practice Exam Completion Screen** — Pass `mode` prop; new `PracticeCompletionScreen` with brand blue styling
+7. **Grading Tab: Light-Theme Token Migration** — All `emerald/red/blue/amber` hardcodes replaced with CSS variable tokens
+8. **Analytics InfoTooltip Portal** — `createPortal` to `document.body` with scroll-aware coordinates; escapes all parent overflow/stacking constraints
+9. **Home Screen Redesign** — Remove hardcoded credentials; animated blob background; fade-in mount animation; feature pills; CTA to `/login`
+10. **Verification** — `tsc --noEmit` + `next build` green; cleanliness greps; 15/15 backend unit tests pass
+
+**Exit Criteria:**
+- All 23 issues in the catalogue verified fixed.
+- `tsc --noEmit` + `next build` pass.
+- Backend unit tests 15/15.
+- Zero hardcoded emerald/red/amber grading colors.
+- Zero nav link for Import in GlobalHeader.
+
+**Status:** ✅ Complete. Merged to `feature/epoch-8-1-ux`.
+
+---
+
 ## Epoch 9 — Media Management & Resource Library
 
 **Goal:** Enable rich media uploads, build a reusable resource library, and support CDN-backed delivery for scalable media serving.

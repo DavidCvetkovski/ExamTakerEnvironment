@@ -74,36 +74,52 @@ export interface AvailableItem {
     };
 }
 
+export interface BlueprintUsage {
+    has_scheduled_sessions: boolean;
+    has_past_sessions: boolean;
+    is_locked: boolean;
+    is_permanently_locked: boolean;
+}
+
 interface BlueprintState {
     blueprints: TestDefinition[];
     currentBlueprint: Partial<TestDefinition> | null;
+    savedSnapshot: string | null;
     availableItems: AvailableItem[];
     isLoading: boolean;
     error: string | null;
     saveStatus: BlueprintSaveStatus;
     lastEditingId: string | null;
+    viewMode: 'list' | 'editor';
+    usageMap: Record<string, BlueprintUsage>;
 
     fetchBlueprints: () => Promise<void>;
     fetchBlueprint: (id: string) => Promise<void>;
     fetchAvailableItems: () => Promise<void>;
     saveBlueprint: (data: Partial<TestDefinition>) => Promise<string>;
+    deleteBlueprint: (id: string) => Promise<void>;
+    duplicateBlueprint: (id: string) => Promise<string>;
     resetCurrent: () => void;
     resetSaveStatus: () => void;
     setLastEditingId: (id: string | null) => void;
+    setViewMode: (mode: 'list' | 'editor') => void;
 }
 
 function getApiErrorMessage(error: unknown, fallback: string): string {
     return (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail || fallback;
 }
 
-export const useBlueprintStore = create<BlueprintState>((set) => ({
+export const useBlueprintStore = create<BlueprintState>((set, get) => ({
     blueprints: [],
     currentBlueprint: null,
+    savedSnapshot: null,
     availableItems: [],
     isLoading: false,
     error: null,
     saveStatus: 'idle',
     lastEditingId: null,
+    viewMode: 'list',
+    usageMap: {},
 
     fetchAvailableItems: async () => {
         set({ isLoading: true, error: null });
@@ -119,7 +135,20 @@ export const useBlueprintStore = create<BlueprintState>((set) => ({
         set({ isLoading: true, error: null });
         try {
             const response = await api.get<TestDefinition[]>('tests/');
-            set({ blueprints: response.data, isLoading: false });
+            const blueprints = response.data;
+            set({ blueprints, isLoading: false });
+            // Fetch usage for all blueprints in parallel
+            const usageEntries = await Promise.all(
+                blueprints.map(async (bp) => {
+                    try {
+                        const u = await api.get<BlueprintUsage>(`tests/${bp.id}/usage`);
+                        return [bp.id, u.data] as [string, BlueprintUsage];
+                    } catch {
+                        return [bp.id, { has_scheduled_sessions: false, has_past_sessions: false, is_locked: false, is_permanently_locked: false }] as [string, BlueprintUsage];
+                    }
+                })
+            );
+            set({ usageMap: Object.fromEntries(usageEntries) });
         } catch (err: unknown) {
             set({ error: getApiErrorMessage(err, 'Failed to fetch blueprints'), isLoading: false });
         }
@@ -129,7 +158,8 @@ export const useBlueprintStore = create<BlueprintState>((set) => ({
         set({ isLoading: true, error: null });
         try {
             const response = await api.get<TestDefinition>(`tests/${id}`);
-            set({ currentBlueprint: response.data, isLoading: false });
+            const snapshot = JSON.stringify(response.data);
+            set({ currentBlueprint: response.data, savedSnapshot: snapshot, isLoading: false });
         } catch (err: unknown) {
             set({ error: getApiErrorMessage(err, 'Failed to fetch blueprint'), isLoading: false });
         }
@@ -144,13 +174,27 @@ export const useBlueprintStore = create<BlueprintState>((set) => ({
             } else {
                 response = await api.post<TestDefinition>('tests/', data);
             }
-            set({ currentBlueprint: response.data, isLoading: false, saveStatus: 'saved' });
+            const snapshot = JSON.stringify(response.data);
+            set({ currentBlueprint: response.data, savedSnapshot: snapshot, isLoading: false, saveStatus: 'saved' });
             return response.data.id;
         } catch (err: unknown) {
             const msg = getApiErrorMessage(err, 'Failed to save blueprint');
             set({ error: msg, isLoading: false, saveStatus: 'error' });
             throw new Error(msg);
         }
+    },
+
+    deleteBlueprint: async (id: string) => {
+        await api.delete(`tests/${id}`);
+        set((state) => ({
+            blueprints: state.blueprints.filter((bp) => bp.id !== id),
+        }));
+    },
+
+    duplicateBlueprint: async (id: string) => {
+        const response = await api.post<{ id: string }>(`tests/${id}/duplicate`);
+        await get().fetchBlueprints();
+        return response.data.id;
     },
 
     resetCurrent: () => {
@@ -163,11 +207,13 @@ export const useBlueprintStore = create<BlueprintState>((set) => ({
                 shuffle_questions: false,
                 scoring_config: { ...DEFAULT_SCORING_CONFIG },
             },
+            savedSnapshot: null,
             error: null,
-            saveStatus: 'idle'
+            saveStatus: 'idle',
         });
     },
 
     resetSaveStatus: () => set({ saveStatus: 'idle' }),
     setLastEditingId: (id) => set({ lastEditingId: id }),
+    setViewMode: (mode) => set({ viewMode: mode }),
 }));

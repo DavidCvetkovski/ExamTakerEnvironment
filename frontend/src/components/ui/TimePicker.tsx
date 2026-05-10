@@ -6,7 +6,7 @@ import { useClickOutside } from '@/hooks/useClickOutside';
 interface TimePickerProps {
     value: Date | null;
     onChange: (date: Date) => void;
-    step?: number; // minute increment, default 5
+    step?: number; // minute increment, default 1
 }
 
 function pad(n: number): string {
@@ -104,7 +104,7 @@ function SpinnerColumn({
     );
 }
 
-export function TimePicker({ value, onChange, step = 5 }: TimePickerProps) {
+export function TimePicker({ value, onChange, step = 1 }: TimePickerProps) {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement | null>(null);
 

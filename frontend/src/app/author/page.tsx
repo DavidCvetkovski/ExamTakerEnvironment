@@ -8,7 +8,7 @@ import EssayOptionsPanel from '@/components/editor/EssayOptionsPanel';
 import { useAuthoringStore } from '@/stores/useAuthoringStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { Badge, Button, Card, Field, Input, PageHeader, Select, StatusDot, cn, useToast } from '@/components/ui';
+import { Badge, Button, Card, Field, Input, PageHeader, Select, StatusDot, cn, useToast, useConfirm } from '@/components/ui';
 
 export default function AuthorPage() {
     return (
@@ -26,6 +26,7 @@ function AuthorPageInner() {
     const blueprintId = searchParams.get('blueprint_id');
     const fetchedRef = useRef<string | null>(null);
     const { toast } = useToast();
+    const { confirm, ConfirmDialog } = useConfirm();
 
     const {
         saveStatus, questionType, setQuestionType,
@@ -73,19 +74,31 @@ function AuthorPageInner() {
         : saveStatus === 'ERROR' ? <Badge tone="danger" size="sm">Save failed</Badge>
         : null;
 
+    async function handleBack() {
+        if (isDirty) {
+            const ok = await confirm({
+                title: 'Leave without saving?',
+                message: 'You have unsaved changes in this question. They will be lost if you leave.',
+                confirmLabel: 'Leave',
+                tone: 'warning',
+            });
+            if (!ok) return;
+        }
+        setLastEditingLoId(null);
+        if (fromBlueprint && blueprintId) {
+            router.push(`/blueprint?id=${blueprintId}`);
+        } else {
+            router.push('/items');
+        }
+    }
+
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
             <div className="min-h-screen bg-shell-bg text-foreground">
+                {ConfirmDialog}
                 <div className="max-w-4xl mx-auto px-6 py-10">
                     <button
-                        onClick={() => {
-                            setLastEditingLoId(null);
-                            if (fromBlueprint && blueprintId) {
-                                router.push(`/blueprint?id=${blueprintId}`);
-                            } else {
-                                router.push('/items');
-                            }
-                        }}
+                        onClick={handleBack}
                         className={cn(
                             'mb-6 inline-flex items-center gap-2 text-meta font-medium',
                             'text-shell-muted hover:text-foreground transition-colors'

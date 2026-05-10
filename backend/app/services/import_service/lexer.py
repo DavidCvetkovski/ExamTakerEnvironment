@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Iterator
 
-METADATA_KEYS = {"TYPE", "LEVEL", "DIFFICULTY", "POINTS", "TAGS", "TITLE", "COURSE", "DURATION", "DESCRIPTION"}
+METADATA_KEYS = {"TYPE", "LEVEL", "DIFFICULTY", "POINTS", "TAGS", "SUBJECT", "TITLE", "COURSE", "DURATION", "DESCRIPTION"}
 
 
 class TokenType(Enum):

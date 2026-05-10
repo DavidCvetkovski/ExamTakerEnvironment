@@ -1,16 +1,18 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { Button, Badge, Field, Select, useToast } from '@/components/ui';
+import { Button, Badge, useToast, useConfirm } from '@/components/ui';
 import { useImportStore, ParseError } from '@/stores/useImportStore';
 import FormatGuideModal from '@/components/import/FormatGuideModal';
 
 export default function ImportPage() {
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <ImportPageInner />
+            <Suspense fallback={<div className="min-h-screen bg-shell-bg" />}>
+                <ImportPageInner />
+            </Suspense>
         </ProtectedRoute>
     );
 }
@@ -26,14 +28,14 @@ function lineToCharOffset(text: string, lineNumber: number): number {
 
 function ImportPageInner() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { toast } = useToast();
+    const { confirm, ConfirmDialog } = useConfirm();
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [showGuide, setShowGuide] = useState(false);
 
     const {
         rawText,
-        bankId,
-        banks,
         createBlueprint,
         previewResult,
         previewLoading,
@@ -42,18 +44,18 @@ function ImportPageInner() {
         commitResult,
         commitError,
         setRawText,
-        setBankId,
         setCreateBlueprint,
-        fetchBanks,
         fetchPreview,
         commitImport,
         reset,
     } = useImportStore();
 
+    // Set initial mode from query param
     useEffect(() => {
-        fetchBanks();
-        return () => { reset(); };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        const mode = searchParams.get('mode');
+        if (mode === 'questions') setCreateBlueprint(false);
+        else if (mode === 'blueprint') setCreateBlueprint(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // After successful commit, redirect to items page
@@ -61,16 +63,11 @@ function ImportPageInner() {
         if (commitStatus === 'completed' && commitResult) {
             const count = commitResult.question_count;
             toast({ tone: 'success', title: `Import complete — ${count} question${count !== 1 ? 's' : ''} added` });
-
             if (commitResult.blueprint_id) {
-                toast({
-                    tone: 'info',
-                    title: 'Blueprint created',
-                    description: 'A draft blueprint was created from this import.',
-                });
+                toast({ tone: 'info', title: 'Blueprint created', description: 'A draft blueprint was created from this import.' });
             }
-
-            router.push(`/items?imported=true&bank_id=${bankId}`);
+            reset();
+            router.push('/items?imported=true');
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [commitStatus]);
@@ -82,6 +79,15 @@ function ImportPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [commitError]);
 
+    // Exit warning for browser unload
+    useEffect(() => {
+        const isDirty = rawText.trim().length > 0 && commitStatus !== 'completed';
+        if (!isDirty) return;
+        const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+        window.addEventListener('beforeunload', handler);
+        return () => window.removeEventListener('beforeunload', handler);
+    }, [rawText, commitStatus]);
+
     function jumpToLine(line: number | null) {
         if (!line || !textareaRef.current) return;
         const offset = lineToCharOffset(rawText, line);
@@ -89,70 +95,80 @@ function ImportPageInner() {
         textareaRef.current.setSelectionRange(offset, offset);
     }
 
+    async function handleNavAway(dest: string) {
+        const isDirty = rawText.trim().length > 0 && commitStatus !== 'completed';
+        if (isDirty) {
+            const ok = await confirm({
+                title: 'Leave without importing?',
+                message: 'You have pasted text that has not been imported yet. Your draft will be cleared.',
+                confirmLabel: 'Leave',
+                cancelLabel: 'Stay',
+                tone: 'warning',
+            });
+            if (!ok) return;
+        }
+        reset();
+        router.push(dest);
+    }
+
     const estimatedQuestions = (rawText.match(/^#Q\s/gm) || []).length;
     const canPreview = rawText.trim().length > 0;
-    const canCommit = previewResult?.can_commit === true && !!bankId && commitStatus !== 'running';
+    const canCommit = previewResult?.can_commit === true && commitStatus !== 'running';
     const isCommitting = commitStatus === 'running';
 
     return (
         <div className="min-h-screen bg-shell-bg">
+            {ConfirmDialog}
             <div className="max-w-7xl mx-auto px-6 py-8">
                 {/* Page header */}
-                <div className="flex items-center gap-3 mb-8">
+                <div className="flex items-start justify-between gap-4 mb-8">
                     <div>
                         <p className="text-eyebrow text-shell-muted mb-1">Constructor Tools</p>
-                        <h1 className="text-h1 text-foreground flex items-center gap-2">
-                            Import Questions
-                            <button
-                                onClick={() => setShowGuide(true)}
-                                className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-shell-border bg-shell-input text-shell-muted-dim text-xs font-bold hover:text-foreground hover:border-shell-border-deep focus-ring transition-colors"
-                                aria-label="Open format guide"
-                            >
-                                i
-                            </button>
-                        </h1>
+                        <h1 className="text-h1 text-foreground">Import Questions</h1>
                     </div>
+                    <Button variant="ghost" size="sm" onClick={() => setShowGuide(true)}>
+                        📖 Format Guide
+                    </Button>
+                </div>
+
+                {/* Mode cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                    <button
+                        type="button"
+                        onClick={() => setCreateBlueprint(false)}
+                        className={`text-left p-4 rounded-2xl border-2 transition-all ${
+                            !createBlueprint
+                                ? 'border-brand bg-brand/5'
+                                : 'border-shell-border bg-shell-surface hover:border-shell-border-deep'
+                        }`}
+                    >
+                        <p className="font-semibold text-foreground mb-1">📋 Import Questions Only</p>
+                        <p className="text-sm text-shell-muted">Add questions to your library (no blueprint created)</p>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setCreateBlueprint(true)}
+                        className={`text-left p-4 rounded-2xl border-2 transition-all ${
+                            createBlueprint
+                                ? 'border-brand bg-brand/5'
+                                : 'border-shell-border bg-shell-surface hover:border-shell-border-deep'
+                        }`}
+                    >
+                        <p className="font-semibold text-foreground mb-1">📐 Import + Create Blueprint</p>
+                        <p className="text-sm text-shell-muted">Build a ready-to-use exam too (questions + blueprint draft)</p>
+                    </button>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                    {/* Left panel — input (60%) */}
+                    {/* Left panel — input */}
                     <div className="lg:col-span-3 space-y-4">
-                        {/* Bank selector + options */}
-                        <div className="bg-shell-surface rounded-2xl border border-shell-border p-5 space-y-4">
-                            <Field label="Target Item Bank">
-                                <Select
-                                    value={bankId ?? ''}
-                                    onChange={(e) => setBankId(e.target.value || null)}
-                                >
-                                    <option value="">— select a bank —</option>
-                                    {banks.map((b) => (
-                                        <option key={b.id} value={b.id}>{b.name}</option>
-                                    ))}
-                                </Select>
-                            </Field>
-
-                            <label className="flex items-center gap-3 cursor-pointer select-none">
-                                <span
-                                    role="checkbox"
-                                    aria-checked={createBlueprint}
-                                    tabIndex={0}
-                                    onClick={() => setCreateBlueprint(!createBlueprint)}
-                                    onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') setCreateBlueprint(!createBlueprint); }}
-                                    className={`w-10 h-6 rounded-full transition-colors focus-ring cursor-pointer ${createBlueprint ? 'bg-brand' : 'bg-shell-input-alt'}`}
-                                >
-                                    <span className={`block w-4 h-4 rounded-full bg-shell-bg shadow transition-transform m-1 ${createBlueprint ? 'translate-x-4' : 'translate-x-0'}`} />
-                                </span>
-                                <span className="text-sm text-foreground">Also create a draft blueprint from this import</span>
-                            </label>
-                        </div>
-
                         {/* Textarea */}
                         <div className="bg-shell-surface rounded-2xl border border-shell-border overflow-hidden">
                             <textarea
                                 ref={textareaRef}
                                 value={rawText}
                                 onChange={(e) => setRawText(e.target.value)}
-                                placeholder={`// Paste your formatted exam text here…\n\n#BLUEPRINT\nTitle: My Exam\nDuration: 60\n\n#Q What is the capital of France?\nTYPE: MCQ\n\nA) Lyon\nB) Paris *\nC) Marseille`}
+                                placeholder={`// Paste your formatted exam text here…\n\n#BLUEPRINT\nTitle: My Exam\nDuration: 60\n\n#Q What is the capital of France?\nTYPE: MCQ\nSUBJECT: Geography\n\nA) Lyon\nB) Paris *\nC) Marseille`}
                                 className="w-full h-[28rem] bg-transparent font-mono text-sm text-foreground placeholder:text-shell-muted-dim resize-none p-5 focus:outline-none"
                                 spellCheck={false}
                             />
@@ -187,12 +203,15 @@ function ImportPageInner() {
                                 disabled={!canCommit}
                                 loading={isCommitting}
                             >
-                                Commit Import
+                                Import
+                            </Button>
+                            <Button variant="ghost" onClick={() => handleNavAway('/items')}>
+                                ← Library
                             </Button>
                         </div>
                     </div>
 
-                    {/* Right panel — results (40%) */}
+                    {/* Right panel — results */}
                     <div className="lg:col-span-2">
                         <ResultPanel
                             previewResult={previewResult}
@@ -249,12 +268,11 @@ function ResultPanel({ previewResult, previewLoading, previewError, onJumpToLine
 
     return (
         <div className="space-y-4">
-            {/* Summary banner */}
             <div className={`rounded-2xl border p-4 ${can_commit ? 'border-[var(--color-success-border)] bg-[var(--color-success-bg)]' : 'border-[var(--color-danger-border)] bg-[var(--color-danger-bg)]'}`}>
                 <p className={`font-semibold text-sm ${can_commit ? 'text-[var(--color-success-fg)]' : 'text-[var(--color-danger-fg)]'}`}>
                     {can_commit
                         ? `✓ ${question_count} question${question_count !== 1 ? 's' : ''} parsed across ${blocks.length} block${blocks.length !== 1 ? 's' : ''}`
-                        : `✗ ${errors.length} error${errors.length !== 1 ? 's' : ''} — fix before committing`
+                        : `✗ ${errors.length} error${errors.length !== 1 ? 's' : ''} — fix before importing`
                     }
                 </p>
                 {has_blueprint_header && blueprint_title && (
@@ -262,7 +280,6 @@ function ResultPanel({ previewResult, previewLoading, previewError, onJumpToLine
                 )}
             </div>
 
-            {/* Errors */}
             {errors.length > 0 && (
                 <div className="bg-shell-surface rounded-2xl border border-[var(--color-danger-border)] overflow-hidden">
                     <div className="px-4 py-3 border-b border-shell-border">
@@ -276,7 +293,6 @@ function ResultPanel({ previewResult, previewLoading, previewError, onJumpToLine
                 </div>
             )}
 
-            {/* Blocks */}
             {can_commit && blocks.length > 0 && (
                 <div className="bg-shell-surface rounded-2xl border border-shell-border overflow-hidden">
                     <div className="px-4 py-3 border-b border-shell-border">
@@ -310,7 +326,6 @@ function ResultPanel({ previewResult, previewLoading, previewError, onJumpToLine
                 </div>
             )}
 
-            {/* Warnings */}
             {warnings.length > 0 && (
                 <div className="bg-shell-surface rounded-2xl border border-[var(--color-warning-border)] overflow-hidden">
                     <button

@@ -190,8 +190,16 @@ class Assembler:
                         severity=ParseErrorSeverity.ERROR,
                         fix_hint="POINTS must be a whole number ≥ 1.",
                     ))
+            elif key == "SUBJECT":
+                self._current_q["tags"] = [t.strip() for t in val.split(",") if t.strip()]
             elif key == "TAGS":
                 self._current_q["tags"] = [t.strip() for t in val.split(",") if t.strip()]
+                self._errors.append(ParseError(
+                    line=token.line,
+                    message="TAGS: is deprecated — use SUBJECT: instead.",
+                    severity=ParseErrorSeverity.WARNING,
+                    fix_hint="Replace `TAGS:` with `SUBJECT:` for clarity.",
+                ))
 
     def _handle_option(self, token: Token) -> None:
         if self._state not in (AssemblerState.IN_QUESTION, AssemblerState.IN_MODEL_ANSWER) or self._current_q is None:

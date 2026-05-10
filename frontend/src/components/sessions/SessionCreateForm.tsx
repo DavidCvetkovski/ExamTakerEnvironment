@@ -141,7 +141,6 @@ export default function SessionCreateForm({
                                 <TimePicker
                                     value={startsAt}
                                     onChange={setStartsAt}
-                                    step={5}
                                 />
                             </Field>
                         </div>

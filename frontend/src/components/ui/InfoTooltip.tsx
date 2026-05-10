@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from './cn';
 
 interface InfoTooltipProps {
@@ -17,12 +18,17 @@ export default function InfoTooltip({
     align = 'left',
 }: InfoTooltipProps) {
     const [open, setOpen] = useState(false);
-    const ref = useRef<HTMLSpanElement>(null);
+    const [mounted, setMounted] = useState(false);
+    const [coords, setCoords] = useState({ top: 0, left: 0 });
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const containerRef = useRef<HTMLSpanElement>(null);
+
+    useEffect(() => { setMounted(true); }, []);
 
     useEffect(() => {
         if (!open) return;
         const onClick = (e: MouseEvent) => {
-            if (!ref.current?.contains(e.target as Node)) setOpen(false);
+            if (!containerRef.current?.contains(e.target as Node)) setOpen(false);
         };
         const onKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') setOpen(false);
@@ -35,15 +41,41 @@ export default function InfoTooltip({
         };
     }, [open]);
 
+    function openTooltip() {
+        if (!triggerRef.current) return;
+        const rect = triggerRef.current.getBoundingClientRect();
+        const left = align === 'right'
+            ? rect.right + window.scrollX - 288  // 288 = w-72
+            : rect.left + window.scrollX;
+        setCoords({
+            top: rect.bottom + window.scrollY + 8,
+            left: Math.max(8, left),
+        });
+        setOpen(true);
+    }
+
+    const tooltip = open && mounted ? createPortal(
+        <span
+            role="tooltip"
+            style={{ position: 'absolute', top: coords.top, left: coords.left, zIndex: 9999 }}
+            className="w-72 rounded-lg border border-shell-border bg-shell-surface shadow-elevated px-3 py-2.5 text-meta text-foreground leading-relaxed normal-case tracking-normal font-normal pointer-events-auto"
+        >
+            {children}
+        </span>,
+        document.body
+    ) : null;
+
     return (
-        <span ref={ref} className={cn('relative inline-flex', className)}>
+        <span ref={containerRef} className={cn('relative inline-flex', className)}>
             <button
+                ref={triggerRef}
                 type="button"
                 aria-label={label}
                 aria-expanded={open}
                 onClick={(e) => {
                     e.stopPropagation();
-                    setOpen((v) => !v);
+                    if (open) setOpen(false);
+                    else openTooltip();
                 }}
                 className={cn(
                     'inline-flex items-center justify-center w-4 h-4 rounded-full',
@@ -56,20 +88,7 @@ export default function InfoTooltip({
             >
                 i
             </button>
-            {open && (
-                <span
-                    role="tooltip"
-                    className={cn(
-                        'absolute z-50 top-full mt-2 w-72',
-                        align === 'right' ? 'right-0' : 'left-0',
-                        'rounded-lg border border-shell-border bg-shell-surface shadow-elevated',
-                        'px-3 py-2.5 text-meta text-foreground leading-relaxed',
-                        'normal-case tracking-normal font-normal'
-                    )}
-                >
-                    {children}
-                </span>
-            )}
+            {tooltip}
         </span>
     );
 }

@@ -53,11 +53,11 @@ function AutoGradeResult({ grade }: { grade: QuestionGrade }) {
     return (
         <div className="space-y-3">
             {/* Student answer */}
-            <div className={`rounded-lg p-3 border ${grade.is_correct ? 'bg-emerald-950/40 border-emerald-800/60' : 'bg-red-950/40 border-red-800/60'}`}>
+            <div className={`rounded-lg p-3 border ${grade.is_correct ? 'bg-[var(--color-success-bg)] border-[var(--color-success-border)]' : 'bg-[var(--color-danger-bg)] border-[var(--color-danger-border)]'}`}>
                 <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-semibold text-shell-muted">STUDENT ANSWER</span>
                     {grade.is_correct !== null && (
-                        <span className={`text-xs font-bold ${grade.is_correct ? 'text-emerald-400' : 'text-red-400'}`}>
+                        <span className={`text-xs font-bold ${grade.is_correct ? 'text-[var(--color-success-fg)]' : 'text-[var(--color-danger-fg)]'}`}>
                             {grade.is_correct ? '✓ CORRECT' : '✗ INCORRECT'}
                         </span>
                     )}
@@ -70,7 +70,7 @@ function AutoGradeResult({ grade }: { grade: QuestionGrade }) {
                 <div className="rounded-lg p-3 bg-shell-input/50 border border-shell-border-deep">
                     <p className="text-xs font-semibold text-shell-muted mb-1">CORRECT ANSWER</p>
                     {((grade.correct_answer as Record<string, number[]>).correct_indices ?? []).map((idx: number) => (
-                        <span key={idx} className="bg-emerald-900/40 text-emerald-300 text-xs px-2 py-0.5 rounded mr-1">
+                        <span key={idx} className="bg-[var(--color-success-bg)] text-[var(--color-success-fg)] text-xs px-2 py-0.5 rounded mr-1">
                             {options[idx]?.text ?? `Option ${idx + 1}`}
                         </span>
                     ))}
@@ -89,17 +89,17 @@ function AutoGradeResult({ grade }: { grade: QuestionGrade }) {
                                     key={`${idx}-${option.text}`}
                                     className={`rounded-md border px-3 py-2 text-sm ${
                                         isSelected && isCorrect
-                                            ? 'border-emerald-700 bg-emerald-950/30 text-emerald-200'
+                                            ? 'border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-fg)]'
                                             : isSelected
-                                                ? 'border-red-700 bg-red-950/30 text-red-200'
+                                                ? 'border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)]'
                                                 : isCorrect
-                                                    ? 'border-emerald-900/60 bg-shell-surface text-emerald-300'
+                                                    ? 'border-[var(--color-success-border)] bg-shell-surface text-[var(--color-success-fg)]'
                                                     : 'border-shell-border-deep bg-shell-surface/60 text-shell-muted'
                                     }`}
                                 >
                                     <span className="font-semibold mr-2">{String.fromCharCode(65 + idx)}.</span>
                                     <span
-                                        className="inline-block align-middle prose prose-invert prose-p:my-0 prose-li:my-0 prose-pre:my-1 max-w-none"
+                                        className="inline-block align-middle prose prose-p:my-0 prose-li:my-0 prose-pre:my-1 max-w-none"
                                         dangerouslySetInnerHTML={{ __html: sanitizeHtml(option.html) }}
                                     />
                                 </div>
@@ -208,12 +208,12 @@ function EssayGradingPanel({
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white text-xs font-semibold rounded-lg disabled:opacity-50 transition-colors"
+                    className="px-4 py-2 bg-brand hover:bg-brand/90 text-white text-xs font-semibold rounded-lg disabled:opacity-50 transition-colors"
                 >
                     {saving ? 'Saving…' : '✓ Save Grade'}
                 </button>
                 {grade.feedback !== null && !grade.is_auto_graded && (
-                    <span className="text-xs text-emerald-400">✓ Graded</span>
+                    <span className="text-xs text-[var(--color-success-fg)]">✓ Graded</span>
                 )}
             </div>
         </div>
@@ -272,15 +272,15 @@ export default function SessionGradingPage() {
                             </span>
                             <span className="font-bold text-foreground">
                                 {sessionResult.total_points} / {sessionResult.max_points} pts
-                                <span className="ml-2 text-blue-400">({sessionResult.percentage.toFixed(1)}%)</span>
+                                <span className="ml-2 text-brand">({sessionResult.percentage.toFixed(1)}%)</span>
                             </span>
                             {sessionResult.letter_grade && (
-                                <span className={`px-2 py-0.5 rounded text-xs font-bold ${sessionResult.passed ? 'bg-emerald-900/50 text-emerald-300' : 'bg-red-900/50 text-red-300'}`}>
+                                <span className={`px-2 py-0.5 rounded text-xs font-bold ${sessionResult.passed ? 'bg-[var(--color-success-bg)] text-[var(--color-success-fg)]' : 'bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)]'}`}>
                                     {sessionResult.letter_grade}
                                 </span>
                             )}
                             {pendingEssays.length > 0 && (
-                                <span className="text-xs text-amber-400">
+                                <span className="text-xs text-[var(--color-warning-fg)]">
                                     ⚠ {pendingEssays.length} essay{pendingEssays.length > 1 ? 's' : ''} pending
                                 </span>
                             )}
@@ -292,9 +292,9 @@ export default function SessionGradingPage() {
             <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
                 {/* Error banner */}
                 {error && (
-                    <div className="bg-red-900/30 border border-red-700 text-red-300 rounded-lg px-4 py-3 text-sm flex justify-between">
+                    <div className="border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] rounded-lg px-4 py-3 text-sm flex justify-between">
                         <span>{error}</span>
-                        <button onClick={clearError} className="text-red-400 hover:text-red-200">✕</button>
+                        <button onClick={clearError} className="text-[var(--color-danger-fg)] hover:opacity-80">✕</button>
                     </div>
                 )}
 
@@ -318,14 +318,14 @@ export default function SessionGradingPage() {
                             key={grade.id}
                             className={`bg-shell-surface border rounded-xl p-6 space-y-5 transition-colors ${
                                 isGraded
-                                    ? 'border-emerald-900/60'
-                                    : 'border-amber-800/60'
+                                    ? 'border-[var(--color-success-border)]'
+                                    : 'border-[var(--color-warning-border)]'
                             }`}
                         >
                             {/* Card header */}
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex items-center gap-3">
-                                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isGraded ? 'bg-emerald-900/60 text-emerald-400' : 'bg-amber-900/40 text-amber-400'}`}>
+                                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isGraded ? 'bg-[var(--color-success-bg)] text-[var(--color-success-fg)]' : 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]'}`}>
                                         {isGraded ? '✓' : idx + 1}
                                     </span>
                                     <div>
@@ -344,7 +344,7 @@ export default function SessionGradingPage() {
                             </div>
                             {grade.question_content != null && (
                                 <div
-                                    className="prose prose-invert max-w-none rounded-lg border border-shell-border bg-shell-bg/60 px-4 py-3 text-base leading-relaxed"
+                                    className="prose max-w-none rounded-lg border border-shell-border bg-shell-bg/60 px-4 py-3 text-base leading-relaxed"
                                     dangerouslySetInnerHTML={{ __html: sanitizeHtml(toExamContentHtml(grade.question_content)) }}
                                 />
                             )}

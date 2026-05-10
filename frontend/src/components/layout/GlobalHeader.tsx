@@ -28,7 +28,6 @@ export default function GlobalHeader() {
               ]
             : [
                   { name: 'Library', href: '/items' },
-                  { name: 'Import', href: '/import' },
                   { name: 'Blueprints', href: '/blueprint' },
                   { name: 'Sessions', href: '/sessions' },
                   { name: 'Grading', href: '/grading' },

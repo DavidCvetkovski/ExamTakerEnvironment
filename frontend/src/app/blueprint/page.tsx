@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import { DEFAULT_SCORING_CONFIG, useBlueprintStore, SelectionRule, TestDefinition } from '@/stores/useBlueprintStore';
 import { useExamStore } from '@/stores/useExamStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useRouter, useSearchParams } from 'next/navigation';
 import QuestionPickerModal from '@/components/blueprint/QuestionPickerModal';
 import BlueprintSaveIndicator from '@/components/blueprint/BlueprintSaveIndicator';
-import { Badge, Button, useToast } from '@/components/ui';
+import { Badge, Button, Input, Select, useToast, useConfirm } from '@/components/ui';
 
 type BlueprintDraft = Partial<TestDefinition>;
 
@@ -23,16 +23,22 @@ function BlueprintPageInner() {
     const {
         blueprints,
         currentBlueprint,
+        savedSnapshot,
         availableItems,
         isLoading,
         error,
+        usageMap,
         fetchBlueprints,
         fetchBlueprint,
         fetchAvailableItems,
         saveBlueprint,
+        deleteBlueprint,
+        duplicateBlueprint,
         resetCurrent,
         lastEditingId,
         setLastEditingId,
+        viewMode,
+        setViewMode,
     } = useBlueprintStore();
 
     const { instantiateSession } = useExamStore();
@@ -40,34 +46,103 @@ function BlueprintPageInner() {
     const searchParams = useSearchParams();
     const idFromUrl = searchParams.get('id');
     const { toast } = useToast();
+    const { confirm, ConfirmDialog } = useConfirm();
 
-    const [isEditing, setIsEditing] = useState(false);
     const [isStarting, setIsStarting] = useState(false);
+    const [search, setSearch] = useState('');
+    const [sortKey, setSortKey] = useState<'created_desc' | 'created_asc' | 'updated_desc' | 'duration_asc' | 'duration_desc'>('created_desc');
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
     const [pickerOpen, setPickerOpen] = useState<{ blockIdx: number, ruleIdx: number } | null>(null);
     const [draggedItem, setDraggedItem] = useState<{ blockIdx: number, ruleIdx: number } | null>(null);
     const [dragOverItem, setDragOverItem] = useState<{ blockIdx: number, ruleIdx: number } | null>(null);
+
+    const isEditing = viewMode === 'editor' || !!idFromUrl;
 
     useEffect(() => {
         fetchAvailableItems();
         if (idFromUrl) {
             setLastEditingId(idFromUrl);
             fetchBlueprint(idFromUrl);
-            setIsEditing(true);
+            setViewMode('editor');
         } else if (lastEditingId) {
             router.replace(`/blueprint?id=${lastEditingId}`);
         } else {
             fetchBlueprints();
-            setIsEditing(false);
+            setViewMode('list');
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [idFromUrl]); // only re-run when URL id changes
 
+    const isDirty = savedSnapshot !== null
+        ? JSON.stringify(currentBlueprint) !== savedSnapshot
+        : (currentBlueprint?.title?.trim() || currentBlueprint?.blocks?.some(b => b.rules.length > 0)) ?? false;
+
     const handleCreateNew = () => {
         setLastEditingId(null);
         resetCurrent();
-        setIsEditing(true);
+        setViewMode('editor');
         router.push('/blueprint');
     };
+
+    const handleBackToList = async () => {
+        if (isDirty) {
+            const ok = await confirm({
+                title: 'Leave without saving?',
+                message: 'Your blueprint changes have not been saved. They will be lost if you leave.',
+                confirmLabel: 'Leave',
+                tone: 'warning',
+            });
+            if (!ok) return;
+        }
+        setLastEditingId(null);
+        resetCurrent();
+        setViewMode('list');
+        router.push('/blueprint');
+    };
+
+    const handleDeleteBlueprint = async (bp: TestDefinition) => {
+        const ok = await confirm({
+            title: 'Delete blueprint?',
+            message: `"${bp.title}" will be permanently removed. This cannot be undone.`,
+            confirmLabel: 'Delete',
+            tone: 'danger',
+        });
+        if (!ok) return;
+        setDeletingId(bp.id);
+        try {
+            await deleteBlueprint(bp.id);
+            toast({ tone: 'success', title: 'Blueprint deleted' });
+        } catch (err) {
+            toast({ tone: 'danger', title: 'Delete failed', description: err instanceof Error ? err.message : 'Try again.' });
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const handleDuplicateBlueprint = async (bp: TestDefinition) => {
+        setDuplicatingId(bp.id);
+        try {
+            await duplicateBlueprint(bp.id);
+            toast({ tone: 'success', title: 'Duplicate created — you can edit it now.' });
+        } catch (err) {
+            toast({ tone: 'danger', title: 'Duplicate failed', description: err instanceof Error ? err.message : 'Try again.' });
+        } finally {
+            setDuplicatingId(null);
+        }
+    };
+
+    const displayedBlueprints = useMemo(() => {
+        let list = blueprints.filter((bp) =>
+            bp.title.toLowerCase().includes(search.toLowerCase())
+        );
+        if (sortKey === 'created_desc') list = [...list].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        if (sortKey === 'created_asc')  list = [...list].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        if (sortKey === 'updated_desc') list = [...list].sort((a, b) => new Date(b.updated_at ?? b.created_at).getTime() - new Date(a.updated_at ?? a.created_at).getTime());
+        if (sortKey === 'duration_asc') list = [...list].sort((a, b) => a.duration_minutes - b.duration_minutes);
+        if (sortKey === 'duration_desc') list = [...list].sort((a, b) => b.duration_minutes - a.duration_minutes);
+        return list;
+    }, [blueprints, search, sortKey]);
 
     const handleAddBlock = () => {
         if (!currentBlueprint) return;
@@ -239,20 +314,45 @@ function BlueprintPageInner() {
         return (
             <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-foreground">
-                    <div className="flex justify-between items-end mb-12">
+                    {ConfirmDialog}
+                    <div className="flex justify-between items-end mb-8">
                         <div>
-                            <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
-                                Test Blueprints
-                            </h1>
+                            <h1 className="text-4xl font-extrabold tracking-tight text-foreground">Test Blueprints</h1>
                             <p className="mt-2 text-shell-muted-dim">Design and manage rule-based exam definitions.</p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <a href="/import" className="text-sm text-brand hover:underline">
-                                Or import questions from text →
-                            </a>
+                            <Button variant="ghost" size="sm" onClick={() => router.push('/import?mode=blueprint')}>
+                                ↑ Import questions
+                            </Button>
                             <Button variant="primary" size="lg" onClick={handleCreateNew}>
                                 <span className="mr-2 text-xl">+</span> New Blueprint
                             </Button>
+                        </div>
+                    </div>
+
+                    {/* Sort + Search toolbar */}
+                    <div className="flex flex-wrap items-center gap-3 mb-8">
+                        <div className="flex-1 min-w-[220px]">
+                            <Input
+                                inputSize="md"
+                                type="text"
+                                placeholder="Search blueprints…"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
+                        <div className="min-w-[200px]">
+                            <Select
+                                inputSize="md"
+                                value={sortKey}
+                                onChange={(e) => setSortKey(e.target.value as typeof sortKey)}
+                            >
+                                <option value="created_desc">Newest first</option>
+                                <option value="created_asc">Oldest first</option>
+                                <option value="updated_desc">Recently edited</option>
+                                <option value="duration_asc">Shortest exam</option>
+                                <option value="duration_desc">Longest exam</option>
+                            </Select>
                         </div>
                     </div>
 
@@ -278,33 +378,80 @@ function BlueprintPageInner() {
                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {blueprints.map(bp => (
-                            <div
-                                key={bp.id}
-                                onClick={() => router.push(`/blueprint?id=${bp.id}`)}
-                                className="group relative bg-shell-surface/50 hover:bg-shell-input/80 p-6 rounded-3xl border border-shell-border hover:border-shell-border-deep transition-all cursor-pointer backdrop-blur-sm"
-                            >
-                                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <span className="text-brand text-sm font-medium">Edit →</span>
-                                </div>
-                                <h3 className="text-xl font-bold mb-2 pr-12 line-clamp-1 text-foreground">{bp.title}</h3>
-                                <p className="text-shell-muted-dim text-sm mb-6 line-clamp-2 min-h-[40px]">{bp.description || 'No description provided.'}</p>
+                        {displayedBlueprints.map((bp) => {
+                            const usage = usageMap[bp.id];
+                            const isPermanentlyLocked = usage?.is_permanently_locked ?? false;
+                            const isLocked = usage?.is_locked ?? false;
+                            const canEdit = !isLocked && !isPermanentlyLocked;
 
-                                <div className="flex items-center justify-between pt-4 border-t border-shell-border text-xs text-shell-muted-dim font-medium tracking-wider uppercase">
-                                    <div className="flex items-center gap-4">
-                                        <span className="flex items-center gap-1.5">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-info"></span>
-                                            {bp.blocks.length} Sections
-                                        </span>
-                                        <span className="flex items-center gap-1.5">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-brand"></span>
-                                            {bp.duration_minutes} min
-                                        </span>
+                            return (
+                                <div
+                                    key={bp.id}
+                                    className="group relative bg-shell-surface/50 hover:bg-shell-input/80 p-6 rounded-3xl border border-shell-border hover:border-shell-border-deep transition-all backdrop-blur-sm"
+                                >
+                                    {/* Lock badge */}
+                                    {isPermanentlyLocked && (
+                                        <div className="absolute top-4 right-4">
+                                            <Badge tone="neutral" size="sm">Locked</Badge>
+                                        </div>
+                                    )}
+                                    {isLocked && !isPermanentlyLocked && (
+                                        <div className="absolute top-4 right-4">
+                                            <Badge tone="warning" size="sm">In use</Badge>
+                                        </div>
+                                    )}
+
+                                    <h3 className="text-xl font-bold mb-2 pr-12 line-clamp-1 text-foreground">{bp.title}</h3>
+                                    <p className="text-shell-muted-dim text-sm mb-4 line-clamp-2 min-h-[40px]">{bp.description || 'No description provided.'}</p>
+
+                                    <div className="flex items-center justify-between pt-4 border-t border-shell-border text-xs text-shell-muted-dim font-medium tracking-wider uppercase mb-4">
+                                        <div className="flex items-center gap-4">
+                                            <span className="flex items-center gap-1.5">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-info"></span>
+                                                {bp.blocks.length} Sections
+                                            </span>
+                                            <span className="flex items-center gap-1.5">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-brand"></span>
+                                                {bp.duration_minutes} min
+                                            </span>
+                                        </div>
+                                        <span>{new Date(bp.updated_at).toLocaleDateString()}</span>
                                     </div>
-                                    <span>{new Date(bp.updated_at).toLocaleDateString()}</span>
+
+                                    {/* Actions */}
+                                    <div className="flex items-center gap-2">
+                                        {canEdit && (
+                                            <Button
+                                                variant="secondary"
+                                                size="sm"
+                                                onClick={() => router.push(`/blueprint?id=${bp.id}`)}
+                                            >
+                                                Edit →
+                                            </Button>
+                                        )}
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            loading={duplicatingId === bp.id}
+                                            onClick={() => handleDuplicateBlueprint(bp)}
+                                        >
+                                            Duplicate
+                                        </Button>
+                                        {canEdit && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                loading={deletingId === bp.id}
+                                                onClick={() => handleDeleteBlueprint(bp)}
+                                                className="text-danger hover:bg-[var(--color-danger-bg)]"
+                                            >
+                                                Delete
+                                            </Button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             </ProtectedRoute>
@@ -314,14 +461,12 @@ function BlueprintPageInner() {
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
             <div className="max-w-page mx-auto px-4 py-12 text-foreground sm:px-6 lg:px-8">
+                {ConfirmDialog}
                 <div className="flex gap-8">
                     {/* Main Editor */}
                     <div className="min-w-0 flex-1">
                         <button
-                            onClick={() => {
-                                setLastEditingId(null);
-                                router.push('/blueprint');
-                            }}
+                            onClick={handleBackToList}
                             className="group flex items-center text-shell-muted-dim hover:text-foreground mb-8 transition-colors"
                         >
                             <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> All Blueprints

@@ -246,9 +246,14 @@ function BlueprintPageInner() {
                             </h1>
                             <p className="mt-2 text-shell-muted-dim">Design and manage rule-based exam definitions.</p>
                         </div>
-                        <Button variant="primary" size="lg" onClick={handleCreateNew}>
-                            <span className="mr-2 text-xl">+</span> New Blueprint
-                        </Button>
+                        <div className="flex items-center gap-3">
+                            <a href="/import" className="text-sm text-brand hover:underline">
+                                Or import questions from text →
+                            </a>
+                            <Button variant="primary" size="lg" onClick={handleCreateNew}>
+                                <span className="mr-2 text-xl">+</span> New Blueprint
+                            </Button>
+                        </div>
                     </div>
 
                     {isLoading && blueprints.length === 0 && (

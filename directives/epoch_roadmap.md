@@ -473,11 +473,55 @@
 
 ---
 
-## Epoch 8 — Media Management & Resource Library
+## Epoch 8 — Bulk Import & Blueprint Paste Parser
+
+**Goal:** Let constructors paste a specially formatted plain-text exam document into a single textarea, preview the parsed structure with per-line error feedback, and commit — automatically creating `ItemVersion` records in a target bank and optionally assembling a draft `TestDefinition` (blueprint). Eliminates the need to manually author every question through the UI when the exam already exists in a document.
+
+### 8.1 — Text Format & Parser Engine
+
+**Deliverables:**
+- Canonical plain-text import format (documented in directive and in-app). Supports `#BLUEPRINT` header, `#BLOCK` section separators, `#Q` question stems, `TYPE / LEVEL / DIFFICULTY / POINTS / TAGS` metadata, lettered MCQ/MCQ_MULTI options with ` *` correct-answer markers, and `MODEL_ANSWER:` blocks for essays.
+- `backend/app/services/import_service/` sub-package: `lexer.py` (tokeniser), `assembler.py` (state-machine builder), `validator.py` (rule checker), `schemas.py` (Pydantic DTOs), `persister.py` (bulk DB insert).
+- ≥ 15 unit tests covering happy paths and all error/warning rules.
+
+### 8.2 — Import API
+
+**Deliverables:**
+- `POST /api/import/preview` — parse and validate without persisting; returns structured preview + per-line errors. Role-gated (CONSTRUCTOR / ADMIN).
+- `POST /api/import/commit` — synchronous for ≤ 50 items; enqueues a Celery job for > 50 items. Returns created LO ids and optional blueprint id.
+- `GET /api/import/jobs/{job_id}` — polls Celery job status; returns progress, completion, or error.
+- `ImportJob` table (single Alembic migration) to track async job state.
+
+### 8.3 — Frontend Import Page
+
+**Deliverables:**
+- New `/import` route (CONSTRUCTOR / ADMIN only): paste textarea, bank selector, "create blueprint" toggle, Parse & Preview button, Commit button.
+- Right-panel preview: collapsible block/question list, error list with line numbers (clickable to jump in textarea), warning accordion.
+- Progress bar + polling loop for async Celery jobs.
+- Post-commit redirect to item library with "Import complete" banner and optional "View Blueprint" toast action.
+- "Import" nav link in constructor/admin global header.
+- Entry-point link on the blueprint page: "Or import questions from text →".
+
+### 8.4 — Format Guide & Template
+
+**Deliverables:**
+- In-app Format Guide modal (Quick Reference, Full Example, FAQ tabs).
+- Downloadable `import-template.txt` (static file in `public/`).
+
+**Exit Criteria:**
+- Paste canonical 3-question example → preview clean → commit → items in bank + draft blueprint created.
+- MCQ with no ` *` → parse error on correct line, commit blocked.
+- 51-question paste → job queued, polled to completion, all items persisted.
+- `tsc --noEmit` + `next build` green; all import service unit tests green.
+- Aikido scan: zero new Critical/High findings.
+
+---
+
+## Epoch 9 — Media Management & Resource Library
 
 **Goal:** Enable rich media uploads, build a reusable resource library, and support CDN-backed delivery for scalable media serving.
 
-### 8.1 — Upload Pipeline
+### 9.1 — Upload Pipeline
 
 **Deliverables:**
 - File upload endpoint (`POST /media/upload`) with multipart form data.
@@ -487,7 +531,7 @@
 - S3-compatible storage backend (MinIO for local dev, AWS S3 for production).
 - Unique filename generation with original name preserved in metadata.
 
-### 8.2 — Resource Library UI
+### 9.2 — Resource Library UI
 
 **Deliverables:**
 - Searchable, filterable media library accessible from the TipTap editor.
@@ -498,7 +542,7 @@
 
 **TestVision Parity:** *"Instead of storing BLOBs directly in the item record, the system utilizes a resource library. This allows a single asset to be referenced by multiple questions, optimizing storage."*
 
-### 8.3 — TipTap Media Integration
+### 9.3 — TipTap Media Integration
 
 **Deliverables:**
 - "Insert Image" button in TipTap toolbar opening the resource library modal.
@@ -513,11 +557,11 @@
 
 ---
 
-## Epoch 9 — Accessibility & Inclusive Design
+## Epoch 10 — Accessibility & Inclusive Design
 
 **Goal:** Ensure the platform meets WCAG 2.1 AA standards and provides the accommodations required for high-stakes university exams.
 
-### 9.1 — Visual Accessibility
+### 10.1 — Visual Accessibility
 
 **Deliverables:**
 - Theme provider with three modes:
@@ -527,7 +571,7 @@
 - Font size controls: student can increase/decrease font size during the exam.
 - All interactive elements have ≥ 4.5:1 contrast ratio.
 
-### 9.2 — Keyboard & Screen Reader Support
+### 10.2 — Keyboard & Screen Reader Support
 
 **Deliverables:**
 - Full keyboard navigation: Tab through questions, Enter to select, arrow keys for MCQ options.
@@ -536,7 +580,7 @@
 - Skip navigation links.
 - Focus trap management in modals and dialogs.
 
-### 9.3 — Examination Accommodations
+### 10.3 — Examination Accommodations
 
 **Deliverables:**
 - Per-student time multiplier (e.g., 1.25x, 1.5x) set by the exam administrator.
@@ -553,11 +597,11 @@
 
 ---
 
-## Epoch 10 — Security: Safe Exam Browser & Proctoring
+## Epoch 11 — Security: Safe Exam Browser & Proctoring
 
 **Goal:** Lock down the exam environment to prevent cheating during summative assessments.
 
-### 10.1 — Safe Exam Browser (SEB) Integration
+### 11.1 — Safe Exam Browser (SEB) Integration
 
 **Deliverables:**
 - Per-test configuration toggle: "Require SEB" (boolean in TestDefinition).
@@ -568,7 +612,7 @@
 
 **TestVision Parity:** *"When an exam is SEB-enabled, the TestVision server generates a unique Browser Exam Key. The student's SEB instance must send a matching hash in its request headers."*
 
-### 10.2 — Supervisor Status Monitor
+### 11.2 — Supervisor Status Monitor
 
 **Deliverables:**
 - Real-time dashboard for exam supervisors showing:
@@ -580,7 +624,7 @@
 
 **TestVision Parity:** *"If the student attempts to switch windows, the incident is logged for the supervisor's status monitor."*
 
-### 10.3 — Anti-Cheating Measures
+### 11.3 — Anti-Cheating Measures
 
 **Deliverables:**
 - Context menu suppression and right-click disabling during exams (even without SEB).
@@ -595,11 +639,11 @@
 
 ---
 
-## Epoch 11 — LTI 1.3, Canvas Integration & Interoperability
+## Epoch 12 — LTI 1.3, Canvas Integration & Interoperability
 
 **Goal:** Integrate with institutional systems so OpenVision functions as a seamless part of the VU Amsterdam digital learning ecosystem.
 
-### 11.1 — LTI 1.3 Advantage Integration
+### 12.1 — LTI 1.3 Advantage Integration
 
 **Deliverables:**
 - LTI 1.3 tool provider implementation using `PyLTI1p3`.
@@ -610,7 +654,7 @@
 
 **TestVision Parity:** *"LTI 1.3 Advantage utilizes a secure OIDC handshake. A JWT is passed containing the student's identity and their role in the course."*
 
-### 11.2 — SIS Integration (Osiris Bridge)
+### 12.2 — SIS Integration (Osiris Bridge)
 
 **Deliverables:**
 - Grade export in Osiris-compatible CSV format.
@@ -618,7 +662,7 @@
 - Student roster import from CSV (VUnetID, name, course enrollment).
 - Accommodation import from CSV (VUnetID + time multiplier).
 
-### 11.3 — QTI & Interoperability (Future-Proofing)
+### 12.3 — QTI & Interoperability (Future-Proofing)
 
 **Deliverables:**
 - QTI 2.1 export: export items and tests in the IMS Question & Test Interoperability standard.
@@ -632,11 +676,11 @@
 
 ---
 
-## Epoch 12 — Scalability, Concurrency & Production Hardening
+## Epoch 13 — Scalability, Concurrency & Production Hardening
 
 **Goal:** Prepare the system to handle "thundering herd" scenarios — hundreds of students logging in simultaneously for a high-stakes exam.
 
-### 12.1 — Concurrency & Performance
+### 13.1 — Concurrency & Performance
 
 **Deliverables:**
 - **Async ingestion pipeline:** heartbeat writes go through a Redis queue → async worker flushes to Postgres. This prevents database locks during peak load.
@@ -648,7 +692,7 @@
 
 **TestVision Parity:** *"The infrastructure must handle 'thundering herd' scenarios — 800 students logging in at precisely 08:30 AM. Server-side storage uses a non-blocking queue to prevent database locks."*
 
-### 12.2 — Containerization & Deployment
+### 13.2 — Containerization & Deployment
 
 **Deliverables:**
 - Multi-stage Dockerfiles for frontend (Next.js) and backend (FastAPI).
@@ -657,7 +701,7 @@
 - Health check endpoints for container orchestration readiness probes.
 - Environment-based configuration (dev / staging / production) with `.env` validation.
 
-### 12.3 — CI/CD Pipeline
+### 13.3 — CI/CD Pipeline
 
 **Deliverables:**
 - GitHub Actions workflow:
@@ -667,7 +711,7 @@
 - Branch protection rules on `main`: require passing CI before merge.
 - Code coverage reporting (target: ≥ 80%).
 
-### 12.4 — Observability & Monitoring
+### 13.4 — Observability & Monitoring
 
 **Deliverables:**
 - Structured logging with correlation IDs per request.
@@ -675,7 +719,7 @@
 - Performance metrics dashboard (response times, error rates, DB query performance).
 - Alerting on critical failures (exam session errors, database connectivity loss).
 
-### 12.5 — Security Hardening
+### 13.5 — Security Hardening
 
 **Deliverables:**
 - Rate limiting on all endpoints (especially auth and heartbeat).
@@ -700,7 +744,6 @@ These are logged as GitHub Issues and will be scheduled into Epochs as prioritie
 
 | Feature | GitHub Issue | Priority | Notes |
 |---------|-------------|----------|-------|
-| **Bulk Import Exam Parser** | [#1](https://github.com/DavidCvetkovski/ExamTakerEnvironment/issues/1) | High | Celery background task; paste raw text → auto-parse into ItemVersions |
 | **LaTeX / KaTeX Math Rendering** | — | High | TipTap extension; critical for STEM exams |
 | **Hotspot Questions** | — | Medium | Clickable image regions for anatomy/geography exams |
 | **Drag-and-Drop / Ordering Questions** | — | Medium | Sortable list question type |
@@ -727,7 +770,8 @@ This matrix maps every major TestVision capability to its corresponding Epoch, e
 | WYSIWYG Authoring | 2 | ✅ Done |
 | Code Snippet Embedding | 2 | ✅ Done |
 | LaTeX Math Rendering | Backlog | ⬜ Planned |
-| Multimedia Resource Library | 8 | ⬜ Planned |
+| Bulk Import / Paste Parser | 8 | ⬜ Planned |
+| Multimedia Resource Library | 9 | ⬜ Planned |
 | Metadata Taxonomy (Bloom's, tags) | 4 | ⬜ Planned |
 | Test Matrix / Blueprint | 4 | ⬜ Planned |
 | Random Item Selection | 4 | ⬜ Planned |
@@ -747,14 +791,14 @@ This matrix maps every major TestVision capability to its corresponding Epoch, e
 | JWT Authentication | 3 | ⬜ Planned |
 | RBAC (Constructor/Reviewer/Admin/Student) | 3 | ⬜ Planned |
 | SSO / SURFconext | 3 | ⬜ Planned |
-| Safe Exam Browser | 10 | ⬜ Planned |
-| Supervisor Monitor | 10 | ⬜ Planned |
-| LTI 1.3 Canvas Integration | 11 | ⬜ Planned |
-| Osiris Grade Push | 11 | ⬜ Planned |
-| Accessibility (WCAG 2.1 AA) | 9 | ⬜ Planned |
-| Dyslexia Mode | 9 | ⬜ Planned |
-| Extra Time Accommodations | 9 | ⬜ Planned |
-| CDN Media Delivery | 8 | ⬜ Planned |
-| Thundering Herd Handling | 12 | ⬜ Planned |
-| Docker Deployment | 12 | ⬜ Planned |
-| CI/CD Pipeline | 12 | ⬜ Planned |
+| Safe Exam Browser | 11 | ⬜ Planned |
+| Supervisor Monitor | 11 | ⬜ Planned |
+| LTI 1.3 Canvas Integration | 12 | ⬜ Planned |
+| Osiris Grade Push | 12 | ⬜ Planned |
+| Accessibility (WCAG 2.1 AA) | 10 | ⬜ Planned |
+| Dyslexia Mode | 10 | ⬜ Planned |
+| Extra Time Accommodations | 10 | ⬜ Planned |
+| CDN Media Delivery | 9 | ⬜ Planned |
+| Thundering Herd Handling | 13 | ⬜ Planned |
+| Docker Deployment | 13 | ⬜ Planned |
+| CI/CD Pipeline | 13 | ⬜ Planned |

@@ -1,0 +1,65 @@
+// OpenVision Import Template
+// Lines starting with "//" are comments and are ignored by the parser.
+// Remove or replace placeholder text before pasting into the import page.
+// Full format guide is available in the app under Import > Format Guide (ⓘ).
+
+// ─── BLUEPRINT HEADER (optional) ────────────────────────────────────────────
+// Remove the #BLUEPRINT block if you only want to import questions without
+// creating a draft blueprint.
+
+#BLUEPRINT
+Title: [Your Exam Title]
+Course: [COURSE101]
+Duration: 90
+Description: [Brief description of this exam.]
+
+// ─── BLOCK 1 (optional) ─────────────────────────────────────────────────────
+// Use #BLOCK to group questions into named sections.
+
+#BLOCK Part A: Multiple Choice
+
+---
+
+#Q [Write your first question stem here.]
+TYPE: MCQ
+LEVEL: Remember
+DIFFICULTY: Easy
+POINTS: 1
+TAGS: [tag1, tag2]
+
+A) [Option A]
+B) [Option B — correct] *
+C) [Option C]
+D) [Option D]
+
+---
+
+#Q [A multiple-response question — students select ALL that apply.]
+TYPE: MCQ_MULTI
+LEVEL: Understand
+DIFFICULTY: Medium
+POINTS: 2
+TAGS: [tag1]
+
+A) [Correct option] *
+B) [Wrong option]
+C) [Another correct option] *
+D) [Wrong option]
+
+---
+
+#BLOCK Part B: Open Questions
+
+---
+
+#Q [Write your essay question stem here.]
+TYPE: ESSAY
+LEVEL: Analyze
+DIFFICULTY: Hard
+POINTS: 10
+TAGS: [tag1]
+
+MODEL_ANSWER:
+[Write the model/expected answer here.
+It can span multiple lines.]
+END_MODEL_ANSWER

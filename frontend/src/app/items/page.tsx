@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import {
@@ -47,7 +47,17 @@ function formatRelativeTime(dateStr: string): string {
 }
 
 export default function ItemsLibraryPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-shell-bg" />}>
+            <ItemsLibraryPageInner />
+        </Suspense>
+    );
+}
+
+function ItemsLibraryPageInner() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const imported = searchParams.get('imported') === 'true';
     const { items, isLoading, error, fetchItems, createItem, lastEditingLoId } = useLibraryStore();
     const [isCreating, setIsCreating] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -101,6 +111,9 @@ export default function ItemsLibraryPage() {
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
             <div className="min-h-screen bg-shell-bg text-foreground">
                 <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+                    {imported && (
+                        <ImportedBanner onDismiss={() => router.replace('/items')} />
+                    )}
                     <PageHeader
                         eyebrow="Item bank"
                         title="Question Library"
@@ -240,5 +253,26 @@ export default function ItemsLibraryPage() {
                 </div>
             </div>
         </ProtectedRoute>
+    );
+}
+
+function ImportedBanner({ onDismiss }: { onDismiss: () => void }) {
+    useEffect(() => {
+        const t = setTimeout(onDismiss, 8000);
+        return () => clearTimeout(t);
+    }, [onDismiss]);
+
+    return (
+        <div className="flex items-center justify-between px-4 py-3 rounded-xl border border-[var(--color-success-border)] bg-[var(--color-success-bg)]">
+            <p className="text-sm font-medium text-[var(--color-success-fg)]">
+                Import complete — showing newly imported items.
+            </p>
+            <button
+                onClick={onDismiss}
+                className="text-xs text-[var(--color-success-fg)] hover:underline ml-4 focus-ring rounded"
+            >
+                Clear ×
+            </button>
+        </div>
     );
 }

@@ -27,9 +27,10 @@ export default function GlobalHeader() {
                   { name: 'My Grades', href: '/my-grades' },
               ]
             : [
-                  { name: 'Sessions', href: '/sessions' },
-                  { name: 'Blueprints', href: '/blueprint' },
                   { name: 'Library', href: '/items' },
+                  { name: 'Import', href: '/import' },
+                  { name: 'Blueprints', href: '/blueprint' },
+                  { name: 'Sessions', href: '/sessions' },
                   { name: 'Grading', href: '/grading' },
                   { name: 'Analytics', href: '/analytics' },
               ];

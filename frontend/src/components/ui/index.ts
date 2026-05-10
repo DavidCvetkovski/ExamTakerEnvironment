@@ -12,3 +12,5 @@ export { ToastProvider } from './Toast';
 export { useToast } from './useToast';
 export { DatePicker } from './DatePicker';
 export { TimePicker } from './TimePicker';
+export { useConfirm } from './ConfirmDialog';
+export type { ConfirmOptions } from './ConfirmDialog';

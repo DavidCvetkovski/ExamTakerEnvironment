@@ -1,29 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from typing import Optional
-from uuid import UUID
+import uuid as _uuid
 
-from app.core.dependencies import get_current_user, require_role
+from app.core.dependencies import require_role
 from app.core.prisma_db import prisma
 from app.models.user import User, UserRole
 from app.services.import_service import parse_text, persist_import
 from app.services.import_service.schemas import ParseError
 
 router = APIRouter()
-
-
-class ItemBankResponse(BaseModel):
-    id: str
-    name: str
-
-
-@router.get("/banks", response_model=list[ItemBankResponse])
-async def list_banks(
-    current_user: User = Depends(require_role(UserRole.CONSTRUCTOR, UserRole.ADMIN)),
-):
-    """List all available item banks."""
-    banks = await prisma.item_banks.find_many(order={"name": "asc"})
-    return [ItemBankResponse(id=b.id, name=b.name) for b in banks]
 
 
 class ImportPreviewRequest(BaseModel):
@@ -49,7 +35,6 @@ class ImportPreviewResponse(BaseModel):
 
 class ImportCommitRequest(BaseModel):
     raw_text: str = Field(..., max_length=500_000)
-    bank_id: UUID
     create_blueprint: bool = True
 
 
@@ -59,6 +44,18 @@ class ImportCommitResponse(BaseModel):
     blueprint_id: Optional[str] = None
     question_count: int
     warnings: list[ParseError]
+
+
+async def _resolve_bank(author_user_id: str) -> str:
+    """Return the first item bank id, creating a default one if none exist."""
+    bank = await prisma.item_banks.find_first()
+    if not bank:
+        bank = await prisma.item_banks.create(data={
+            "id": str(_uuid.uuid4()),
+            "name": "Default Bank",
+            "created_by": author_user_id,
+        })
+    return bank.id
 
 
 @router.post("/preview", response_model=ImportPreviewResponse)
@@ -111,9 +108,11 @@ async def commit_import(
             detail="No questions to import.",
         )
 
+    bank_id = await _resolve_bank(str(current_user.id))
+
     persist_result = await persist_import(
         parsed=result.blueprint,
-        bank_id=str(body.bank_id),
+        bank_id=bank_id,
         create_blueprint=body.create_blueprint,
         author_user_id=str(current_user.id),
     )

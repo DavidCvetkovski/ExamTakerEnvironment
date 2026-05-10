@@ -119,9 +119,14 @@ function ItemsLibraryPageInner() {
                         title="Question Library"
                         subtitle="Browse, filter, and author the learning objects that feed every test."
                         actions={
-                            <Button variant="primary" size="md" loading={isCreating} onClick={handleCreateNew}>
-                                + New question
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button variant="secondary" size="md" onClick={() => router.push('/import?mode=questions')}>
+                                    ↑ Import
+                                </Button>
+                                <Button variant="primary" size="md" loading={isCreating} onClick={handleCreateNew}>
+                                    + New question
+                                </Button>
+                            </div>
                         }
                     />
 

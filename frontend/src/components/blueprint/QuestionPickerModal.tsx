@@ -184,36 +184,47 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                                     <div
                                         key={item.id}
                                         onClick={() => setInspectedItem(item)}
-                                        className="group flex cursor-pointer items-center gap-4 rounded-2xl border border-shell-border bg-shell-input/30 px-5 py-4 transition-all hover:border-brand/30 hover:bg-shell-input"
+                                        className="group flex cursor-pointer items-start gap-3 rounded-2xl border border-shell-border bg-shell-input/30 px-4 py-3 transition-all hover:border-brand/30 hover:bg-shell-input"
                                     >
-                                        <Badge tone={typeTone(item.latest_question_type)} size="sm">
-                                            {typeLabel(item.latest_question_type)}
-                                        </Badge>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="truncate text-sm font-medium text-foreground">
+                                        <div className="shrink-0 pt-0.5">
+                                            <Badge tone={typeTone(item.latest_question_type)} size="sm">
+                                                {typeLabel(item.latest_question_type)}
+                                            </Badge>
+                                        </div>
+                                        <div className="flex-1 min-w-0 space-y-1">
+                                            <p className="line-clamp-3 text-sm font-medium text-foreground leading-snug">
                                                 {item.latest_content_preview}
                                             </p>
-                                            <div className="mt-1 flex gap-3 text-xs text-shell-muted-dim">
+                                            <div className="flex gap-3 text-xs text-shell-muted-dim">
                                                 {item.metadata_tags?.topic && <span>{item.metadata_tags.topic}</span>}
                                                 <span>{item.metadata_tags?.points ?? 1} pt(s)</span>
                                             </div>
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (!excluded) onSelect(item);
-                                            }}
-                                            disabled={excluded}
-                                            className={[
-                                                'rounded-xl px-4 py-2 text-xs font-bold transition-colors',
-                                                excluded
-                                                    ? 'border border-shell-border text-shell-muted-dim cursor-not-allowed'
-                                                    : 'border border-brand/30 bg-brand/10 text-brand hover:bg-brand hover:text-white',
-                                            ].join(' ')}
-                                        >
-                                            {excluded ? 'Added' : 'Select'}
-                                        </button>
+                                        <div className="shrink-0 flex flex-col items-end gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (!excluded) onSelect(item);
+                                                }}
+                                                disabled={excluded}
+                                                className={[
+                                                    'rounded-xl px-4 py-2 text-xs font-bold transition-colors',
+                                                    excluded
+                                                        ? 'border border-shell-border text-shell-muted-dim cursor-not-allowed'
+                                                        : 'border border-brand/30 bg-brand/10 text-brand hover:bg-brand hover:text-white',
+                                                ].join(' ')}
+                                            >
+                                                {excluded ? 'Added' : 'Add'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => { e.stopPropagation(); setInspectedItem(item); }}
+                                                className="text-xs text-shell-muted hover:text-foreground focus-ring rounded"
+                                            >
+                                                Details
+                                            </button>
+                                        </div>
                                     </div>
                                 );
                             })}

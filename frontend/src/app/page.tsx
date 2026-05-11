@@ -11,7 +11,7 @@ export default function Home() {
     }, []);
 
     return (
-        <div className="relative min-h-screen bg-shell-bg overflow-hidden flex flex-col items-center justify-center px-6 text-center">
+        <div className="relative min-h-full bg-shell-bg overflow-hidden flex flex-col items-center justify-center px-6 text-center">
             {/* Animated background blobs */}
             <div className="pointer-events-none absolute inset-0" aria-hidden>
                 <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-brand/10 blur-[120px] animate-blob" />

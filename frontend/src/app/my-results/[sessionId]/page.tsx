@@ -228,7 +228,7 @@ export default function MyResultDetailPage() {
     const result = currentResultDetail;
 
     return (
-        <div className="min-h-screen bg-[image:var(--gradient-student-page)] px-4 py-10 text-foreground sm:px-6 lg:px-8">
+        <div className="min-h-full bg-[image:var(--gradient-student-page)] px-4 py-10 text-foreground sm:px-6 lg:px-8">
             <div className="mx-auto max-w-3xl space-y-8">
                 {/* Back */}
                 <Link href="/my-exams" className="inline-flex items-center gap-2 text-sm text-student-primary hover:underline">

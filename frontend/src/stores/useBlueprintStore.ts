@@ -106,7 +106,10 @@ interface BlueprintState {
 }
 
 function getApiErrorMessage(error: unknown, fallback: string): string {
-    return (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail || fallback;
+    const detail = (error as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) return detail.map((e: { msg?: string }) => e.msg ?? String(e)).join('; ');
+    return fallback;
 }
 
 export const useBlueprintStore = create<BlueprintState>((set, get) => ({

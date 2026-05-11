@@ -12,7 +12,7 @@ import { Badge, Button, Card, Field, Input, PageHeader, Select, StatusDot, cn, u
 
 export default function AuthorPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-shell-bg" />}>
+        <Suspense fallback={<div className="min-h-full bg-shell-bg" />}>
             <AuthorPageInner />
         </Suspense>
     );
@@ -94,7 +94,7 @@ function AuthorPageInner() {
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <div className="min-h-screen bg-shell-bg text-foreground">
+            <div className="min-h-full bg-shell-bg text-foreground">
                 {ConfirmDialog}
                 <div className="max-w-4xl mx-auto px-6 py-10">
                     <button

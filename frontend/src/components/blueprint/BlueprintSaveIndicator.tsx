@@ -19,11 +19,7 @@ export default function BlueprintSaveIndicator() {
     }, [resetSaveStatus, saveStatus]);
 
     if (saveStatus === 'idle') {
-        return (
-            <div className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim" aria-live="polite">
-                Ready
-            </div>
-        );
+        return null;
     }
 
     if (saveStatus === 'saving') {
@@ -52,7 +48,7 @@ export default function BlueprintSaveIndicator() {
                 <span className="text-sm font-bold">!</span>
             </span>
             <span className="text-xs font-semibold uppercase tracking-medium">
-                {error || 'Save failed'}
+                {typeof error === 'string' ? error : 'Save failed'}
             </span>
         </div>
     );

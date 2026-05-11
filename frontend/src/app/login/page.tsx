@@ -14,7 +14,7 @@ function getSafeRedirectPath(redirect: string | null): string | null {
 
 export default function LoginPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-shell-bg" />}>
+        <Suspense fallback={<div className="min-h-full bg-shell-bg" />}>
             <LoginPageInner />
         </Suspense>
     );
@@ -61,14 +61,14 @@ function LoginPageInner() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-shell-bg flex items-center justify-center text-foreground">
+            <div className="min-h-full bg-shell-bg flex items-center justify-center text-foreground">
                 Loading...
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-shell-bg flex items-center justify-center font-sans text-foreground">
+        <div className="min-h-full bg-shell-bg flex items-center justify-center font-sans text-foreground">
             <div className="w-full max-w-md bg-shell-surface p-8 space-y-6">
                 <h1 className="text-2xl font-bold text-center">OpenVision SSO</h1>
                 <div className="bg-shell-bg border border-shell-border p-4 text-xs space-y-2">

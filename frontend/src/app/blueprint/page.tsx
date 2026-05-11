@@ -7,13 +7,13 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useRouter, useSearchParams } from 'next/navigation';
 import QuestionPickerModal from '@/components/blueprint/QuestionPickerModal';
 import BlueprintSaveIndicator from '@/components/blueprint/BlueprintSaveIndicator';
-import { Badge, Button, Input, Select, useToast, useConfirm } from '@/components/ui';
+import { Badge, Button, Input, Select, useToast, useConfirm, StatusDot } from '@/components/ui';
 
 type BlueprintDraft = Partial<TestDefinition>;
 
 export default function BlueprintPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-shell-bg" />}>
+        <Suspense fallback={<div className="min-h-full bg-shell-bg" />}>
             <BlueprintPageInner />
         </Suspense>
     );
@@ -218,8 +218,8 @@ function BlueprintPageInner() {
         if (!minutes || minutes <= 0) {
             toast({
                 tone: 'danger',
-                title: 'Cannot publish',
-                description: 'Set a duration of at least 1 minute before publishing.',
+                title: 'Cannot save',
+                description: 'Set a duration of at least 1 minute before saving.',
             });
             return;
         }
@@ -228,7 +228,7 @@ function BlueprintPageInner() {
             const id = await saveBlueprint(currentBlueprint);
             toast({
                 tone: 'success',
-                title: 'Blueprint published',
+                title: 'Blueprint saved',
                 description: currentBlueprint.title?.trim() || 'Untitled blueprint',
             });
             if (!idFromUrl) {
@@ -237,7 +237,7 @@ function BlueprintPageInner() {
         } catch (err) {
             toast({
                 tone: 'danger',
-                title: 'Publish failed',
+                title: 'Save failed',
                 description: err instanceof Error ? err.message : 'Try again.',
             });
         }
@@ -718,8 +718,14 @@ function BlueprintPageInner() {
 
                             {/* Sticky Footer */}
                             <div className="sticky bottom-0 bg-shell-surface/90 backdrop-blur-xl border-t border-shell-border p-6 px-8 flex justify-between items-center z-10">
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3">
                                     <BlueprintSaveIndicator />
+                                    {isDirty && (
+                                        <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-medium text-warning">
+                                            <StatusDot tone="warning" />
+                                            Unsaved changes
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="flex gap-4">
                                     {idFromUrl && (
@@ -727,8 +733,9 @@ function BlueprintPageInner() {
                                             variant="secondary"
                                             size="lg"
                                             onClick={handleStartPreview}
-                                            disabled={isStarting || !minutesValid}
+                                            disabled={isStarting || !minutesValid || !!isDirty}
                                             loading={isStarting}
+                                            title={isDirty ? 'Save your changes before practicing' : undefined}
                                         >
                                             {isStarting ? 'Loading...' : 'Practice Blueprint'}
                                         </Button>
@@ -739,7 +746,7 @@ function BlueprintPageInner() {
                                         onClick={handleSave}
                                         disabled={!minutesValid}
                                     >
-                                        Publish Blueprint
+                                        Save Blueprint
                                     </Button>
                                 </div>
                             </div>

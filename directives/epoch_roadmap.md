@@ -544,6 +544,31 @@
 
 ---
 
+## Epoch 8.2 — Blueprint Polish, Auth UX & Layout Hardening
+
+**Goal:** Fix 9 concrete issues uncovered during live use of the Epoch 8.1 build. Frontend-first (8 of 10 stages). Two backend touches (duplicate-blueprint JSONB fix; exam-session error surfacing). No DB migrations.
+
+### Stages
+1. **Duplicate Blueprint Fix** — Add `Json()` wrapping to JSONB fields (`blocks`, `scoring_config`) in `duplicate_test_definition` endpoint; eliminates 500 crash on copy
+2. **Smart Draw Error Surface** — Audit `useExamStore.instantiateSession` to extract `response.data.detail` and surface the backend's human-readable reason in the Practice toast
+3. **`getApiErrorMessage` Pydantic v2 Fix** — Handle `detail: list[{type,loc,msg,input}]` format in `useBlueprintStore`; guard `BlueprintSaveIndicator` to only render strings
+4. **Blueprint Editor Labels & Dirty State** — "Publish Blueprint" → "Save Blueprint"; remove "Ready" idle text; add `StatusDot` dirty indicator; disable Practice Blueprint when `isDirty`
+5. **Auth-Aware Home Page** — Role-appropriate dashboard for logged-in users; marketing page for unauthenticated visitors
+6. **Login Page Redesign** — Split-panel layout (brand illustration + form card); responsive collapse; consistent with 8.1 home screen aesthetic
+7. **Layout Scroll Hardening** — Fix sticky header (root layout must use `h-screen flex-col overflow-hidden`; `<main>` gets `flex-1 overflow-y-auto`); eliminate bottom-whitespace from `min-h-screen` pages inside a scroll container
+8. **`useExamStore` Error Surface** — Mirror `getApiErrorMessage` pattern so Smart Draw failures produce readable `Error` objects for `catch` blocks
+9. **Import Store Verification** — Confirm `useImportStore` already handles Pydantic v2 arrays correctly (no code change needed)
+10. **Verification** — `tsc --noEmit` + `next build` + `pytest` green; manual matrix across dark/warm/light-blue; Aikido scan clean
+
+**Exit Criteria:**
+- All 9 issues verified fixed.
+- `tsc --noEmit` + `next build` pass.
+- `pytest backend/tests` green.
+- Manual verification matrix complete across all three themes.
+- Aikido scan: zero new Critical/High findings.
+
+---
+
 ## Epoch 9 — Media Management & Resource Library
 
 **Goal:** Enable rich media uploads, build a reusable resource library, and support CDN-backed delivery for scalable media serving.

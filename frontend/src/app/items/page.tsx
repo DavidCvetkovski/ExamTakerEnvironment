@@ -48,7 +48,7 @@ function formatRelativeTime(dateStr: string): string {
 
 export default function ItemsLibraryPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-shell-bg" />}>
+        <Suspense fallback={<div className="min-h-full bg-shell-bg" />}>
             <ItemsLibraryPageInner />
         </Suspense>
     );
@@ -109,7 +109,7 @@ function ItemsLibraryPageInner() {
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <div className="min-h-screen bg-shell-bg text-foreground">
+            <div className="min-h-full bg-shell-bg text-foreground">
                 <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
                     {imported && (
                         <ImportedBanner onDismiss={() => router.replace('/items')} />

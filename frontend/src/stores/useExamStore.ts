@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { api } from '@/lib/api';
 
+function extractApiError(err: unknown, fallback: string): string {
+    const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) return detail.map((e: { msg?: string }) => e.msg ?? String(e)).join('; ');
+    return fallback;
+}
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export interface ExamItem {
@@ -102,9 +109,7 @@ export const useExamStore = create<ExamState>((set, get) => ({
             const response = await api.get(`/sessions/${sessionId}`);
             set({ currentSession: response.data, isLoading: false });
         } catch (err: unknown) {
-            const message = (err as { response?: { data?: { detail?: string } } })
-                ?.response?.data?.detail || 'Failed to fetch exam session';
-            set({ error: message, isLoading: false });
+            set({ error: extractApiError(err, 'Failed to fetch exam session'), isLoading: false });
         }
     },
 
@@ -115,8 +120,7 @@ export const useExamStore = create<ExamState>((set, get) => ({
             set({ currentSession: response.data, isLoading: false });
             return response.data.id;
         } catch (err: unknown) {
-            const msg = (err as { response?: { data?: { detail?: string } } })
-                ?.response?.data?.detail || 'Failed to start practice exam';
+            const msg = extractApiError(err, 'Failed to start practice exam');
             set({ error: msg, isLoading: false });
             throw new Error(msg);
         }
@@ -129,8 +133,7 @@ export const useExamStore = create<ExamState>((set, get) => ({
             set({ currentSession: response.data, isLoading: false });
             return response.data.id;
         } catch (err: unknown) {
-            const msg = (err as { response?: { data?: { detail?: string } } })
-                ?.response?.data?.detail || 'Failed to join scheduled exam';
+            const msg = extractApiError(err, 'Failed to join scheduled exam');
             set({ error: msg, isLoading: false });
             throw new Error(msg);
         }
@@ -144,8 +147,7 @@ export const useExamStore = create<ExamState>((set, get) => ({
             const response = await api.post(`/sessions/${sessionId}/submit`);
             set({ currentSession: response.data, isLoading: false });
         } catch (err: unknown) {
-            const msg = (err as { response?: { data?: { detail?: string } } })
-                ?.response?.data?.detail || 'Failed to submit exam';
+            const msg = extractApiError(err, 'Failed to submit exam');
             set({ error: msg, isLoading: false });
             throw new Error(msg);
         }

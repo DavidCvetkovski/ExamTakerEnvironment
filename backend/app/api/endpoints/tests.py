@@ -4,6 +4,7 @@ from uuid import UUID
 import uuid as _uuid
 from typing import List
 
+from prisma import Json
 from app.core.dependencies import get_current_user, require_role
 from app.core.prisma_db import prisma
 from app.models.user import User, UserRole
@@ -125,9 +126,9 @@ async def duplicate_test_definition(
         "title": f"{original.title} (Copy)",
         "description": original.description,
         "created_by": str(current_user.id),
-        "blocks": original.blocks,
+        "blocks": Json(original.blocks),
         "duration_minutes": original.duration_minutes,
         "shuffle_questions": original.shuffle_questions,
-        "scoring_config": original.scoring_config,
+        "scoring_config": Json(original.scoring_config),
     })
     return {"id": copy.id}

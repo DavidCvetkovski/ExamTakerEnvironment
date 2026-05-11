@@ -87,7 +87,7 @@ export default function TestAnalyticsDashboardPage() {
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <div className="min-h-screen bg-shell-bg text-foreground">
+            <div className="min-h-full bg-shell-bg text-foreground">
                 <div className="border-b border-shell-border bg-shell-surface px-6 py-5">
                     <div className="mx-auto max-w-7xl">
                         <Button

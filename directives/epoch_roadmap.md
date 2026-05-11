@@ -599,6 +599,39 @@
 
 ---
 
+## Epoch 8.4 — Visual Design Pass: Calm, Intuitive, Human
+
+**Goal:** Quiet the UI. Take the now-functional surface and remove visual noise across 17 stages. Fix the broken inspect/view flows, formalise blueprint status semantics (`NEW` / `SCHEDULED` / `ONGOING` / `PASSED` with editability rules), extract a reusable set of design primitives (status badge, row action menu, avatar dropdown, back button, subject color coding, shared `Spinner`, `PageShell`, `Modal`, `Drawer`) so future epochs don't drift back into clutter, harden design-token discipline (eliminate hardcoded Tailwind colors, decorative glyphs, layout duplication), and harmonise cross-surface inconsistencies (modal scaffolding, lifecycle vocabulary, toast copy, date/time formatting, empty states). One backend change (status enum + mutation-guard relaxation for `SCHEDULED`); the rest is frontend polish, primitive extraction, and consistency hygiene.
+
+### Stages
+1. **Blueprint Status Semantics** — Backend `BlueprintStatus` enum (`NEW`/`SCHEDULED`/`ONGOING`/`PASSED`); single derivation helper; `SCHEDULED` becomes editable; frontend `BlueprintStatusBadge` + filter chips on `/blueprint`
+2. **True Read-Only for Locked Author Page** — Add `editable` prop to `TipTapEditor`; remove caret, hide toolbar, drop Save/Revert buttons entirely (not just disabled) when question is in active use
+3. **Inspect View Distinct from Edit View** — New `BlueprintInspector` component renders blueprints as a clean read-only document, no mutation controls anywhere in the tree
+4. **Question Library Row Decluttering** — Replace clumped row buttons with a `RowActionMenu` kebab; redesign "In Blueprint" indicator as a subtle lock glyph; tighten Type column to color-coded chip
+5. **Subject Color Coding** — Deterministic hash → theme-token-bound palette of 8 hues; same subject = same color across items page, picker, and blueprint editor
+6. **Full-Content Question Preview** — Picker preview renders the full TipTap content via a read-only editor, not a truncated string
+7. **Account Dropdown** — Replace inline `email + role + Sign out` in the global header with a circular avatar button + dropdown panel; introduces reusable `Avatar` component
+8. **Blueprint Cards Polish** — Relative time ("3 hours ago") instead of absolute date; breathing room between title and status tag; "Next session" subline for scheduled/ongoing
+9. **Per-Section Analytics** — New `compute_section_analytics` service + `/analytics/tests/{id}/sections` endpoint; section panel in drill-down with click-to-filter
+10. **Theme-Aware Back Button** — Extract `BackButton` component, route all six pages with back buttons through it, eliminate inline SVG copies
+11. **Sort Default First-Column Ascending** — Tables always have an active sort; remove the `↕` unsorted glyph
+12. **Eyebrow Audit** — Remove filler eyebrows ("Educator workspace", "Item bank", "Authoring workbench", "Psychometric analysis")
+13. **Login Distinct Theme** — Scoped `data-theme-scope='login'` override with green brand accent that overlays whichever global theme is active
+14. **Reusable Primitives Consolidation** — Index and barrel-export all extracted components/utils
+15. **Design Token Hardening** — Replace hardcoded Tailwind colors with tokens; consolidate 13 inline spinners into a single `<Spinner>`; introduce `<PageShell>` to eliminate the duplicated layout wrapper; remove the last decorative glyphs missed by Epoch 8.3
+16. **Cross-Surface Consistency** — Extract `<Modal>` and `<Drawer>` primitives (kills 6 hand-rolled overlays + one redundant `CancelSessionModal`); add a proper `<PageHeader>` to `/sessions`; replace exam page's hand-rolled `<button>` with `<Button>`; align session lifecycle vocabulary (`Planned`→`Scheduled`, `Past`→`Completed`) with blueprint statuses; unify empty states via `<EmptyState>`; toast copy style guide + migration pass; date/time format unification; audit undocumented Tailwind utilities (`rounded-card-md`, `bg-shell-panel-a`)
+17. **Verification & Theme Matrix** — `tsc` + `next build` + pytest green; grep audits; manual matrix across dark/warm/light-blue
+
+**Exit Criteria:**
+- All 13 user-reported issues fixed; user-language verification ("less busy", "intuitive", "human") confirmed in matrix.
+- Backend `pytest` proves editing is allowed for `SCHEDULED`, blocked for `ONGOING`/`PASSED`.
+- Every extracted primitive used at ≥ 2 call sites (or single-use marked with rationale).
+- Zero filler eyebrows; zero inline back-button SVG duplicates; zero `<Button>` inside `/items` `<TR>`; zero `↕` glyphs.
+- `tsc --noEmit` + `next build` pass.
+- Aikido: zero new Critical/High findings.
+
+---
+
 ## Epoch 9 — Media Management & Resource Library
 
 **Goal:** Enable rich media uploads, build a reusable resource library, and support CDN-backed delivery for scalable media serving.

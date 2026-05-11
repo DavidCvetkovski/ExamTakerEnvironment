@@ -2,27 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/useAuthStore';
 
-export default function Home() {
-    const [mounted, setMounted] = useState(false);
-    useEffect(() => {
-        const t = setTimeout(() => setMounted(true), 50);
-        return () => clearTimeout(t);
-    }, []);
+// ─── Unauthenticated landing ─────────────────────────────────────────────────
 
+function MarketingPage({ mounted }: { mounted: boolean }) {
     return (
         <div className="relative min-h-full bg-shell-bg overflow-hidden flex flex-col items-center justify-center px-6 text-center">
-            {/* Animated background blobs */}
             <div className="pointer-events-none absolute inset-0" aria-hidden>
                 <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-brand/10 blur-[120px] animate-blob" />
                 <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-brand/8 blur-[100px] animate-blob animation-delay-2000" />
             </div>
 
-            {/* Content */}
-            <div
-                className={`relative z-10 max-w-2xl transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
-            >
-                {/* Logo mark */}
+            <div className={`relative z-10 max-w-2xl transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
                 <div className="flex items-center justify-center gap-3 mb-8">
                     <span className="w-3 h-3 rounded-full bg-brand animate-pulse" />
                     <span className="text-eyebrow tracking-eyebrow text-shell-muted uppercase text-sm font-semibold">OpenVision</span>
@@ -44,7 +37,6 @@ export default function Home() {
                     Sign in to OpenVision →
                 </Link>
 
-                {/* Feature pills */}
                 <div className="mt-12 flex flex-wrap justify-center gap-4 text-sm text-shell-muted">
                     {[
                         { icon: '📐', label: 'Adaptive Blueprints' },
@@ -62,4 +54,142 @@ export default function Home() {
             </div>
         </div>
     );
+}
+
+// ─── Role-aware quick actions ─────────────────────────────────────────────────
+
+interface QuickAction {
+    href: string;
+    label: string;
+    description: string;
+    icon: string;
+    primary?: boolean;
+}
+
+const CONSTRUCTOR_ACTIONS: QuickAction[] = [
+    { href: '/items', label: 'Item Library', description: 'Browse, author & manage question items', icon: '📚', primary: true },
+    { href: '/blueprint', label: 'Blueprints', description: 'Design exam blueprints and test structures', icon: '📐', primary: true },
+    { href: '/sessions', label: 'Sessions', description: 'Schedule and manage exam sessions', icon: '📅' },
+    { href: '/analytics', label: 'Analytics', description: 'Review psychometric stats and item performance', icon: '📊' },
+];
+
+const ADMIN_ACTIONS: QuickAction[] = [
+    { href: '/sessions', label: 'Sessions', description: 'Manage and schedule all exam sessions', icon: '📅', primary: true },
+    { href: '/items', label: 'Item Library', description: 'Browse and manage all question items', icon: '📚', primary: true },
+    { href: '/blueprint', label: 'Blueprints', description: 'Create and edit exam blueprints', icon: '📐' },
+    { href: '/analytics', label: 'Analytics', description: 'Platform-wide psychometric analytics', icon: '📊' },
+];
+
+const STUDENT_ACTIONS: QuickAction[] = [
+    { href: '/my-exams', label: 'My Exams', description: 'View upcoming and active exam sessions', icon: '✍️', primary: true },
+    { href: '/my-grades', label: 'My Grades', description: 'See published results and feedback', icon: '🎓', primary: true },
+];
+
+function getActions(role: string): QuickAction[] {
+    if (role === 'STUDENT') return STUDENT_ACTIONS;
+    if (role === 'ADMIN') return ADMIN_ACTIONS;
+    return CONSTRUCTOR_ACTIONS; // CONSTRUCTOR | REVIEWER
+}
+
+function getRoleLabel(role: string): string {
+    switch (role) {
+        case 'ADMIN': return 'Administrator';
+        case 'CONSTRUCTOR': return 'Constructor';
+        case 'REVIEWER': return 'Reviewer';
+        case 'STUDENT': return 'Student';
+        default: return role;
+    }
+}
+
+function DashboardPage({ mounted }: { mounted: boolean }) {
+    const { user } = useAuthStore();
+    const router = useRouter();
+    const role = user?.role ?? 'CONSTRUCTOR';
+    const actions = getActions(role);
+    const firstName = user?.email?.split('@')[0] ?? 'there';
+
+    return (
+        <div className="relative min-h-full bg-shell-bg overflow-hidden">
+            {/* Background blobs */}
+            <div className="pointer-events-none absolute inset-0" aria-hidden>
+                <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-brand/8 blur-[140px] animate-blob" />
+                <div className="absolute bottom-[-20%] right-[-10%] w-[400px] h-[400px] rounded-full bg-brand/6 blur-[100px] animate-blob animation-delay-2000" />
+            </div>
+
+            <div className={`relative z-10 max-w-4xl mx-auto px-6 py-16 transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
+                {/* Header */}
+                <div className="mb-12">
+                    <div className="flex items-center gap-2 mb-4">
+                        <span className="w-2 h-2 rounded-full bg-brand animate-pulse" />
+                        <span className="text-xs font-bold uppercase tracking-eyebrow text-shell-muted">{getRoleLabel(role)}</span>
+                    </div>
+                    <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-foreground leading-tight">
+                        Welcome back,<br />
+                        <span className="text-brand">{firstName}.</span>
+                    </h1>
+                    <p className="mt-4 text-shell-muted text-lg">
+                        What would you like to work on today?
+                    </p>
+                </div>
+
+                {/* Quick action grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {actions.map((action) => (
+                        <button
+                            key={action.href}
+                            onClick={() => router.push(action.href)}
+                            className={[
+                                'group text-left rounded-2xl border p-6 transition-all duration-200',
+                                'hover:scale-[1.02] hover:shadow-elevated focus-ring focus:outline-none',
+                                action.primary
+                                    ? 'bg-shell-surface border-shell-border hover:border-brand/50'
+                                    : 'bg-shell-input/40 border-shell-border hover:border-shell-border-deep',
+                            ].join(' ')}
+                        >
+                            <div className="flex items-start gap-4">
+                                <span className="text-2xl mt-0.5 select-none">{action.icon}</span>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-base font-bold ${action.primary ? 'text-foreground' : 'text-foreground/80'}`}>
+                                            {action.label}
+                                        </span>
+                                        <span className="text-shell-muted-dim group-hover:text-brand transition-colors text-sm">→</span>
+                                    </div>
+                                    <p className="mt-1 text-sm text-shell-muted leading-snug">
+                                        {action.description}
+                                    </p>
+                                </div>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+
+                {/* Footer note */}
+                <p className="mt-12 text-xs text-shell-muted-dim text-center">
+                    OpenVision · Academic Assessment Platform
+                </p>
+            </div>
+        </div>
+    );
+}
+
+// ─── Root export ──────────────────────────────────────────────────────────────
+
+export default function Home() {
+    const [mounted, setMounted] = useState(false);
+    const { isAuthenticated, isLoading, initialize } = useAuthStore();
+
+    useEffect(() => {
+        initialize();
+        const t = setTimeout(() => setMounted(true), 50);
+        return () => clearTimeout(t);
+    }, [initialize]);
+
+    if (isLoading || !mounted) {
+        return <div className="min-h-full bg-shell-bg" />;
+    }
+
+    return isAuthenticated
+        ? <DashboardPage mounted={mounted} />
+        : <MarketingPage mounted={mounted} />;
 }

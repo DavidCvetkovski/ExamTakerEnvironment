@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef, Suspense } from 'react';
+import { useEffect, useMemo, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import TipTapEditor from '@/components/editor/TipTapEditor';
 import MCQOptionsPanel from '@/components/editor/MCQOptionsPanel';
 import EssayOptionsPanel from '@/components/editor/EssayOptionsPanel';
 import { useAuthoringStore } from '@/stores/useAuthoringStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import { useBlueprintStore } from '@/stores/useBlueprintStore';
+import { deriveLockedQuestionIds, useBlueprintStore } from '@/stores/useBlueprintStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Badge, Button, Card, Field, Input, PageHeader, Select, StatusDot, cn, useToast, useConfirm } from '@/components/ui';
 
@@ -36,8 +36,14 @@ function AuthorPageInner() {
     } = useAuthoringStore();
 
     const setLastEditingLoId = useLibraryStore((s) => s.setLastEditingLoId);
+    const blueprints = useBlueprintStore((s) => s.blueprints);
     const usageMap = useBlueprintStore((s) => s.usageMap);
-    const isLocked = learningObjectId ? learningObjectId in usageMap : false;
+    const fetchBlueprints = useBlueprintStore((s) => s.fetchBlueprints);
+    const lockedQuestionIds = useMemo(
+        () => deriveLockedQuestionIds(blueprints, usageMap),
+        [blueprints, usageMap],
+    );
+    const isLocked = !!learningObjectId && lockedQuestionIds.has(learningObjectId);
 
     useEffect(() => {
         if (loIdParam && fetchedRef.current !== loIdParam) {
@@ -50,6 +56,11 @@ function AuthorPageInner() {
             });
         }
     }, [loIdParam, fetchLatestVersion, setLastEditingLoId, router]);
+
+    useEffect(() => {
+        // Need blueprint usage data to know whether this question is locked.
+        fetchBlueprints();
+    }, [fetchBlueprints]);
 
     // Warn on navigation with unsaved changes
     useEffect(() => {

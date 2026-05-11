@@ -1,5 +1,8 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { api } from '../lib/api';
+import type { BlueprintStatus } from '../lib/blueprintPermissions';
+import { isBlueprintLocked } from '../lib/blueprintPermissions';
 
 export type RuleType = 'FIXED' | 'RANDOM';
 
@@ -75,11 +78,15 @@ export interface AvailableItem {
 }
 
 export interface BlueprintUsage {
+    status: BlueprintStatus;
+    // Legacy fields — see directives/todo.md TODO-007. Read `status` instead.
     has_scheduled_sessions: boolean;
     has_past_sessions: boolean;
     is_locked: boolean;
     is_permanently_locked: boolean;
 }
+
+export type BlueprintStatusFilter = 'ALL' | BlueprintStatus;
 
 interface BlueprintState {
     blueprints: TestDefinition[];
@@ -92,6 +99,7 @@ interface BlueprintState {
     lastEditingId: string | null;
     viewMode: 'list' | 'editor';
     usageMap: Record<string, BlueprintUsage>;
+    statusFilter: BlueprintStatusFilter;
 
     fetchBlueprints: () => Promise<void>;
     fetchBlueprint: (id: string) => Promise<void>;
@@ -103,6 +111,27 @@ interface BlueprintState {
     resetSaveStatus: () => void;
     setLastEditingId: (id: string | null) => void;
     setViewMode: (mode: 'list' | 'editor') => void;
+    setStatusFilter: (filter: BlueprintStatusFilter) => void;
+}
+
+/** Question IDs that are locked because they're referenced by an ONGOING or PASSED blueprint. */
+export function deriveLockedQuestionIds(
+    blueprints: TestDefinition[],
+    usageMap: Record<string, BlueprintUsage>,
+): Set<string> {
+    const locked = new Set<string>();
+    for (const bp of blueprints) {
+        const usage = usageMap[bp.id];
+        if (!usage || !isBlueprintLocked(usage.status)) continue;
+        for (const block of bp.blocks ?? []) {
+            for (const rule of block.rules ?? []) {
+                if (rule.rule_type === 'FIXED' && rule.learning_object_id) {
+                    locked.add(rule.learning_object_id);
+                }
+            }
+        }
+    }
+    return locked;
 }
 
 function getApiErrorMessage(error: unknown, fallback: string): string {
@@ -112,7 +141,7 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
     return fallback;
 }
 
-export const useBlueprintStore = create<BlueprintState>((set, get) => ({
+export const useBlueprintStore = create<BlueprintState>()(persist((set, get) => ({
     blueprints: [],
     currentBlueprint: null,
     savedSnapshot: null,
@@ -123,6 +152,7 @@ export const useBlueprintStore = create<BlueprintState>((set, get) => ({
     lastEditingId: null,
     viewMode: 'list',
     usageMap: {},
+    statusFilter: 'ALL',
 
     fetchAvailableItems: async () => {
         set({ isLoading: true, error: null });
@@ -147,7 +177,7 @@ export const useBlueprintStore = create<BlueprintState>((set, get) => ({
                         const u = await api.get<BlueprintUsage>(`tests/${bp.id}/usage`);
                         return [bp.id, u.data] as [string, BlueprintUsage];
                     } catch {
-                        return [bp.id, { has_scheduled_sessions: false, has_past_sessions: false, is_locked: false, is_permanently_locked: false }] as [string, BlueprintUsage];
+                        return [bp.id, { status: 'NEW' as BlueprintStatus, has_scheduled_sessions: false, has_past_sessions: false, is_locked: false, is_permanently_locked: false }] as [string, BlueprintUsage];
                     }
                 })
             );
@@ -219,4 +249,9 @@ export const useBlueprintStore = create<BlueprintState>((set, get) => ({
     resetSaveStatus: () => set({ saveStatus: 'idle' }),
     setLastEditingId: (id) => set({ lastEditingId: id }),
     setViewMode: (mode) => set({ viewMode: mode }),
+    setStatusFilter: (filter) => set({ statusFilter: filter }),
+}), {
+    name: 'blueprint-store',
+    storage: createJSONStorage(() => sessionStorage),
+    partialize: (state) => ({ statusFilter: state.statusFilter, lastEditingId: state.lastEditingId }),
 }));

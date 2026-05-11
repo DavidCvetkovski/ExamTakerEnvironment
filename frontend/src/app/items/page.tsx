@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import { useBlueprintStore } from '@/stores/useBlueprintStore';
+import { deriveLockedQuestionIds, useBlueprintStore } from '@/stores/useBlueprintStore';
 import { api } from '@/lib/api';
 import {
     Badge,
@@ -97,22 +97,11 @@ function ItemsLibraryPageInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Derive locked question IDs from blueprint data
-    const lockedQuestionIds = useMemo(() => {
-        const ids = new Set<string>();
-        blueprints.forEach((bp) => {
-            const bpUsage = usageMap[bp.id];
-            if (!bpUsage?.is_locked && !bpUsage?.is_permanently_locked) return;
-            bp.blocks?.forEach((block) => {
-                block.rules.forEach((rule) => {
-                    if (rule.rule_type === 'FIXED' && rule.learning_object_id) {
-                        ids.add(rule.learning_object_id);
-                    }
-                });
-            });
-        });
-        return ids;
-    }, [blueprints, usageMap]);
+    // Derive locked question IDs (referenced by ONGOING or PASSED blueprints).
+    const lockedQuestionIds = useMemo(
+        () => deriveLockedQuestionIds(blueprints, usageMap),
+        [blueprints, usageMap],
+    );
 
     const uniqueSubjects = Array.from(
         new Set(items.map((item) => getMetadataString(item.metadata_tags?.topic)).filter((v): v is string => v !== null))

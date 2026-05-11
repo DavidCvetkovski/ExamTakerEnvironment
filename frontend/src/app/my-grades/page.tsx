@@ -19,7 +19,7 @@ export default function MyGradesPage() {
 
     return (
         <ProtectedRoute allowedRoles={['STUDENT']}>
-            <div className="min-h-screen bg-shell-bg text-foreground">
+            <div className="min-h-full bg-shell-bg text-foreground">
                 <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-10">
                     <PageHeader
                         eyebrow="Student portal"

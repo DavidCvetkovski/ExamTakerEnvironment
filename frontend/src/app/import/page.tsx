@@ -10,7 +10,7 @@ import FormatGuideModal from '@/components/import/FormatGuideModal';
 export default function ImportPage() {
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <Suspense fallback={<div className="min-h-screen bg-shell-bg" />}>
+            <Suspense fallback={<div className="min-h-full bg-shell-bg" />}>
                 <ImportPageInner />
             </Suspense>
         </ProtectedRoute>
@@ -117,7 +117,7 @@ function ImportPageInner() {
     const isCommitting = commitStatus === 'running';
 
     return (
-        <div className="min-h-screen bg-shell-bg">
+        <div className="min-h-full bg-shell-bg">
             {ConfirmDialog}
             <div className="max-w-7xl mx-auto px-6 py-8">
                 {/* Page header */}

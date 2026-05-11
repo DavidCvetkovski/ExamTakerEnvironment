@@ -122,7 +122,7 @@ export default function GradingDashboard() {
     ];
 
     return (
-        <div className="min-h-screen bg-shell-bg text-foreground">
+        <div className="min-h-full bg-shell-bg text-foreground">
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <PageHeader
                     eyebrow="Educator workspace"

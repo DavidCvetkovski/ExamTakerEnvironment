@@ -244,7 +244,7 @@ export default function SessionGradingPage() {
     const pendingEssays = questionGrades.filter(g => !g.is_auto_graded && g.is_correct === null && !g.feedback);
 
     return (
-        <div className="min-h-screen bg-shell-bg text-foreground">
+        <div className="min-h-full bg-shell-bg text-foreground">
             {/* ── Top bar ── */}
             <div className="bg-shell-surface border-b border-shell-border px-6 py-4 sticky top-0 z-10">
                 <div className="max-w-5xl mx-auto flex items-center gap-4">

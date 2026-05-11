@@ -12,7 +12,12 @@ const lowlight = createLowlight(common);
 
 import './TipTapEditor.css';
 
-export default function TipTapEditor() {
+interface TipTapEditorProps {
+    /** When false, hides toolbar and disables editing entirely. Default: true. */
+    editable?: boolean;
+}
+
+export default function TipTapEditor({ editable = true }: TipTapEditorProps) {
     const { tiptapJson, updateTipTap } = useAuthoringStore();
 
     const editor = useEditor({
@@ -25,7 +30,8 @@ export default function TipTapEditor() {
                 defaultLanguage: 'python',
             }),
         ],
-        content: tiptapJson && Object.keys(tiptapJson).length > 0 ? tiptapJson : '<p>Start writing your question here...</p>',
+        content: tiptapJson && Object.keys(tiptapJson).length > 0 ? tiptapJson : '<p>Start writing your question here…</p>',
+        editable,
         onUpdate: ({ editor }) => {
             const json = editor.getJSON();
             updateTipTap(json);
@@ -43,11 +49,17 @@ export default function TipTapEditor() {
         }
     }, [tiptapJson, editor]);
 
+    // Reactive editable toggle.
+    useEffect(() => {
+        if (editor) editor.setEditable(editable);
+    }, [editable, editor]);
+
     if (!editor) return null;
 
     return (
-        <div className="tiptap-editor-wrapper">
-            {/* Toolbar */}
+        <div className={`tiptap-editor-wrapper${editable ? '' : ' tiptap-readonly'}`}>
+            {/* Toolbar — hidden in read-only mode */}
+            {editable && (
             <div className="tiptap-toolbar">
                 <button
                     onClick={() => editor.chain().focus().toggleBold().run()}
@@ -86,6 +98,7 @@ export default function TipTapEditor() {
                     {'</>'}
                 </button>
             </div>
+            )}
 
             {/* Editor Content */}
             <EditorContent editor={editor} className="tiptap-content" />

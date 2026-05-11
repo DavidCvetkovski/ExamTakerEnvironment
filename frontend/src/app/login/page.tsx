@@ -95,15 +95,15 @@ function LoginPageInner() {
 
                     <div className="flex flex-wrap justify-center gap-3 text-sm text-shell-muted">
                         {[
-                            { icon: '📐', label: 'Adaptive Blueprints' },
-                            { icon: '📊', label: 'Psychometric Analytics' },
-                            { icon: '🔒', label: 'Secure Exam Delivery' },
-                        ].map((f) => (
+                            'Adaptive Blueprints',
+                            'Psychometric Analytics',
+                            'Secure Exam Delivery',
+                        ].map((label) => (
                             <span
-                                key={f.label}
+                                key={label}
                                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-shell-border bg-shell-bg/60"
                             >
-                                {f.icon} {f.label}
+                                {label}
                             </span>
                         ))}
                     </div>

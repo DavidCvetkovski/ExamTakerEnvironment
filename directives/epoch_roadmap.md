@@ -569,6 +569,36 @@
 
 ---
 
+## Epoch 8.3 — UX Audit: Library, Blueprints & Navigation Coherence
+
+**Goal:** Fix 13 concrete UX, interaction, and visual-consistency issues identified during live use of the Epoch 8.2 build. Frontend-only across 13 stages (no backend changes, no DB migrations). Focuses on question library power features, blueprint ergonomics, navigation coherence, and removing all emoji usage from the application.
+
+### Stages
+1. **Warm-Theme Scroll Background Leak** — Eliminate the white flash/strip that appears when scrolling in the warm theme; audit root `<main>` and page-level background tokens
+2. **Emoji Purge** — Remove every emoji from UI text and labels; replace with text-only labels or scoped icon components where a visual anchor is needed
+3. **Admin Dashboard Card Polish** — Normalise all four quick-action cards to a single visual weight; replace rigid `scale` hover with a smooth token-bound `shadow` + `translate-y` transition
+4. **Cut Score: Rename + Per-Millisecond Reactivity** — Rename to "Cut Score %" in the grading tab; wire the slider's `onInput` (not `onChange`) so the displayed percentage updates on every pixel of drag
+5. **Grading Dashboard Sort Redesign** — Replace the unintuitive sort control with a standard column-header sort pattern (click header → asc → desc → unsorted); clear visual active-sort indicator
+6. **Question Library Column Sort + Enhancements** — Clickable sort on every column header (Preview, Subject, Points, Last Edited, First Created); add First Created column; extend preview to two lines; remove "Actions" column header; add "Copy ID" button per row
+7. **Blueprint Question Lock + Duplicate** — Prevent edit/delete of questions that are referenced by any blueprint; surface a locked badge; add a Duplicate button to the question library row and author page
+8. **Blueprint Name Wrapping + Locked Blueprint UX** — Allow blueprint card titles to wrap to two lines; rename "Locked" status to "In Use"; enable Inspect and Practice on "In Use" blueprints (read-only editor view)
+9. **Import Tab State Persistence** — Persist the active import section (and any in-progress paste) in `useImportStore` so navigating away and back restores the previous view
+10. **Select Question: ID Search + Details Label Fix** — Add a "Search by ID" input in the question picker modal; replace or reposition the "Details" expand trigger with a clearer, centred label
+11. **Blueprint Validation: Title + No Empty Sections** — Block save/commit for blueprints with no title or with any section containing zero questions; show inline validation errors in both the manual editor and the import preview
+12. **Back Navigation Standardisation + Confirmation** — Move the "Back to Library / Back to Blueprints" button to a canonical top-left position on all detail pages; infer the correct destination from the navigation origin; prompt "Are you sure?" before discarding unsaved changes
+13. **Practice Exam Completion Destination Fix** — Make the "Back" action on the practice completion screen consistently navigate to Blueprints; update all copy that references the destination to match
+14. **Verification** — `tsc --noEmit` + `next build` green; grep audits for emoji characters, hardcoded sort logic, "Actions" header, "Locked" label; manual theme matrix across dark/warm/light-blue
+
+**Exit Criteria:**
+- All 13 issues verified fixed.
+- `tsc --noEmit` + `next build` pass.
+- Zero emoji characters in any `.tsx`/`.ts` UI file.
+- Zero "Locked" blueprint status labels (replaced by "In Use").
+- Manual verification matrix complete across all three themes.
+- Aikido scan: zero new Critical/High findings.
+
+---
+
 ## Epoch 9 — Media Management & Resource Library
 
 **Goal:** Enable rich media uploads, build a reusable resource library, and support CDN-backed delivery for scalable media serving.

@@ -34,6 +34,14 @@ function statusBadge(status: GradingStatus) {
     return <Badge tone={cfg.tone} size="sm">{cfg.label}</Badge>;
 }
 
+function SortArrow({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
+    return (
+        <span className={`text-xs transition-colors ${active ? 'text-brand' : 'text-shell-muted-dim'}`}>
+            {active ? (dir === 'asc' ? '↑' : '↓') : '↕'}
+        </span>
+    );
+}
+
 function ProgressBar({ done, total }: { done: number; total: number }) {
     const pct = total > 0 ? Math.round((done / total) * 100) : 0;
     return (
@@ -72,7 +80,8 @@ export default function GradingDashboard() {
     const { blueprints, fetchBlueprints } = useBlueprintStore();
 
     const [filterStatus, setFilterStatus] = useState<GradingStatus | 'ALL'>('ALL');
-    const [sortKey, setSortKey] = useState<'student' | 'status' | 'percentage'>('student');
+    const [sortKey, setSortKey] = useState<'student' | 'status' | 'percentage' | 'submitted'>('student');
+    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
     useEffect(() => { fetchBlueprints(); }, [fetchBlueprints]);
     useEffect(() => {
@@ -94,12 +103,24 @@ export default function GradingDashboard() {
     const isAdmin = user?.role === 'ADMIN';
     const anyPublished = gradingOverview.some(s => s.is_published);
 
+    const toggleSort = (key: typeof sortKey) => {
+        if (sortKey === key) {
+            setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortKey(key);
+            setSortDir('asc');
+        }
+    };
+
     const filtered = gradingOverview
         .filter(s => filterStatus === 'ALL' || s.grading_status === filterStatus)
         .sort((a, b) => {
-            if (sortKey === 'status') return a.grading_status.localeCompare(b.grading_status);
-            if (sortKey === 'percentage') return b.percentage - a.percentage;
-            return formatStudentLabel(a.student_email).localeCompare(formatStudentLabel(b.student_email));
+            let cmp = 0;
+            if (sortKey === 'status') cmp = a.grading_status.localeCompare(b.grading_status);
+            else if (sortKey === 'percentage') cmp = a.percentage - b.percentage;
+            else if (sortKey === 'submitted') cmp = (a.submitted_at ?? '').localeCompare(b.submitted_at ?? '');
+            else cmp = formatStudentLabel(a.student_email).localeCompare(formatStudentLabel(b.student_email));
+            return sortDir === 'asc' ? cmp : -cmp;
         });
 
     const stats = {
@@ -190,17 +211,6 @@ export default function GradingDashboard() {
                                 ))}
                             </div>
 
-                            <Select
-                                value={sortKey}
-                                onChange={(e) => setSortKey(e.target.value as typeof sortKey)}
-                                inputSize="sm"
-                                className="w-auto min-w-[140px]"
-                            >
-                                <option value="student">Sort: Student</option>
-                                <option value="status">Sort: Status</option>
-                                <option value="percentage">Sort: Score</option>
-                            </Select>
-
                             <div className="flex-1" />
 
                             <Button
@@ -254,12 +264,32 @@ export default function GradingDashboard() {
                                 <Table>
                                     <THead>
                                         <TR>
-                                            <TH>Student</TH>
-                                            <TH>Status</TH>
+                                            <TH>
+                                                <button onClick={() => toggleSort('student')} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                                                    Student
+                                                    <SortArrow active={sortKey === 'student'} dir={sortDir} />
+                                                </button>
+                                            </TH>
+                                            <TH>
+                                                <button onClick={() => toggleSort('status')} className="flex items-center gap-1 hover:text-foreground transition-colors">
+                                                    Status
+                                                    <SortArrow active={sortKey === 'status'} dir={sortDir} />
+                                                </button>
+                                            </TH>
                                             <TH>Progress</TH>
-                                            <TH align="right">Score</TH>
-                                            <TH align="center">Published</TH>
-                                            <TH align="right">Action</TH>
+                                            <TH align="right">
+                                                <button onClick={() => toggleSort('percentage')} className="flex items-center gap-1 ml-auto hover:text-foreground transition-colors">
+                                                    Score
+                                                    <SortArrow active={sortKey === 'percentage'} dir={sortDir} />
+                                                </button>
+                                            </TH>
+                                            <TH align="center">
+                                                <button onClick={() => toggleSort('submitted')} className="flex items-center gap-1 mx-auto hover:text-foreground transition-colors">
+                                                    Submitted
+                                                    <SortArrow active={sortKey === 'submitted'} dir={sortDir} />
+                                                </button>
+                                            </TH>
+                                            <TH align="right"></TH>
                                         </TR>
                                     </THead>
                                     <TBody>
@@ -296,11 +326,11 @@ export default function GradingDashboard() {
                                                     </div>
                                                 </TD>
                                                 <TD align="center">
-                                                    {session.is_published ? (
-                                                        <span className="text-[var(--color-success-fg)]">●</span>
-                                                    ) : (
-                                                        <span className="text-shell-muted-dim">—</span>
-                                                    )}
+                                                    <div className="text-shell-muted-dim text-meta tabular-nums">
+                                                        {session.submitted_at
+                                                            ? new Date(session.submitted_at).toLocaleDateString()
+                                                            : '—'}
+                                                    </div>
                                                 </TD>
                                                 <TD align="right">
                                                     <Button

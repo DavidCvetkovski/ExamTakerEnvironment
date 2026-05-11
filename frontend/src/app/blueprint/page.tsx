@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import { DEFAULT_SCORING_CONFIG, useBlueprintStore, SelectionRule, TestDefinition } from '@/stores/useBlueprintStore';
 import { useExamStore } from '@/stores/useExamStore';
+import { useImportStore } from '@/stores/useImportStore';
+import { validateBlueprint } from '@/lib/validateBlueprint';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useRouter, useSearchParams } from 'next/navigation';
 import QuestionPickerModal from '@/components/blueprint/QuestionPickerModal';
@@ -42,15 +44,18 @@ function BlueprintPageInner() {
     } = useBlueprintStore();
 
     const { instantiateSession } = useExamStore();
+    const { rawText: importDraft, commitStatus: importCommitStatus } = useImportStore();
     const router = useRouter();
     const searchParams = useSearchParams();
     const idFromUrl = searchParams.get('id');
+    const inspectMode = searchParams.get('inspect') === 'true';
     const { toast } = useToast();
     const { confirm, ConfirmDialog } = useConfirm();
 
     const [isStarting, setIsStarting] = useState(false);
     const [search, setSearch] = useState('');
     const [sortKey, setSortKey] = useState<'created_desc' | 'created_asc' | 'updated_desc' | 'duration_asc' | 'duration_desc'>('created_desc');
+    const [validationErrors, setValidationErrors] = useState<ReturnType<typeof validateBlueprint> | null>(null);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
     const [pickerOpen, setPickerOpen] = useState<{ blockIdx: number, ruleIdx: number } | null>(null);
@@ -68,6 +73,11 @@ function BlueprintPageInner() {
         } else if (lastEditingId) {
             router.replace(`/blueprint?id=${lastEditingId}`);
         } else {
+            // If the user has an in-progress import draft, redirect back to it
+            if (importDraft.trim() && importCommitStatus !== 'completed') {
+                router.replace('/import?mode=blueprint&from=blueprint');
+                return;
+            }
             fetchBlueprints();
             setViewMode('list');
         }
@@ -214,6 +224,17 @@ function BlueprintPageInner() {
     const handleSave = async () => {
         if (!currentBlueprint) return;
 
+        const validation = validateBlueprint(currentBlueprint);
+        setValidationErrors(validation);
+        if (!validation.valid) {
+            toast({
+                tone: 'danger',
+                title: 'Cannot save',
+                description: validation.titleError ?? 'Fix empty sections before saving.',
+            });
+            return;
+        }
+
         const minutes = currentBlueprint.duration_minutes;
         if (!minutes || minutes <= 0) {
             toast({
@@ -321,8 +342,8 @@ function BlueprintPageInner() {
                             <p className="mt-2 text-shell-muted-dim">Design and manage rule-based exam definitions.</p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <Button variant="ghost" size="sm" onClick={() => router.push('/import?mode=blueprint')}>
-                                ↑ Import questions
+                            <Button variant="ghost" size="sm" onClick={() => router.push('/import?mode=blueprint&from=blueprint')}>
+                                Import questions
                             </Button>
                             <Button variant="primary" size="lg" onClick={handleCreateNew}>
                                 <span className="mr-2 text-xl">+</span> New Blueprint
@@ -390,18 +411,13 @@ function BlueprintPageInner() {
                                     className="group relative bg-shell-surface/50 hover:bg-shell-input/80 p-6 rounded-3xl border border-shell-border hover:border-shell-border-deep transition-all backdrop-blur-sm"
                                 >
                                     {/* Lock badge */}
-                                    {isPermanentlyLocked && (
+                                    {(isPermanentlyLocked || isLocked) && (
                                         <div className="absolute top-4 right-4">
-                                            <Badge tone="neutral" size="sm">Locked</Badge>
-                                        </div>
-                                    )}
-                                    {isLocked && !isPermanentlyLocked && (
-                                        <div className="absolute top-4 right-4">
-                                            <Badge tone="warning" size="sm">In use</Badge>
+                                            <Badge tone="warning" size="sm">In Use</Badge>
                                         </div>
                                     )}
 
-                                    <h3 className="text-xl font-bold mb-2 pr-12 line-clamp-1 text-foreground">{bp.title}</h3>
+                                    <h3 className="text-xl font-bold mb-2 pr-12 line-clamp-2 text-foreground">{bp.title}</h3>
                                     <p className="text-shell-muted-dim text-sm mb-4 line-clamp-2 min-h-[40px]">{bp.description || 'No description provided.'}</p>
 
                                     <div className="flex items-center justify-between pt-4 border-t border-shell-border text-xs text-shell-muted-dim font-medium tracking-wider uppercase mb-4">
@@ -419,8 +435,8 @@ function BlueprintPageInner() {
                                     </div>
 
                                     {/* Actions */}
-                                    <div className="flex items-center gap-2">
-                                        {canEdit && (
+                                    <div className="flex items-center flex-wrap gap-2">
+                                        {canEdit ? (
                                             <Button
                                                 variant="secondary"
                                                 size="sm"
@@ -428,6 +444,34 @@ function BlueprintPageInner() {
                                             >
                                                 Edit →
                                             </Button>
+                                        ) : (
+                                            <>
+                                                <Button
+                                                    variant="secondary"
+                                                    size="sm"
+                                                    onClick={() => router.push(`/blueprint?id=${bp.id}&inspect=true`)}
+                                                >
+                                                    Inspect
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    loading={isStarting && idFromUrl === bp.id}
+                                                    onClick={async () => {
+                                                        setIsStarting(true);
+                                                        try {
+                                                            const sessionId = await instantiateSession(bp.id);
+                                                            router.push(`/exam/${sessionId}`);
+                                                        } catch (err) {
+                                                            toast({ tone: 'danger', title: 'Practice failed', description: err instanceof Error ? err.message : 'Try again.' });
+                                                        } finally {
+                                                            setIsStarting(false);
+                                                        }
+                                                    }}
+                                                >
+                                                    Practice
+                                                </Button>
+                                            </>
                                         )}
                                         <Button
                                             variant="ghost"
@@ -473,15 +517,31 @@ function BlueprintPageInner() {
                         </button>
 
                         <div className="min-h-blueprint-canvas overflow-hidden rounded-card-lg border border-shell-border bg-shell-surface/80 shadow-2xl backdrop-blur-xl">
+                            {inspectMode && (
+                                <div className="px-8 py-3 bg-[var(--color-info-bg)] border-b border-[var(--color-info-border)]">
+                                    <p className="text-sm font-medium text-[var(--color-info-fg)]">
+                                        This blueprint is in use and cannot be edited.
+                                    </p>
+                                </div>
+                            )}
                             {/* Hero Section */}
                             <div className="p-8 pb-0">
                                 <input
                                     type="text"
                                     placeholder="Untitled Blueprint"
                                     value={currentBlueprint?.title || ''}
-                                    onChange={(e) => saveState({ title: e.target.value })}
-                                    className="w-full bg-transparent border-none text-foreground text-4xl font-black placeholder:text-shell-muted-dim focus:ring-0 mb-2 p-0"
+                                    onChange={(e) => {
+                                        if (!inspectMode) {
+                                            saveState({ title: e.target.value });
+                                            if (validationErrors) setValidationErrors(null);
+                                        }
+                                    }}
+                                    readOnly={inspectMode}
+                                    className={`w-full bg-transparent border-none text-foreground text-4xl font-black placeholder:text-shell-muted-dim focus:ring-0 mb-2 p-0 ${inspectMode ? 'cursor-default' : ''} ${validationErrors?.titleError ? 'border-b-2 border-danger' : ''}`}
                                 />
+                                {validationErrors?.titleError && (
+                                    <p className="text-meta text-[var(--color-danger-fg)] mb-2">{validationErrors.titleError}</p>
+                                )}
                                 <textarea
                                     placeholder="Describe the purpose of this test (optional)..."
                                     value={currentBlueprint?.description || ''}
@@ -545,8 +605,10 @@ function BlueprintPageInner() {
                             {/* Content Area */}
                             <div className="p-8 pt-0">
                                 <div className="space-y-12">
-                                    {(currentBlueprint?.blocks || []).map((block, bIdx) => (
-                                        <div key={bIdx} className="relative">
+                                    {(currentBlueprint?.blocks || []).map((block, bIdx) => {
+                                        const sectionError = validationErrors?.sectionErrors?.[bIdx];
+                                        return (
+                                        <div key={bIdx} className="relative" data-block-idx={bIdx}>
                                             <div className="absolute -left-4 top-0 bottom-0 w-1 bg-brand/20 rounded-full"></div>
                                             <div className="flex justify-between items-center mb-6">
                                                 <input
@@ -582,8 +644,11 @@ function BlueprintPageInner() {
                                                 }}
                                             >
                                                 {block.rules.length === 0 && (
-                                                    <div className="h-full min-h-[60px] border-2 border-dashed border-shell-border rounded-2xl flex items-center justify-center text-shell-muted-dim text-xs font-semibold uppercase tracking-widest bg-shell-input/30">
-                                                        Empty Section
+                                                    <div className={`h-full min-h-[60px] border-2 border-dashed rounded-2xl flex flex-col items-center justify-center text-xs font-semibold uppercase tracking-widest bg-shell-input/30 ${sectionError ? 'border-danger' : 'border-shell-border'}`}>
+                                                        <span className={sectionError ? 'text-danger' : 'text-shell-muted-dim'}>Empty Section</span>
+                                                        {sectionError && (
+                                                            <span className="normal-case tracking-normal font-medium mt-1 text-[var(--color-danger-fg)]">{sectionError}</span>
+                                                        )}
                                                     </div>
                                                 )}
                                                 {block.rules.map((rule, rIdx) => {
@@ -687,24 +752,27 @@ function BlueprintPageInner() {
                                                 })}
                                             </div>
 
-                                            <div className="mt-6 flex gap-3">
-                                                <Button
-                                                    variant="secondary"
-                                                    size="sm"
-                                                    onClick={() => handleAddRule(bIdx, 'FIXED')}
-                                                >
-                                                    <span className="mr-1.5">+</span> Specific Item
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleAddRule(bIdx, 'RANDOM')}
-                                                >
-                                                    <span className="mr-1.5">+</span> Smart Rule
-                                                </Button>
-                                            </div>
+                                            {!inspectMode && (
+                                                <div className="mt-6 flex gap-3">
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="sm"
+                                                        onClick={() => handleAddRule(bIdx, 'FIXED')}
+                                                    >
+                                                        <span className="mr-1.5">+</span> Specific Item
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleAddRule(bIdx, 'RANDOM')}
+                                                    >
+                                                        <span className="mr-1.5">+</span> Smart Rule
+                                                    </Button>
+                                                </div>
+                                            )}
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
 
                                 <button

@@ -71,6 +71,14 @@ async def transition_item_status(
         feedback=payload.feedback
     )
 
+@router.post("/learning-objects/{lo_id}/duplicate", response_model=dict)
+async def duplicate_learning_object(
+    lo_id: UUID,
+    current_user: User = Depends(require_role(UserRole.CONSTRUCTOR, UserRole.ADMIN)),
+):
+    """Create a copy of a Learning Object with its latest version content."""
+    return await svc.duplicate_learning_object(lo_id=lo_id, current_user_id=current_user.id)
+
 @router.delete("/learning-objects/{lo_id}")
 async def delete_learning_object(
     lo_id: UUID,

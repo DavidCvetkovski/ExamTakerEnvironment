@@ -7,8 +7,15 @@ from typing import List
 from prisma import Json
 from app.core.dependencies import get_current_user, require_role
 from app.core.prisma_db import prisma
+from app.models.blueprint_status import BlueprintStatus
 from app.models.user import User, UserRole
 from app.schemas.test_definition import TestDefinitionCreate, TestDefinitionResponse
+from app.services.blueprint_status_service import (
+    can_delete_blueprint,
+    can_edit_blueprint,
+    derive_blueprint_status,
+    mutation_error_message,
+)
 from app.services.blueprints_service import (
     create_test_definition as svc_create_test_definition,
     list_test_definitions as svc_list_test_definitions,
@@ -20,6 +27,9 @@ router = APIRouter()
 
 
 class BlueprintUsage(BaseModel):
+    # Canonical lifecycle status (Epoch 8.4).
+    status: BlueprintStatus
+    # Legacy fields — kept for one release for backwards compat. See directives/todo.md TODO-007.
     has_scheduled_sessions: bool
     has_past_sessions: bool
     is_locked: bool
@@ -27,22 +37,19 @@ class BlueprintUsage(BaseModel):
 
 
 async def _assert_blueprint_mutable(test_id: str, allow_delete: bool = False) -> None:
-    """Raise 403 if the blueprint is linked to sessions that prevent mutation."""
-    scheduled = await prisma.scheduled_exam_sessions.find_many(
-        where={"test_definition_id": test_id}
-    )
-    if not scheduled:
+    """Raise 403 when blueprint status prevents the requested mutation."""
+    bp_status = await derive_blueprint_status(test_id)
+    if allow_delete:
+        if not can_delete_blueprint(bp_status):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This blueprint has scheduled or past sessions and cannot be deleted.",
+            )
         return
-    has_past = any(s.status in ("CLOSED", "CANCELED") for s in scheduled)
-    if has_past and allow_delete:
+    if not can_edit_blueprint(bp_status):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="This blueprint has been used in a completed session and cannot be deleted.",
-        )
-    if scheduled:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="This blueprint is linked to one or more sessions and cannot be edited.",
+            detail=mutation_error_message(bp_status),
         )
 
 
@@ -66,17 +73,21 @@ async def get_blueprint_usage(
     test_id: UUID,
     current_user: User = Depends(require_role(UserRole.CONSTRUCTOR, UserRole.ADMIN)),
 ):
-    """Return whether the blueprint is linked to scheduled or past sessions."""
-    scheduled = await prisma.scheduled_exam_sessions.find_many(
-        where={"test_definition_id": str(test_id)}
+    """Return the blueprint's lifecycle status (and legacy boolean flags)."""
+    bp_status = await derive_blueprint_status(str(test_id))
+    # Legacy fields preserved for one release — drop after Epoch 8.5 (see TODO-007).
+    has_scheduled = bp_status in (
+        BlueprintStatus.SCHEDULED,
+        BlueprintStatus.ONGOING,
+        BlueprintStatus.PASSED,
     )
-    has_scheduled = len(scheduled) > 0
-    has_past = any(s.status in ("CLOSED", "CANCELED") for s in scheduled)
+    has_past = bp_status == BlueprintStatus.PASSED
     return BlueprintUsage(
+        status=bp_status,
         has_scheduled_sessions=has_scheduled,
         has_past_sessions=has_past,
-        is_locked=has_scheduled,
-        is_permanently_locked=has_past,
+        is_locked=bp_status in (BlueprintStatus.ONGOING, BlueprintStatus.PASSED),
+        is_permanently_locked=bp_status == BlueprintStatus.PASSED,
     )
 
 @router.get("/{test_id}", response_model=TestDefinitionResponse)

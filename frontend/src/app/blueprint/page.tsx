@@ -1,15 +1,17 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
-import { DEFAULT_SCORING_CONFIG, useBlueprintStore, SelectionRule, TestDefinition } from '@/stores/useBlueprintStore';
+import { DEFAULT_SCORING_CONFIG, useBlueprintStore, SelectionRule, TestDefinition, type BlueprintStatusFilter } from '@/stores/useBlueprintStore';
 import { useExamStore } from '@/stores/useExamStore';
 import { useImportStore } from '@/stores/useImportStore';
 import { validateBlueprint } from '@/lib/validateBlueprint';
+import { canEditBlueprint, canDeleteBlueprint, type BlueprintStatus } from '@/lib/blueprintPermissions';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useRouter, useSearchParams } from 'next/navigation';
 import QuestionPickerModal from '@/components/blueprint/QuestionPickerModal';
 import BlueprintSaveIndicator from '@/components/blueprint/BlueprintSaveIndicator';
-import { Badge, Button, Input, Select, useToast, useConfirm, StatusDot } from '@/components/ui';
+import BlueprintStatusBadge from '@/components/blueprint/BlueprintStatusBadge';
+import { Badge, Button, Input, Select, cn, useToast, useConfirm, StatusDot } from '@/components/ui';
 
 type BlueprintDraft = Partial<TestDefinition>;
 
@@ -30,6 +32,8 @@ function BlueprintPageInner() {
         isLoading,
         error,
         usageMap,
+        statusFilter,
+        setStatusFilter,
         fetchBlueprints,
         fetchBlueprint,
         fetchAvailableItems,
@@ -146,13 +150,16 @@ function BlueprintPageInner() {
         let list = blueprints.filter((bp) =>
             bp.title.toLowerCase().includes(search.toLowerCase())
         );
+        if (statusFilter !== 'ALL') {
+            list = list.filter((bp) => (usageMap[bp.id]?.status ?? 'NEW') === statusFilter);
+        }
         if (sortKey === 'created_desc') list = [...list].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         if (sortKey === 'created_asc')  list = [...list].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         if (sortKey === 'updated_desc') list = [...list].sort((a, b) => new Date(b.updated_at ?? b.created_at).getTime() - new Date(a.updated_at ?? a.created_at).getTime());
         if (sortKey === 'duration_asc') list = [...list].sort((a, b) => a.duration_minutes - b.duration_minutes);
         if (sortKey === 'duration_desc') list = [...list].sort((a, b) => b.duration_minutes - a.duration_minutes);
         return list;
-    }, [blueprints, search, sortKey]);
+    }, [blueprints, usageMap, statusFilter, search, sortKey]);
 
     const handleAddBlock = () => {
         if (!currentBlueprint) return;
@@ -352,7 +359,7 @@ function BlueprintPageInner() {
                     </div>
 
                     {/* Sort + Search toolbar */}
-                    <div className="flex flex-wrap items-center gap-3 mb-8">
+                    <div className="flex flex-wrap items-center gap-3 mb-4">
                         <div className="flex-1 min-w-[220px]">
                             <Input
                                 inputSize="md"
@@ -375,6 +382,30 @@ function BlueprintPageInner() {
                                 <option value="duration_desc">Longest exam</option>
                             </Select>
                         </div>
+                    </div>
+
+                    {/* Status filter chips */}
+                    <div className="inline-flex items-center gap-0.5 bg-shell-surface border border-shell-border rounded-md p-0.5 mb-8">
+                        {(['ALL', 'NEW', 'SCHEDULED', 'ONGOING', 'PASSED'] as BlueprintStatusFilter[]).map((key) => {
+                            const label = key === 'ALL' ? 'All' : key === 'PASSED' ? 'Completed' : key.charAt(0) + key.slice(1).toLowerCase();
+                            const count = key === 'ALL'
+                                ? blueprints.length
+                                : blueprints.filter((bp) => (usageMap[bp.id]?.status ?? 'NEW') === key).length;
+                            return (
+                                <button
+                                    key={key}
+                                    onClick={() => setStatusFilter(key)}
+                                    className={cn(
+                                        'px-3 py-1 rounded text-meta font-medium transition-colors',
+                                        statusFilter === key
+                                            ? 'bg-brand text-white'
+                                            : 'text-shell-muted hover:text-foreground'
+                                    )}
+                                >
+                                    {label} <span className="opacity-60">({count})</span>
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {isLoading && blueprints.length === 0 && (
@@ -401,23 +432,21 @@ function BlueprintPageInner() {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {displayedBlueprints.map((bp) => {
                             const usage = usageMap[bp.id];
-                            const isPermanentlyLocked = usage?.is_permanently_locked ?? false;
-                            const isLocked = usage?.is_locked ?? false;
-                            const canEdit = !isLocked && !isPermanentlyLocked;
+                            const status: BlueprintStatus = usage?.status ?? 'NEW';
+                            const canEdit = canEditBlueprint(status);
+                            const canDelete = canDeleteBlueprint(status);
 
                             return (
                                 <div
                                     key={bp.id}
                                     className="group relative bg-shell-surface/50 hover:bg-shell-input/80 p-6 rounded-3xl border border-shell-border hover:border-shell-border-deep transition-all backdrop-blur-sm"
                                 >
-                                    {/* Lock badge */}
-                                    {(isPermanentlyLocked || isLocked) && (
-                                        <div className="absolute top-4 right-4">
-                                            <Badge tone="warning" size="sm">In Use</Badge>
-                                        </div>
-                                    )}
+                                    {/* Status badge */}
+                                    <div className="absolute top-4 right-4">
+                                        <BlueprintStatusBadge status={status} />
+                                    </div>
 
-                                    <h3 className="text-xl font-bold mb-2 pr-12 line-clamp-2 text-foreground">{bp.title}</h3>
+                                    <h3 className="text-xl font-bold mb-3 pr-24 line-clamp-2 text-foreground">{bp.title}</h3>
                                     <p className="text-shell-muted-dim text-sm mb-4 line-clamp-2 min-h-[40px]">{bp.description || 'No description provided.'}</p>
 
                                     <div className="flex items-center justify-between pt-4 border-t border-shell-border text-xs text-shell-muted-dim font-medium tracking-wider uppercase mb-4">
@@ -481,7 +510,7 @@ function BlueprintPageInner() {
                                         >
                                             Duplicate
                                         </Button>
-                                        {canEdit && (
+                                        {canDelete && (
                                             <Button
                                                 variant="ghost"
                                                 size="sm"

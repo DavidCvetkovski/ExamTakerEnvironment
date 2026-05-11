@@ -132,3 +132,14 @@
 .tiptap-content .tiptap li {
   margin: 4px 0;
 }
+
+/* Read-only mode — no caret, no editor affordances */
+.tiptap-readonly .tiptap-content .tiptap {
+  caret-color: transparent;
+  cursor: default;
+}
+
+.tiptap-readonly .tiptap-content .tiptap:focus,
+.tiptap-readonly .tiptap-content .tiptap *:focus {
+  outline: none;
+}

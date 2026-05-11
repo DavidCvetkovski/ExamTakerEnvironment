@@ -138,7 +138,7 @@ function AuthorPageInner() {
 
                     {isLocked && (
                         <div className="mb-5 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-4 py-3 text-sm text-[var(--color-warning-fg)]">
-                            This question is used in a blueprint and cannot be edited.
+                            This question is in active use. Edits would invalidate existing student attempts.
                         </div>
                     )}
 
@@ -192,50 +192,52 @@ function AuthorPageInner() {
 
                                     <div className="flex-1" />
 
-                                    {isDirty && !isLocked && (
-                                        <span className="inline-flex items-center gap-1.5 text-meta text-[var(--color-warning-fg)]">
-                                            <StatusDot tone="warning" pulse />
-                                            Unsaved
-                                        </span>
+                                    {isLocked ? (
+                                        <Badge tone="info" size="sm">View only</Badge>
+                                    ) : (
+                                        <>
+                                            {isDirty && (
+                                                <span className="inline-flex items-center gap-1.5 text-meta text-[var(--color-warning-fg)]">
+                                                    <StatusDot tone="warning" pulse />
+                                                    Unsaved
+                                                </span>
+                                            )}
+                                            {statusBadge}
+
+                                            <Button
+                                                variant="secondary"
+                                                size="md"
+                                                disabled={!isDirty || saveStatus === 'SAVING'}
+                                                onClick={revertChanges}
+                                            >
+                                                Revert
+                                            </Button>
+
+                                            <Button
+                                                variant="primary"
+                                                size="md"
+                                                disabled={!isDirty || saveStatus === 'SAVING'}
+                                                loading={saveStatus === 'SAVING'}
+                                                onClick={handleSave}
+                                            >
+                                                Save
+                                            </Button>
+                                        </>
                                     )}
-                                    {statusBadge}
-
-                                    <Button
-                                        variant="secondary"
-                                        size="md"
-                                        disabled={isLocked || !isDirty || saveStatus === 'SAVING'}
-                                        onClick={revertChanges}
-                                    >
-                                        Revert
-                                    </Button>
-
-                                    <Button
-                                        variant="primary"
-                                        size="md"
-                                        disabled={isLocked || !isDirty || saveStatus === 'SAVING'}
-                                        loading={saveStatus === 'SAVING'}
-                                        onClick={handleSave}
-                                    >
-                                        Save
-                                    </Button>
                                 </div>
                             </Card>
 
-                            <div className={isLocked ? 'pointer-events-none opacity-60' : undefined}>
-                                <Card variant="bordered" padding="none" className="overflow-hidden">
-                                    <TipTapEditor />
-                                </Card>
-                            </div>
+                            <Card variant="bordered" padding="none" className="overflow-hidden">
+                                <TipTapEditor editable={!isLocked} />
+                            </Card>
 
-                            <div className={isLocked ? 'pointer-events-none opacity-60' : undefined}>
-                                <Card variant="bordered" padding="none" className="overflow-hidden">
-                                    {questionType === 'MULTIPLE_CHOICE' || questionType === 'MULTIPLE_RESPONSE' ? (
-                                        <MCQOptionsPanel />
-                                    ) : (
-                                        <EssayOptionsPanel />
-                                    )}
-                                </Card>
-                            </div>
+                            <Card variant="bordered" padding="none" className="overflow-hidden">
+                                {questionType === 'MULTIPLE_CHOICE' || questionType === 'MULTIPLE_RESPONSE' ? (
+                                    <MCQOptionsPanel />
+                                ) : (
+                                    <EssayOptionsPanel />
+                                )}
+                            </Card>
                         </div>
                     )}
             </PageShell>

@@ -525,6 +525,12 @@ body {
               0 0 0 4px color-mix(in oklab, var(--color-brand) 50%, transparent);
 }
 
+/* ── 8.3 — Stage 1: Ensure html element carries the theme background so the
+   overscroll/bounce area matches the shell rather than defaulting to white. ── */
+html {
+  background-color: var(--color-shell-bg);
+}
+
 @keyframes ov-shake {
   0%,
   100% {

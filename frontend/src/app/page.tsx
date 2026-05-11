@@ -39,15 +39,15 @@ function MarketingPage({ mounted }: { mounted: boolean }) {
 
                 <div className="mt-12 flex flex-wrap justify-center gap-4 text-sm text-shell-muted">
                     {[
-                        { icon: '📐', label: 'Adaptive Blueprints' },
-                        { icon: '📊', label: 'Psychometric Analytics' },
-                        { icon: '🔒', label: 'Secure Exam Delivery' },
-                    ].map((f) => (
+                        'Adaptive Blueprints',
+                        'Psychometric Analytics',
+                        'Secure Exam Delivery',
+                    ].map((label) => (
                         <span
-                            key={f.label}
+                            key={label}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-shell-border bg-shell-surface/50"
                         >
-                            {f.icon} {f.label}
+                            {label}
                         </span>
                     ))}
                 </div>
@@ -62,27 +62,25 @@ interface QuickAction {
     href: string;
     label: string;
     description: string;
-    icon: string;
-    primary?: boolean;
 }
 
 const CONSTRUCTOR_ACTIONS: QuickAction[] = [
-    { href: '/items', label: 'Item Library', description: 'Browse, author & manage question items', icon: '📚', primary: true },
-    { href: '/blueprint', label: 'Blueprints', description: 'Design exam blueprints and test structures', icon: '📐', primary: true },
-    { href: '/sessions', label: 'Sessions', description: 'Schedule and manage exam sessions', icon: '📅' },
-    { href: '/analytics', label: 'Analytics', description: 'Review psychometric stats and item performance', icon: '📊' },
+    { href: '/items', label: 'Item Library', description: 'Browse, author & manage question items' },
+    { href: '/blueprint', label: 'Blueprints', description: 'Design exam blueprints and test structures' },
+    { href: '/sessions', label: 'Sessions', description: 'Schedule and manage exam sessions' },
+    { href: '/analytics', label: 'Analytics', description: 'Review psychometric stats and item performance' },
 ];
 
 const ADMIN_ACTIONS: QuickAction[] = [
-    { href: '/sessions', label: 'Sessions', description: 'Manage and schedule all exam sessions', icon: '📅', primary: true },
-    { href: '/items', label: 'Item Library', description: 'Browse and manage all question items', icon: '📚', primary: true },
-    { href: '/blueprint', label: 'Blueprints', description: 'Create and edit exam blueprints', icon: '📐' },
-    { href: '/analytics', label: 'Analytics', description: 'Platform-wide psychometric analytics', icon: '📊' },
+    { href: '/sessions', label: 'Sessions', description: 'Manage and schedule all exam sessions' },
+    { href: '/items', label: 'Item Library', description: 'Browse and manage all question items' },
+    { href: '/blueprint', label: 'Blueprints', description: 'Create and edit exam blueprints' },
+    { href: '/analytics', label: 'Analytics', description: 'Platform-wide psychometric analytics' },
 ];
 
 const STUDENT_ACTIONS: QuickAction[] = [
-    { href: '/my-exams', label: 'My Exams', description: 'View upcoming and active exam sessions', icon: '✍️', primary: true },
-    { href: '/my-grades', label: 'My Grades', description: 'See published results and feedback', icon: '🎓', primary: true },
+    { href: '/my-exams', label: 'My Exams', description: 'View upcoming and active exam sessions' },
+    { href: '/my-grades', label: 'My Grades', description: 'See published results and feedback' },
 ];
 
 function getActions(role: string): QuickAction[] {
@@ -138,19 +136,12 @@ function DashboardPage({ mounted }: { mounted: boolean }) {
                         <button
                             key={action.href}
                             onClick={() => router.push(action.href)}
-                            className={[
-                                'group text-left rounded-2xl border p-6 transition-all duration-200',
-                                'hover:scale-[1.02] hover:shadow-elevated focus-ring focus:outline-none',
-                                action.primary
-                                    ? 'bg-shell-surface border-shell-border hover:border-brand/50'
-                                    : 'bg-shell-input/40 border-shell-border hover:border-shell-border-deep',
-                            ].join(' ')}
+                            className="group text-left rounded-2xl border border-shell-border bg-shell-surface p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-elevated hover:border-brand/40 focus-ring focus:outline-none"
                         >
                             <div className="flex items-start gap-4">
-                                <span className="text-2xl mt-0.5 select-none">{action.icon}</span>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
-                                        <span className={`text-base font-bold ${action.primary ? 'text-foreground' : 'text-foreground/80'}`}>
+                                        <span className="text-base font-bold text-foreground">
                                             {action.label}
                                         </span>
                                         <span className="text-shell-muted-dim group-hover:text-brand transition-colors text-sm">→</span>

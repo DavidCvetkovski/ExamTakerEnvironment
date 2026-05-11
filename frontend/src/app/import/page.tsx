@@ -50,9 +50,15 @@ function ImportPageInner() {
         reset,
     } = useImportStore();
 
-    // Set initial mode from query param
+    // Determine back destination from `from` query param (blueprints vs library)
+    const fromParam = searchParams.get('from');
+    const backDest = fromParam === 'blueprint' ? '/blueprint' : '/items';
+    const backLabel = fromParam === 'blueprint' ? 'Back to Blueprints' : 'Back to Library';
+
+    // Set initial mode from query param only when there is no existing draft
     useEffect(() => {
         const mode = searchParams.get('mode');
+        if (rawText.trim()) return; // preserve an existing session draft
         if (mode === 'questions') setCreateBlueprint(false);
         else if (mode === 'blueprint') setCreateBlueprint(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -96,11 +102,11 @@ function ImportPageInner() {
     }
 
     async function handleNavAway(dest: string) {
-        const isDirty = rawText.trim().length > 0 && commitStatus !== 'completed';
-        if (isDirty) {
+        const hasDraft = rawText.trim().length > 0 && commitStatus !== 'completed';
+        if (hasDraft) {
             const ok = await confirm({
-                title: 'Leave without importing?',
-                message: 'You have pasted text that has not been imported yet. Your draft will be cleared.',
+                title: 'Leave this import?',
+                message: 'Your pasted text will be cleared. Are you sure?',
                 confirmLabel: 'Leave',
                 cancelLabel: 'Stay',
                 tone: 'warning',
@@ -120,6 +126,17 @@ function ImportPageInner() {
         <div className="min-h-full bg-shell-bg">
             {ConfirmDialog}
             <div className="max-w-7xl mx-auto px-6 py-8">
+                {/* Back button — canonical top-left position */}
+                <button
+                    onClick={() => handleNavAway(backDest)}
+                    className="mb-6 inline-flex items-center gap-2 text-meta font-medium text-shell-muted hover:text-foreground transition-colors"
+                >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    {backLabel}
+                </button>
+
                 {/* Page header */}
                 <div className="flex items-start justify-between gap-4 mb-8">
                     <div>
@@ -127,7 +144,7 @@ function ImportPageInner() {
                         <h1 className="text-h1 text-foreground">Import Questions</h1>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => setShowGuide(true)}>
-                        📖 Format Guide
+                        Format Guide
                     </Button>
                 </div>
 
@@ -142,7 +159,7 @@ function ImportPageInner() {
                                 : 'border-shell-border bg-shell-surface hover:border-shell-border-deep'
                         }`}
                     >
-                        <p className="font-semibold text-foreground mb-1">📋 Import Questions Only</p>
+                        <p className="font-semibold text-foreground mb-1">Import Questions Only</p>
                         <p className="text-sm text-shell-muted">Add questions to your library (no blueprint created)</p>
                     </button>
                     <button
@@ -154,7 +171,7 @@ function ImportPageInner() {
                                 : 'border-shell-border bg-shell-surface hover:border-shell-border-deep'
                         }`}
                     >
-                        <p className="font-semibold text-foreground mb-1">📐 Import + Create Blueprint</p>
+                        <p className="font-semibold text-foreground mb-1">Import + Create Blueprint</p>
                         <p className="text-sm text-shell-muted">Build a ready-to-use exam too (questions + blueprint draft)</p>
                     </button>
                 </div>
@@ -205,9 +222,6 @@ function ImportPageInner() {
                             >
                                 Import
                             </Button>
-                            <Button variant="ghost" onClick={() => handleNavAway('/items')}>
-                                ← Library
-                            </Button>
                         </div>
                     </div>
 
@@ -242,7 +256,7 @@ function ResultPanel({ previewResult, previewLoading, previewError, onJumpToLine
     if (previewLoading) {
         return (
             <div className="bg-shell-surface rounded-2xl border border-shell-border p-6 flex items-center gap-3 text-shell-muted">
-                <span className="animate-spin text-brand">⟳</span>
+                <span className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin shrink-0" />
                 Parsing…
             </div>
         );

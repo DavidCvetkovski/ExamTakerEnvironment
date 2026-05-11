@@ -7,6 +7,7 @@ import MCQOptionsPanel from '@/components/editor/MCQOptionsPanel';
 import EssayOptionsPanel from '@/components/editor/EssayOptionsPanel';
 import { useAuthoringStore } from '@/stores/useAuthoringStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
+import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Badge, Button, Card, Field, Input, PageHeader, Select, StatusDot, cn, useToast, useConfirm } from '@/components/ui';
 
@@ -35,6 +36,8 @@ function AuthorPageInner() {
     } = useAuthoringStore();
 
     const setLastEditingLoId = useLibraryStore((s) => s.setLastEditingLoId);
+    const usageMap = useBlueprintStore((s) => s.usageMap);
+    const isLocked = learningObjectId ? learningObjectId in usageMap : false;
 
     useEffect(() => {
         if (loIdParam && fetchedRef.current !== loIdParam) {
@@ -67,6 +70,13 @@ function AuthorPageInner() {
         } catch {
             toast({ tone: 'danger', title: 'Save failed', description: 'Check your connection and try again.' });
         }
+    };
+
+    const handleCopyId = () => {
+        if (!learningObjectId) return;
+        navigator.clipboard.writeText(learningObjectId).then(() => {
+            toast({ tone: 'success', title: 'ID copied to clipboard' });
+        });
     };
 
     const statusBadge =
@@ -115,7 +125,20 @@ function AuthorPageInner() {
                         title="Question authoring"
                         subtitle="Create or edit question versions for the selected learning object."
                         compact
+                        actions={
+                            learningObjectId ? (
+                                <Button variant="secondary" size="sm" onClick={handleCopyId}>
+                                    Copy ID
+                                </Button>
+                            ) : undefined
+                        }
                     />
+
+                    {isLocked && (
+                        <div className="mb-5 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-4 py-3 text-sm text-[var(--color-warning-fg)]">
+                            This question is used in a blueprint and cannot be edited.
+                        </div>
+                    )}
 
                     {!learningObjectId ? (
                         <Card variant="surface" padding="lg" className="text-center">
@@ -136,6 +159,7 @@ function AuthorPageInner() {
                                             placeholder="e.g. Math"
                                             value={(metadataTags.topic as string) || ''}
                                             onChange={(e) => updateMetadataField('topic', e.target.value)}
+                                            disabled={isLocked}
                                         />
                                     </Field>
 
@@ -147,6 +171,7 @@ function AuthorPageInner() {
                                             step="1"
                                             value={metadataTags.points !== undefined ? metadataTags.points as number : ''}
                                             onChange={(e) => updateMetadataField('points', e.target.value === '' ? '' : parseInt(e.target.value))}
+                                            disabled={isLocked}
                                         />
                                     </Field>
 
@@ -155,6 +180,7 @@ function AuthorPageInner() {
                                             inputSize="sm"
                                             value={questionType}
                                             onChange={(e) => setQuestionType(e.target.value as 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY')}
+                                            disabled={isLocked}
                                         >
                                             <option value="MULTIPLE_CHOICE">Single choice</option>
                                             <option value="MULTIPLE_RESPONSE">Multiple choice</option>
@@ -164,7 +190,7 @@ function AuthorPageInner() {
 
                                     <div className="flex-1" />
 
-                                    {isDirty && (
+                                    {isDirty && !isLocked && (
                                         <span className="inline-flex items-center gap-1.5 text-meta text-[var(--color-warning-fg)]">
                                             <StatusDot tone="warning" pulse />
                                             Unsaved
@@ -175,7 +201,7 @@ function AuthorPageInner() {
                                     <Button
                                         variant="secondary"
                                         size="md"
-                                        disabled={!isDirty || saveStatus === 'SAVING'}
+                                        disabled={isLocked || !isDirty || saveStatus === 'SAVING'}
                                         onClick={revertChanges}
                                     >
                                         Revert
@@ -184,7 +210,7 @@ function AuthorPageInner() {
                                     <Button
                                         variant="primary"
                                         size="md"
-                                        disabled={!isDirty || saveStatus === 'SAVING'}
+                                        disabled={isLocked || !isDirty || saveStatus === 'SAVING'}
                                         loading={saveStatus === 'SAVING'}
                                         onClick={handleSave}
                                     >
@@ -193,17 +219,21 @@ function AuthorPageInner() {
                                 </div>
                             </Card>
 
-                            <Card variant="bordered" padding="none" className="overflow-hidden">
-                                <TipTapEditor />
-                            </Card>
+                            <div className={isLocked ? 'pointer-events-none opacity-60' : undefined}>
+                                <Card variant="bordered" padding="none" className="overflow-hidden">
+                                    <TipTapEditor />
+                                </Card>
+                            </div>
 
-                            <Card variant="bordered" padding="none" className="overflow-hidden">
-                                {questionType === 'MULTIPLE_CHOICE' || questionType === 'MULTIPLE_RESPONSE' ? (
-                                    <MCQOptionsPanel />
-                                ) : (
-                                    <EssayOptionsPanel />
-                                )}
-                            </Card>
+                            <div className={isLocked ? 'pointer-events-none opacity-60' : undefined}>
+                                <Card variant="bordered" padding="none" className="overflow-hidden">
+                                    {questionType === 'MULTIPLE_CHOICE' || questionType === 'MULTIPLE_RESPONSE' ? (
+                                        <MCQOptionsPanel />
+                                    ) : (
+                                        <EssayOptionsPanel />
+                                    )}
+                                </Card>
+                            </div>
                         </div>
                     )}
                 </div>

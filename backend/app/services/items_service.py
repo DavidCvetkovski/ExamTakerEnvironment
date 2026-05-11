@@ -237,6 +237,48 @@ async def transition_item_status(
     )
     return updated
 
+async def duplicate_learning_object(lo_id: UUID, current_user_id: str) -> dict:
+    """Create a copy of a Learning Object with its latest version content."""
+    original = await prisma.learning_objects.find_unique(where={"id": str(lo_id)})
+    if not original:
+        raise HTTPException(status_code=404, detail="Learning Object not found.")
+
+    latest = await prisma.item_versions.find_first(
+        where={"learning_object_id": str(lo_id)},
+        order={"version_number": "desc"}
+    )
+    if not latest:
+        raise HTTPException(status_code=404, detail="No version found for this Learning Object.")
+
+    new_lo = await prisma.learning_objects.create(
+        data={"bank_id": original.bank_id, "created_by": current_user_id}
+    )
+
+    # Copy the content; strip metadata like review_feedback from tags
+    raw_tags = latest.metadata_tags or {}
+    if isinstance(raw_tags, str):
+        import json as _json
+        try:
+            raw_tags = _json.loads(raw_tags)
+        except Exception:
+            raw_tags = {}
+    raw_tags.pop("review_feedback", None)
+
+    await prisma.item_versions.create(
+        data={
+            "learning_object_id": new_lo.id,
+            "created_by": current_user_id,
+            "version_number": 1,
+            "status": ItemStatus.DRAFT.value,
+            "question_type": latest.question_type,
+            "content": Json(latest.content if isinstance(latest.content, dict) else {}),
+            "options": Json(latest.options if isinstance(latest.options, dict) else {}),
+            "metadata_tags": Json(raw_tags),
+        }
+    )
+
+    return {"status": "duplicated", "learning_object_id": str(new_lo.id)}
+
 async def delete_learning_object(lo_id: UUID) -> dict:
     """Soft-deletes a Learning Object by retiring all versions."""
     lo = await prisma.learning_objects.find_unique(where={"id": str(lo_id)})

@@ -61,8 +61,14 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
         new Set(availableItems.map((i) => i.metadata_tags?.topic).filter(Boolean))
     ) as string[];
 
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isIdSearch = UUID_RE.test(searchQuery.trim());
+
     const filteredItems = availableItems.filter((item) => {
-        const matchesSearch = item.latest_content_preview.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSearch = isIdSearch
+            ? item.id.toLowerCase() === searchQuery.trim().toLowerCase()
+            : item.latest_content_preview.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              item.id.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesType = typeFilter === 'all' || item.latest_question_type === typeFilter;
         const matchesSubject = subjectFilter === 'all' || item.metadata_tags?.topic === subjectFilter;
         const isExcluded = excludeIds.includes(item.id);
@@ -80,20 +86,25 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                         type="button"
                         onClick={handleClose}
                         className="flex h-8 w-8 items-center justify-center rounded-full border border-shell-border text-shell-muted transition-colors hover:bg-shell-input hover:text-foreground"
+                        aria-label="Close"
                     >
-                        ✕
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                     </button>
                 </div>
 
                 {/* Filters */}
                 <div className="flex flex-wrap gap-3 border-b border-shell-border px-6 py-4">
-                    <input
-                        type="text"
-                        placeholder="Search questions..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="flex-1 min-w-[200px] rounded-xl border border-shell-border bg-shell-input px-4 py-2.5 text-sm text-foreground outline-none transition focus:border-brand placeholder:text-shell-muted"
-                    />
+                    <div className="flex-1 min-w-[200px] space-y-1">
+                        <input
+                            type="text"
+                            placeholder="Search by text or paste a Question ID…"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full rounded-xl border border-shell-border bg-shell-input px-4 py-2.5 text-sm text-foreground outline-none transition focus:border-brand placeholder:text-shell-muted"
+                        />
+                    </div>
                     <select
                         value={typeFilter}
                         onChange={(e) => setTypeFilter(e.target.value)}
@@ -172,7 +183,6 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                         </div>
                     ) : filteredItems.length === 0 ? (
                         <div className="px-6 py-16 text-center text-shell-muted-dim">
-                            <p className="text-4xl mb-4">🔍</p>
                             <p className="text-base">No questions found.</p>
                             <p className="mt-2 text-sm">Try adjusting your search or filters.</p>
                         </div>
@@ -221,8 +231,9 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                                                 type="button"
                                                 onClick={(e) => { e.stopPropagation(); setInspectedItem(item); }}
                                                 className="text-xs text-shell-muted hover:text-foreground focus-ring rounded"
+                                                title="Preview question details"
                                             >
-                                                Details
+                                                Preview
                                             </button>
                                         </div>
                                     </div>

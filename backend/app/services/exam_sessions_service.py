@@ -28,7 +28,7 @@ def get_return_path(session_mode: str) -> str:
     """Map an exam session mode to the route the client should return to."""
     if session_mode == ExamSessionMode.ASSIGNED.value:
         return "/my-exams"
-    return "/sessions"
+    return "/blueprint"
 
 
 def serialize_exam_session(session: Any) -> Dict[str, Any]:

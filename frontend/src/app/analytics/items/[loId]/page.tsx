@@ -9,7 +9,7 @@ import DistractorBars from '@/components/analytics/DistractorBars';
 import PDValueTrendChart from '@/components/analytics/PDValueTrendChart';
 import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import { InfoTooltip } from '@/components/ui';
+import { InfoTooltip, Spinner } from '@/components/ui';
 
 export default function ItemAnalyticsDetailPage() {
     const { loId } = useParams<{ loId: string }>();
@@ -56,7 +56,7 @@ export default function ItemAnalyticsDetailPage() {
                     <div className="mx-auto max-w-6xl">
                         <Link
                             href={sourceTestId ? `/analytics/tests/${sourceTestId}` : '/analytics'}
-                            className="text-sm text-blue-300 hover:text-blue-200"
+                            className="text-sm text-brand hover:text-foreground transition-colors"
                         >
                             ← Back to Test
                         </Link>
@@ -78,9 +78,9 @@ export default function ItemAnalyticsDetailPage() {
                     ) : null}
 
                     {!history && status === 'loading' ? (
-                        <div className="flex items-center justify-center py-24 text-shell-muted-dim">
-                            <div className="mr-3 h-6 w-6 animate-spin rounded-full border-2 border-cyan-400 border-t-transparent" />
-                            Loading item history...
+                        <div className="flex items-center justify-center py-24 text-shell-muted-dim gap-3">
+                            <Spinner size="lg" />
+                            Loading item history…
                         </div>
                     ) : null}
 

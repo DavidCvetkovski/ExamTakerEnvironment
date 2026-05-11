@@ -12,7 +12,7 @@ import StatCard from '@/components/analytics/StatCard';
 import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import { Button } from '@/components/ui';
+import { Button, Spinner } from '@/components/ui';
 
 function formatMetric(value: number | null, digits = 1): string {
     return value === null ? '—' : value.toFixed(digits);
@@ -150,9 +150,9 @@ export default function TestAnalyticsDashboardPage() {
                     ) : null}
 
                     {!bundle && status === 'loading' ? (
-                        <div className="flex items-center justify-center py-24 text-shell-muted-dim">
-                            <div className="mr-3 h-6 w-6 animate-spin rounded-full border-2 border-brand border-t-transparent" />
-                            Loading analytics dashboard...
+                        <div className="flex items-center justify-center py-24 text-shell-muted-dim gap-3">
+                            <Spinner size="lg" />
+                            Loading analytics dashboard…
                         </div>
                     ) : null}
 

@@ -11,7 +11,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import QuestionPickerModal from '@/components/blueprint/QuestionPickerModal';
 import BlueprintSaveIndicator from '@/components/blueprint/BlueprintSaveIndicator';
 import BlueprintStatusBadge from '@/components/blueprint/BlueprintStatusBadge';
-import { Badge, Button, Input, Select, cn, useToast, useConfirm, StatusDot } from '@/components/ui';
+import { Badge, Button, Input, Select, Spinner, cn, useToast, useConfirm, StatusDot } from '@/components/ui';
 
 type BlueprintDraft = Partial<TestDefinition>;
 
@@ -409,9 +409,9 @@ function BlueprintPageInner() {
                     </div>
 
                     {isLoading && blueprints.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-24 text-shell-muted-dim">
-                            <div className="w-12 h-12 border-4 border-brand border-t-transparent rounded-full animate-spin mb-4"></div>
-                            <p>Loading blueprints...</p>
+                        <div className="flex flex-col items-center justify-center py-24 text-shell-muted-dim gap-4">
+                            <Spinner size="xl" />
+                            <p>Loading blueprints…</p>
                         </div>
                     )}
                     {error && (

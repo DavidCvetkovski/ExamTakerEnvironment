@@ -11,6 +11,7 @@ import {
     EmptyState,
     PageHeader,
     Select,
+    Spinner,
     StatCard,
     Table,
     TableContainer,
@@ -21,6 +22,7 @@ import {
     TR,
     cn,
 } from '@/components/ui';
+import PageShell from '@/components/layout/PageShell';
 
 function statusBadge(status: GradingStatus) {
     const map: Record<GradingStatus, { label: string; tone: 'neutral' | 'info' | 'warning' | 'success' }> = {
@@ -36,8 +38,8 @@ function statusBadge(status: GradingStatus) {
 
 function SortArrow({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
     return (
-        <span className={`text-xs transition-colors ${active ? 'text-brand' : 'text-shell-muted-dim'}`}>
-            {active ? (dir === 'asc' ? '↑' : '↓') : '↕'}
+        <span className={`text-xs transition-colors ${active ? 'text-brand' : 'text-shell-muted-dim opacity-50'}`}>
+            {dir === 'asc' ? '↑' : '↓'}
         </span>
     );
 }
@@ -143,10 +145,8 @@ export default function GradingDashboard() {
     ];
 
     return (
-        <div className="min-h-full bg-shell-bg text-foreground">
-            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <PageShell width="wide">
                 <PageHeader
-                    eyebrow="Educator workspace"
                     title="Grading Dashboard"
                     subtitle="Review exam submissions, finalise marks, and publish results."
                     actions={
@@ -253,8 +253,8 @@ export default function GradingDashboard() {
                         </div>
 
                         {overviewLoading ? (
-                            <div className="flex items-center justify-center py-16 text-shell-muted-dim text-meta">
-                                <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin mr-3" />
+                            <div className="flex items-center justify-center py-16 text-shell-muted-dim text-meta gap-3">
+                                <Spinner size="sm" />
                                 Loading sessions…
                             </div>
                         ) : filtered.length === 0 ? (
@@ -349,7 +349,6 @@ export default function GradingDashboard() {
                         )}
                     </div>
                 )}
-            </div>
-        </div>
+        </PageShell>
     );
 }

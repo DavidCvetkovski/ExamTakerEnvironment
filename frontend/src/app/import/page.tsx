@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { Button, Badge, useToast, useConfirm } from '@/components/ui';
+import { Button, Badge, Spinner, useToast, useConfirm } from '@/components/ui';
 import { useImportStore, ParseError } from '@/stores/useImportStore';
 import FormatGuideModal from '@/components/import/FormatGuideModal';
 
@@ -256,7 +256,7 @@ function ResultPanel({ previewResult, previewLoading, previewError, onJumpToLine
     if (previewLoading) {
         return (
             <div className="bg-shell-surface rounded-2xl border border-shell-border p-6 flex items-center gap-3 text-shell-muted">
-                <span className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin shrink-0" />
+                <Spinner size="sm" />
                 Parsing…
             </div>
         );

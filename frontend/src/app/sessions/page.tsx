@@ -8,7 +8,8 @@ import CancelSessionModal from '@/components/sessions/CancelSessionModal';
 import CourseEnrollmentDrawer from '@/components/sessions/CourseEnrollmentDrawer';
 import ScheduledSessionsTable from '@/components/sessions/ScheduledSessionsTable';
 import SessionCreateForm from '@/components/sessions/SessionCreateForm';
-import { useToast } from '@/components/ui';
+import { PageHeader, useToast } from '@/components/ui';
+import PageShell from '@/components/layout/PageShell';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import { useCourseStore } from '@/stores/useCourseStore';
@@ -73,8 +74,12 @@ export default function SessionsPage() {
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <div className="min-h-full bg-shell-bg text-foreground">
-                <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+            <PageShell width="wide">
+                <PageHeader
+                    title="Exam Sessions"
+                    subtitle="Schedule, monitor, and manage exam windows for your courses."
+                />
+                <div className="space-y-8 mt-6">
                     <SessionCreateForm
                         courses={courses}
                         blueprints={blueprints}
@@ -126,7 +131,7 @@ export default function SessionsPage() {
                     onClose={() => setCancelTarget(null)}
                     isBusy={sessionsLoading}
                 />
-            </div>
+            </PageShell>
         </ProtectedRoute>
     );
 }

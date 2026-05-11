@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
-import { Badge, Button, Card, EmptyState, PageHeader } from '@/components/ui';
+import { Badge, Button, Card, EmptyState, PageHeader, Spinner } from '@/components/ui';
+import PageShell from '@/components/layout/PageShell';
 
 export default function AnalyticsIndexPage() {
     const router = useRouter();
@@ -24,10 +25,8 @@ export default function AnalyticsIndexPage() {
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <div className="min-h-full bg-shell-bg text-foreground">
-                <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <PageShell width="wide">
                     <PageHeader
-                        eyebrow="Psychometric analysis"
                         title="Analytics dashboards"
                         subtitle="Pick a test blueprint to inspect item quality, score distribution, and version-level behaviour."
                     />
@@ -39,8 +38,8 @@ export default function AnalyticsIndexPage() {
                     )}
 
                     {isLoading && blueprints.length === 0 ? (
-                        <div className="flex items-center justify-center py-24 text-shell-muted-dim text-meta">
-                            <div className="mr-3 h-4 w-4 animate-spin rounded-full border-2 border-brand border-t-transparent" />
+                        <div className="flex items-center justify-center py-24 text-shell-muted-dim text-meta gap-3">
+                            <Spinner size="sm" />
                             Loading available tests…
                         </div>
                     ) : !isLoading && blueprints.length === 0 ? (
@@ -78,8 +77,7 @@ export default function AnalyticsIndexPage() {
                             ))}
                         </div>
                     )}
-                </div>
-            </div>
+            </PageShell>
         </ProtectedRoute>
     );
 }

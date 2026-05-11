@@ -13,6 +13,7 @@ import {
     Input,
     PageHeader,
     Select,
+    Spinner,
     Table,
     TableContainer,
     TBody,
@@ -22,6 +23,7 @@ import {
     TR,
     useToast,
 } from '@/components/ui';
+import PageShell from '@/components/layout/PageShell';
 
 function getMetadataString(value: unknown): string | null {
     return typeof value === 'string' && value.trim() !== '' ? value : null;
@@ -53,12 +55,12 @@ function formatRelativeTime(dateStr: string): string {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type SortKey = 'preview' | 'subject' | 'points' | 'updated' | 'created';
-type SortDir = 'asc' | 'desc' | 'none';
+type SortDir = 'asc' | 'desc';
 
 function SortArrow({ active, dir }: { active: boolean; dir: SortDir }) {
     return (
-        <span className={`text-xs ml-1 transition-colors ${active && dir !== 'none' ? 'text-brand' : 'text-shell-muted-dim'}`}>
-            {active && dir === 'asc' ? '↑' : active && dir === 'desc' ? '↓' : '↕'}
+        <span className={`text-xs ml-1 transition-colors ${active ? 'text-brand' : 'text-shell-muted-dim opacity-50'}`}>
+            {dir === 'asc' ? '↑' : '↓'}
         </span>
     );
 }
@@ -83,8 +85,8 @@ function ItemsLibraryPageInner() {
     const [subjectFilter, setSubjectFilter] = useState('all');
     const [typeFilter, setTypeFilter] = useState<'all' | 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY'>('all');
     const [pointsFilter, setPointsFilter] = useState<'all' | '1' | '2' | '3+'>('all');
-    const [sortKey, setSortKey] = useState<SortKey>('updated');
-    const [sortDir, setSortDir] = useState<SortDir>('desc');
+    const [sortKey, setSortKey] = useState<SortKey>('preview');
+    const [sortDir, setSortDir] = useState<SortDir>('asc');
     const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
     useEffect(() => {
@@ -109,7 +111,7 @@ function ItemsLibraryPageInner() {
 
     const handleColumnSort = (key: SortKey) => {
         if (sortKey === key) {
-            setSortDir(d => d === 'none' ? 'asc' : d === 'asc' ? 'desc' : 'none');
+            setSortDir(d => d === 'asc' ? 'desc' : 'asc');
         } else {
             setSortKey(key);
             setSortDir('asc');
@@ -132,26 +134,21 @@ function ItemsLibraryPageInner() {
             return matchesSearch && matchesSubject && matchesType && matchesPoints;
         });
 
-        if (sortDir !== 'none') {
-            const dir = sortDir === 'asc' ? 1 : -1;
-            list = [...list].sort((a, b) => {
-                switch (sortKey) {
-                    case 'preview':
-                        return dir * (a.latest_content_preview || '').localeCompare(b.latest_content_preview || '');
-                    case 'subject':
-                        return dir * (getMetadataString(a.metadata_tags?.topic) || '').localeCompare(getMetadataString(b.metadata_tags?.topic) || '');
-                    case 'points':
-                        return dir * ((getMetadataNumber(a.metadata_tags?.points) ?? 1) - (getMetadataNumber(b.metadata_tags?.points) ?? 1));
-                    case 'updated':
-                        return dir * (new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime());
-                    case 'created':
-                        return dir * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-                }
-            });
-        } else {
-            // Default: newest updated first
-            list = [...list].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-        }
+        const dir = sortDir === 'asc' ? 1 : -1;
+        list = [...list].sort((a, b) => {
+            switch (sortKey) {
+                case 'preview':
+                    return dir * (a.latest_content_preview || '').localeCompare(b.latest_content_preview || '');
+                case 'subject':
+                    return dir * (getMetadataString(a.metadata_tags?.topic) || '').localeCompare(getMetadataString(b.metadata_tags?.topic) || '');
+                case 'points':
+                    return dir * ((getMetadataNumber(a.metadata_tags?.points) ?? 1) - (getMetadataNumber(b.metadata_tags?.points) ?? 1));
+                case 'updated':
+                    return dir * (new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime());
+                case 'created':
+                    return dir * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            }
+        });
 
         return list;
     }, [items, searchQuery, subjectFilter, typeFilter, pointsFilter, sortKey, sortDir]);
@@ -192,13 +189,12 @@ function ItemsLibraryPageInner() {
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <div className="min-h-full bg-shell-bg text-foreground">
-                <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+            <PageShell width="wide">
+                <div className="space-y-6">
                     {imported && (
                         <ImportedBanner onDismiss={() => router.replace('/items')} />
                     )}
                     <PageHeader
-                        eyebrow="Item bank"
                         title="Question Library"
                         subtitle="Browse, filter, and author the learning objects that feed every test."
                         actions={
@@ -268,8 +264,8 @@ function ItemsLibraryPageInner() {
                     )}
 
                     {isLoading && items.length === 0 ? (
-                        <div className="flex items-center justify-center py-16 text-shell-muted-dim text-meta">
-                            <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin mr-3" />
+                        <div className="flex items-center justify-center py-16 text-shell-muted-dim text-meta gap-3">
+                            <Spinner size="sm" />
                             Loading library items…
                         </div>
                     ) : items.length === 0 ? (
@@ -387,7 +383,7 @@ function ItemsLibraryPageInner() {
                         </TableContainer>
                     )}
                 </div>
-            </div>
+            </PageShell>
         </ProtectedRoute>
     );
 }

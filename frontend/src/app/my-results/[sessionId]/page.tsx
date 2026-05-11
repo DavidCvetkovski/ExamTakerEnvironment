@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useResultsStore, QuestionResultDetail } from '@/stores/useResultsStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { getExamChoiceContent, toExamContentHtml, toExamContentText } from '@/lib/examContent';
+import { Spinner } from '@/components/ui';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -245,7 +246,7 @@ export default function MyResultDetailPage() {
                 {/* Loading */}
                 {detailLoading && (
                     <div className="flex items-center justify-center py-20 text-shell-muted-dim text-sm gap-3">
-                        <div className="w-5 h-5 border-2 border-student-primary border-t-transparent rounded-full animate-spin" />
+                        <Spinner size="md" />
                         Loading your result…
                     </div>
                 )}

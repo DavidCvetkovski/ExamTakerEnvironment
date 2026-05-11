@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useGradingStore, QuestionGrade, ManualGradePayload } from '@/stores/useGradingStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { getExamChoiceContent, toExamContentHtml, toExamContentText } from '@/lib/examContent';
+import { Spinner } from '@/components/ui';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -187,7 +188,7 @@ function EssayGradingPanel({
                         step={0.5}
                         value={pointsInput}
                         onChange={e => setPointsInput(e.target.value)}
-                        className="w-full bg-shell-surface border border-shell-border-deep rounded-lg px-3 py-2 text-foreground text-sm focus:outline-none focus:border-blue-500"
+                        className="w-full bg-shell-surface border border-shell-border-deep rounded-lg px-3 py-2 text-foreground text-sm focus:outline-none focus:border-brand"
                     />
                 </div>
 
@@ -199,7 +200,7 @@ function EssayGradingPanel({
                         value={feedback}
                         onChange={e => setFeedback(e.target.value)}
                         placeholder="Write feedback for the student…"
-                        className="w-full bg-shell-surface border border-shell-border-deep rounded-lg px-3 py-2 text-foreground text-sm focus:outline-none focus:border-blue-500 resize-none"
+                        className="w-full bg-shell-surface border border-shell-border-deep rounded-lg px-3 py-2 text-foreground text-sm focus:outline-none focus:border-brand resize-none"
                     />
                 </div>
             </div>
@@ -301,7 +302,7 @@ export default function SessionGradingPage() {
                 {/* Loading */}
                 {gradesLoading && (
                     <div className="flex items-center justify-center py-20 text-shell-muted-dim">
-                        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mr-3" />
+                        <Spinner size="lg" className="mr-3" />
                         Loading grades…
                     </div>
                 )}

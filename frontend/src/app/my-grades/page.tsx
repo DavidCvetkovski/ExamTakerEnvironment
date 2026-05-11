@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useResultsStore } from '@/stores/useResultsStore';
-import { Badge, Card, EmptyState, PageHeader, SectionHeader } from '@/components/ui';
+import { Badge, Card, EmptyState, PageHeader, SectionHeader, Spinner } from '@/components/ui';
 
 export default function MyGradesPage() {
     const { myResults, myResultsLoading, fetchMyResults } = useResultsStore();
@@ -29,7 +29,7 @@ export default function MyGradesPage() {
 
                     {myResultsLoading && myResults.length === 0 ? (
                         <div className="flex items-center justify-center py-20 text-shell-muted-dim text-meta gap-3">
-                            <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin" />
+                            <Spinner size="md" />
                             Loading your results…
                         </div>
                     ) : myResults.length === 0 ? (

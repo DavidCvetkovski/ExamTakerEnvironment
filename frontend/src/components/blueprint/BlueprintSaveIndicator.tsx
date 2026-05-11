@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 
 import { useBlueprintStore } from '@/stores/useBlueprintStore';
+import { Spinner } from '@/components/ui';
 
 export default function BlueprintSaveIndicator() {
     const saveStatus = useBlueprintStore((state) => state.saveStatus);
@@ -24,8 +25,8 @@ export default function BlueprintSaveIndicator() {
 
     if (saveStatus === 'saving') {
         return (
-            <div className="flex items-center gap-3 text-cyan-300" aria-live="polite">
-                <span className="h-3 w-3 rounded-full border-2 border-cyan-300 border-t-transparent animate-spin" />
+            <div className="flex items-center gap-3 text-brand" aria-live="polite">
+                <Spinner size="xs" tone="current" />
                 <span className="text-xs font-semibold uppercase tracking-medium">Saving blueprint</span>
             </div>
         );
@@ -33,9 +34,11 @@ export default function BlueprintSaveIndicator() {
 
     if (saveStatus === 'saved') {
         return (
-            <div className="flex items-center gap-3 text-emerald-300 motion-safe:animate-[pulse_0.6s_ease-out]" aria-live="polite">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20">
-                    <span className="text-sm font-bold">✓</span>
+            <div className="flex items-center gap-3 text-[var(--color-success-fg)] motion-safe:animate-[pulse_0.6s_ease-out]" aria-live="polite">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-success-bg)]">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
                 </span>
                 <span className="text-xs font-semibold uppercase tracking-medium">Blueprint saved</span>
             </div>

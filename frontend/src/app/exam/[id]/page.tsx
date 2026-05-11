@@ -11,6 +11,7 @@ import TimelineNavigator from '@/components/exam/TimelineNavigator';
 import SaveIndicator from '@/components/exam/SaveIndicator';
 import ReviewSummary from '@/components/exam/ReviewSummary';
 import SubmissionConfirmation from '@/components/exam/SubmissionConfirmation';
+import { Button, Spinner } from '@/components/ui';
 
 export default function ExamPage() {
     const params = useParams();
@@ -111,7 +112,7 @@ export default function ExamPage() {
         return (
             <div className="min-h-screen bg-shell-surface flex items-center justify-center">
                 <div className="text-center space-y-4">
-                    <div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin mx-auto" />
+                    <Spinner size="xl" className="mx-auto" />
                     <p className="text-shell-muted">Loading exam session…</p>
                 </div>
             </div>
@@ -173,13 +174,14 @@ export default function ExamPage() {
                                 {timeLeft}
                             </p>
                         </div>
-                        <button
-                            className="bg-brand text-white px-5 py-2 rounded-md font-medium text-meta transition-[filter] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed"
-                            onClick={() => setShowReview(true)}
+                        <Button
+                            variant="primary"
+                            size="md"
                             disabled={isExpired}
+                            onClick={() => setShowReview(true)}
                         >
                             Submit exam
-                        </button>
+                        </Button>
                     </div>
                 </header>
 

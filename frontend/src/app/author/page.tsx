@@ -9,7 +9,8 @@ import { useAuthoringStore } from '@/stores/useAuthoringStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { deriveLockedQuestionIds, useBlueprintStore } from '@/stores/useBlueprintStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { Badge, Button, Card, Field, Input, PageHeader, Select, StatusDot, cn, useToast, useConfirm } from '@/components/ui';
+import { BackButton, Badge, Button, Card, Field, Input, PageHeader, Select, Spinner, StatusDot, useToast, useConfirm } from '@/components/ui';
+import PageShell from '@/components/layout/PageShell';
 
 export default function AuthorPage() {
     return (
@@ -115,24 +116,14 @@ function AuthorPageInner() {
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-            <div className="min-h-full bg-shell-bg text-foreground">
+            <PageShell width="narrow">
                 {ConfirmDialog}
-                <div className="max-w-4xl mx-auto px-6 py-10">
-                    <button
-                        onClick={handleBack}
-                        className={cn(
-                            'mb-6 inline-flex items-center gap-2 text-meta font-medium',
-                            'text-shell-muted hover:text-foreground transition-colors'
-                        )}
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                        {fromBlueprint ? 'Back to Blueprint' : 'Back to Library'}
-                    </button>
+                <BackButton
+                    onClick={handleBack}
+                    label={fromBlueprint ? 'Back to Blueprint' : 'Back to Library'}
+                />
 
                     <PageHeader
-                        eyebrow="Authoring workbench"
                         title="Question authoring"
                         subtitle="Create or edit question versions for the selected learning object."
                         compact
@@ -153,7 +144,7 @@ function AuthorPageInner() {
 
                     {!learningObjectId ? (
                         <Card variant="surface" padding="lg" className="text-center">
-                            <div className="animate-spin w-6 h-6 border-2 border-brand border-t-transparent rounded-full mx-auto mb-3" />
+                            <Spinner size="lg" className="mx-auto mb-3" />
                             <p className="text-shell-muted text-meta">Linking to learning object…</p>
                             <p className="text-shell-muted-dim text-meta mt-1">
                                 If this persists, return to the library and try again.
@@ -247,8 +238,7 @@ function AuthorPageInner() {
                             </div>
                         </div>
                     )}
-                </div>
-            </div>
+            </PageShell>
         </ProtectedRoute>
     );
 }

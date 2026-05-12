@@ -547,6 +547,73 @@ async def get_cut_score_scenarios(
     return test_stats["cut_score_analysis"]
 
 
+async def compute_section_analytics(test_definition_id: str) -> Dict:
+    """
+    Per-section (per-block) aggregate analytics for a test (Epoch 8.4 Stage 9).
+
+    Groups items by the section they appear in (FIXED rules carry an explicit
+    `learning_object_id`; RANDOM rules are reported by their count only).
+    Returns the per-block aggregates of P-value, D-value, and mean score
+    derived from the existing `compute_test_item_stats` payload.
+    """
+    test_definition = await prisma.test_definitions.find_unique(
+        where={"id": test_definition_id}
+    )
+    if test_definition is None:
+        return {"test_definition_id": test_definition_id, "sections": []}
+
+    blocks = list(test_definition.blocks or [])
+
+    # Build LO → section index from FIXED rules.
+    lo_to_section: Dict[str, int] = {}
+    for idx, block in enumerate(blocks):
+        for rule in block.get("rules", []) or []:
+            if rule.get("rule_type") == "FIXED" and rule.get("learning_object_id"):
+                lo_to_section[str(rule["learning_object_id"])] = idx
+
+    item_stats = await compute_test_item_stats(test_definition_id)
+    items = item_stats.get("items", [])
+
+    section_items: Dict[int, List[Dict]] = defaultdict(list)
+    for item in items:
+        section = lo_to_section.get(str(item.get("learning_object_id")))
+        if section is not None:
+            section_items[section].append(item)
+
+    sections: List[Dict] = []
+    for idx, block in enumerate(blocks):
+        block_items = section_items.get(idx, [])
+        rules = block.get("rules", []) or []
+        question_count = sum(
+            1 if r.get("rule_type") == "FIXED" else int(r.get("count") or 0)
+            for r in rules
+        )
+
+        p_values = [it["p_value"] for it in block_items if it.get("p_value") is not None]
+        d_values = [it["d_value"] for it in block_items if it.get("d_value") is not None]
+        mean_scores = [it["mean_score"] for it in block_items if it.get("mean_score") is not None]
+
+        def _avg(xs: List[float]) -> Optional[float]:
+            return round(sum(xs) / len(xs), 4) if xs else None
+
+        sections.append({
+            "block_index": idx,
+            "block_title": block.get("title") or f"Section {idx + 1}",
+            "question_count": question_count,
+            "graded_item_count": len(block_items),
+            "p_value_mean": _avg(p_values),
+            "discrimination_mean": _avg(d_values),
+            "mean_score": _avg(mean_scores),
+            "learning_object_ids": [str(it.get("learning_object_id")) for it in block_items],
+        })
+
+    return {
+        "test_definition_id": test_definition_id,
+        "total_sessions": item_stats.get("total_sessions", 0),
+        "sections": sections,
+    }
+
+
 async def get_item_history_entries(learning_object_id: str) -> Dict:
     """
     Return one history entry per item-version / test-definition pairing, sorted oldest to newest.

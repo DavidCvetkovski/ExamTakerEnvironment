@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import AllItemsTable from '@/components/analytics/AllItemsTable';
 import CutScoreSlider from '@/components/analytics/CutScoreSlider';
+import SectionAnalyticsPanel, { type SectionAnalytics } from '@/components/analytics/SectionAnalyticsPanel';
 import FlaggedItemsTable from '@/components/analytics/FlaggedItemsTable';
 import HistogramChart from '@/components/analytics/HistogramChart';
 import StatCard from '@/components/analytics/StatCard';
@@ -36,6 +37,8 @@ export default function TestAnalyticsDashboardPage() {
     const { blueprints, fetchBlueprints } = useBlueprintStore();
     const { items, fetchItems } = useLibraryStore();
     const [cutScore, setCutScore] = useState(55);
+    const [sections, setSections] = useState<SectionAnalytics[]>([]);
+    const [activeSection, setActiveSection] = useState<number | null>(null);
 
     useEffect(() => {
         fetchBlueprints();
@@ -45,6 +48,24 @@ export default function TestAnalyticsDashboardPage() {
             setLastTestId(testId);
         }
     }, [fetchBlueprints, fetchItems, loadTestAnalytics, testId, setLastTestId]);
+
+    // Fetch per-section aggregates (Epoch 8.4 Stage 9).
+    useEffect(() => {
+        if (!testId) return;
+        let cancelled = false;
+        (async () => {
+            try {
+                const { api: apiInstance } = await import('@/lib/api');
+                const res = await apiInstance.get<{ sections: SectionAnalytics[] }>(
+                    `analytics/tests/${testId}/sections`,
+                );
+                if (!cancelled) setSections(res.data?.sections ?? []);
+            } catch {
+                if (!cancelled) setSections([]);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [testId]);
 
     const bundle = bundles[testId];
 
@@ -250,13 +271,35 @@ export default function TestAnalyticsDashboardPage() {
                                 />
                             </section>
 
+                            {sections.length > 0 && (
+                                <section>
+                                    <div className="mb-3">
+                                        <h2 className="text-lg font-semibold text-foreground">By section</h2>
+                                        <p className="text-sm text-shell-muted-dim">Per-block aggregates. Click a section to filter the items table below.</p>
+                                    </div>
+                                    <SectionAnalyticsPanel
+                                        sections={sections}
+                                        activeBlock={activeSection}
+                                        onSelect={setActiveSection}
+                                    />
+                                </section>
+                            )}
+
                             <section>
                                 <div className="mb-3">
                                     <h2 className="text-lg font-semibold text-foreground">All Items</h2>
-                                    <p className="text-sm text-shell-muted-dim">Inspect the full test set and filter by quality flags.</p>
+                                    <p className="text-sm text-shell-muted-dim">
+                                        {activeSection !== null && sections[activeSection]
+                                            ? `Showing ${sections[activeSection].block_title} only.`
+                                            : 'Inspect the full test set and filter by quality flags.'}
+                                    </p>
                                 </div>
                                 <AllItemsTable
-                                    items={bundle.items}
+                                    items={(() => {
+                                        if (activeSection === null) return bundle.items;
+                                        const allowed = new Set(sections[activeSection]?.learning_object_ids ?? []);
+                                        return bundle.items.filter((it) => allowed.has(it.learning_object_id));
+                                    })()}
                                     testId={testId}
                                     getItemLabel={getItemLabel}
                                 />

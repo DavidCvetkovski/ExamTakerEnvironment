@@ -38,8 +38,9 @@ function statusBadge(status: GradingStatus) {
 }
 
 function SortArrow({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
+    if (!active) return null;
     return (
-        <span className={`text-xs transition-colors ${active ? 'text-brand' : 'text-shell-muted-dim opacity-50'}`}>
+        <span className="text-xs text-brand ml-1">
             {dir === 'asc' ? '↑' : '↓'}
         </span>
     );

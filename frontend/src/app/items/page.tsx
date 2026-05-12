@@ -106,8 +106,9 @@ type SortKey = 'preview' | 'subject' | 'points' | 'updated' | 'created';
 type SortDir = 'asc' | 'desc';
 
 function SortArrow({ active, dir }: { active: boolean; dir: SortDir }) {
+    if (!active) return null;
     return (
-        <span className={`text-xs ml-1 transition-colors ${active ? 'text-brand' : 'text-shell-muted-dim opacity-50'}`}>
+        <span className="text-xs ml-1 text-brand">
             {dir === 'asc' ? '↑' : '↓'}
         </span>
     );

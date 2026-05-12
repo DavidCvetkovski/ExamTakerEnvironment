@@ -13,8 +13,11 @@ const SHORT_DATETIME_OPTS: Intl.DateTimeFormatOptions = { month: 'short', day: '
 const FULL_OPTS: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false };
 
 /** Past event in conversational form: "Just now", "5 minutes ago", "Yesterday", "Mar 12, 2026" (older than 7 days). */
-export function formatRelativeTime(input: Input): string {
+export function formatRelativeTime(input: Input | null | undefined): string {
+    if (input === null || input === undefined || input === '') return 'unknown';
     const date = toDate(input);
+    // Treat NULL → 1970 / invalid dates as unknown rather than showing "55 years ago".
+    if (Number.isNaN(date.getTime()) || date.getTime() < 86_400_000) return 'unknown';
     const now = Date.now();
     const diffMs = now - date.getTime();
     if (diffMs < 0) return formatScheduled(date);

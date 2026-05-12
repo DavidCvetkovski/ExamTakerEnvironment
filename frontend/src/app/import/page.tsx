@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { Button, Badge, Spinner, useToast, useConfirm } from '@/components/ui';
+import { BackButton, Button, Badge, Spinner, useToast, useConfirm } from '@/components/ui';
 import { useImportStore, ParseError } from '@/stores/useImportStore';
 import FormatGuideModal from '@/components/import/FormatGuideModal';
 
@@ -127,15 +127,7 @@ function ImportPageInner() {
             {ConfirmDialog}
             <div className="max-w-7xl mx-auto px-6 py-8">
                 {/* Back button — canonical top-left position */}
-                <button
-                    onClick={() => handleNavAway(backDest)}
-                    className="mb-6 inline-flex items-center gap-2 text-meta font-medium text-shell-muted hover:text-foreground transition-colors"
-                >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                    {backLabel}
-                </button>
+                <BackButton onClick={() => handleNavAway(backDest)} label={backLabel} />
 
                 {/* Page header */}
                 <div className="flex items-start justify-between gap-4 mb-8">

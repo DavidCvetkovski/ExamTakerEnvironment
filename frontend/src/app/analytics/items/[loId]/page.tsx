@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 
@@ -9,7 +8,7 @@ import DistractorBars from '@/components/analytics/DistractorBars';
 import PDValueTrendChart from '@/components/analytics/PDValueTrendChart';
 import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import { InfoTooltip, Spinner } from '@/components/ui';
+import { BackButton, InfoTooltip, Spinner } from '@/components/ui';
 
 export default function ItemAnalyticsDetailPage() {
     const { loId } = useParams<{ loId: string }>();
@@ -54,13 +53,11 @@ export default function ItemAnalyticsDetailPage() {
             <div className="min-h-full bg-shell-bg text-foreground">
                 <div className="border-b border-shell-border bg-shell-surface px-6 py-5">
                     <div className="mx-auto max-w-6xl">
-                        <Link
+                        <BackButton
                             href={sourceTestId ? `/analytics/tests/${sourceTestId}` : '/analytics'}
-                            className="text-sm text-brand hover:text-foreground transition-colors"
-                        >
-                            ← Back to Test
-                        </Link>
-                        <div className="mt-4">
+                            label="Back to test"
+                        />
+                        <div>
                             <p className="text-eyebrow font-semibold uppercase tracking-medium text-shell-muted-dim">
                                 Item Analytics
                             </p>

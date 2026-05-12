@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useGradingStore, QuestionGrade, ManualGradePayload } from '@/stores/useGradingStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { getExamChoiceContent, toExamContentHtml, toExamContentText } from '@/lib/examContent';
-import { Spinner } from '@/components/ui';
+import { BackButton, Spinner } from '@/components/ui';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -249,12 +249,7 @@ export default function SessionGradingPage() {
             {/* ── Top bar ── */}
             <div className="bg-shell-surface border-b border-shell-border px-6 py-4 sticky top-0 z-10">
                 <div className="max-w-5xl mx-auto flex items-center gap-4">
-                    <button
-                        onClick={() => router.push('/grading')}
-                        className="text-shell-muted hover:text-foreground text-sm transition-colors"
-                    >
-                        ← Back to Dashboard
-                    </button>
+                    <BackButton href="/grading" label="Back to dashboard" className="mb-0" />
 
                     <div className="flex-1">
                         <p className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim">

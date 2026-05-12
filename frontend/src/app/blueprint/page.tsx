@@ -12,6 +12,7 @@ import QuestionPickerModal from '@/components/blueprint/QuestionPickerModal';
 import BlueprintSaveIndicator from '@/components/blueprint/BlueprintSaveIndicator';
 import BlueprintStatusBadge from '@/components/blueprint/BlueprintStatusBadge';
 import { Badge, Button, Input, Select, Spinner, cn, useToast, useConfirm, StatusDot } from '@/components/ui';
+import { formatRelativeTime, formatAbsolute } from '@/lib/relativeTime';
 
 type BlueprintDraft = Partial<TestDefinition>;
 
@@ -446,8 +447,8 @@ function BlueprintPageInner() {
                                         <BlueprintStatusBadge status={status} />
                                     </div>
 
-                                    <h3 className="text-xl font-bold mb-3 pr-24 line-clamp-2 text-foreground">{bp.title}</h3>
-                                    <p className="text-shell-muted-dim text-sm mb-4 line-clamp-2 min-h-[40px]">{bp.description || 'No description provided.'}</p>
+                                    <h3 className="text-xl font-bold pr-24 line-clamp-2 text-foreground">{bp.title}</h3>
+                                    <p className="text-shell-muted-dim text-sm mt-2 mb-4 line-clamp-2 min-h-[40px]">{bp.description || 'No description provided.'}</p>
 
                                     <div className="flex items-center justify-between pt-4 border-t border-shell-border text-xs text-shell-muted-dim font-medium tracking-wider uppercase mb-4">
                                         <div className="flex items-center gap-4">
@@ -460,7 +461,7 @@ function BlueprintPageInner() {
                                                 {bp.duration_minutes} min
                                             </span>
                                         </div>
-                                        <span>{new Date(bp.updated_at).toLocaleDateString()}</span>
+                                        <span title={formatAbsolute(bp.updated_at)}>{formatRelativeTime(bp.updated_at)}</span>
                                     </div>
 
                                     {/* Actions */}

@@ -3,11 +3,10 @@
 import DOMPurify from 'dompurify';
 import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { useResultsStore, QuestionResultDetail } from '@/stores/useResultsStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { getExamChoiceContent, toExamContentHtml, toExamContentText } from '@/lib/examContent';
-import { Spinner } from '@/components/ui';
+import { BackButton, Spinner } from '@/components/ui';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -232,9 +231,7 @@ export default function MyResultDetailPage() {
         <div className="min-h-full bg-[image:var(--gradient-student-page)] px-4 py-10 text-foreground sm:px-6 lg:px-8">
             <div className="mx-auto max-w-3xl space-y-8">
                 {/* Back */}
-                <Link href="/my-exams" className="inline-flex items-center gap-2 text-sm text-student-primary hover:underline">
-                    ← Back to My Exams
-                </Link>
+                <BackButton href="/my-exams" label="Back to my exams" className="mb-0" />
 
                 {/* Error */}
                 {error && (

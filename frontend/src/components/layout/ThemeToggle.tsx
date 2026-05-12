@@ -7,10 +7,11 @@ import { ThemePreference, useAuthStore, UserPublic } from '@/stores/useAuthStore
 import { useClickOutside } from '@/hooks/useClickOutside';
 import Button from '@/components/ui/Button';
 
-const THEMES: Array<{ label: string; value: ThemePreference }> = [
+const THEMES: Array<{ label: string; value: ThemePreference; hint?: string }> = [
+    { label: 'Auto', value: 'auto', hint: 'Follows time of day' },
     { label: 'Dark', value: 'dark' },
     { label: 'Warm', value: 'warm' },
-    { label: 'Light Blue', value: 'light-blue' },
+    { label: 'Light blue', value: 'light-blue' },
 ];
 
 function getRoleDefaultTheme(role: UserPublic['role'] | undefined): ThemePreference {
@@ -83,13 +84,18 @@ export default function ThemeToggle() {
                                         setIsSaving(false);
                                     }
                                 }}
-                                className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                                className={`flex w-full items-start justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                                     isActive
                                         ? 'bg-shell-border-deep text-foreground'
                                         : 'text-foreground hover:bg-shell-border/20'
                                 }`}
                             >
-                                <span>{theme.label}</span>
+                                <span className="flex flex-col">
+                                    <span>{theme.label}</span>
+                                    {theme.hint && (
+                                        <span className="text-eyebrow text-shell-muted-dim">{theme.hint}</span>
+                                    )}
+                                </span>
                                 <span aria-hidden="true">{isActive ? '•' : ''}</span>
                             </button>
                         );

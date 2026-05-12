@@ -316,6 +316,24 @@ async def export_test_analytics_report(
 
 
 @router.get(
+    "/tests/{test_definition_id}/sections",
+    summary="Per-section (per-block) analytics for a test",
+)
+async def get_test_section_analytics(
+    test_definition_id: UUID,
+    current_user=Depends(_require_analytics_user),
+) -> Dict[str, Any]:
+    """
+    Aggregate P-value, D-value, and mean score per blueprint block.
+
+    FIXED rules are matched by `learning_object_id`; RANDOM rules contribute
+    to the section's `question_count` only.
+    """
+    await _require_test_access(str(test_definition_id), current_user)
+    return await psychometrics_service.compute_section_analytics(str(test_definition_id))
+
+
+@router.get(
     "/tests/{test_definition_id}/export.pdf",
     summary="Download analytics report as PDF",
 )

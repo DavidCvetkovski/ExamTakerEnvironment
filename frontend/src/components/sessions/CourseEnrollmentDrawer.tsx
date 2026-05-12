@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 import type { Course, Enrollment, StudentCandidate } from '@/stores/useCourseStore';
-import { Button } from '@/components/ui';
+import { Button, Drawer } from '@/components/ui';
 
 interface CourseEnrollmentDrawerProps {
     course: Course | null;
@@ -34,7 +34,7 @@ export default function CourseEnrollmentDrawer({
     const [bulkResults, setBulkResults] = useState<BulkResult[]>([]);
     const [bulkBusy, setBulkBusy] = useState(false);
 
-    if (!isOpen || !course) {
+    if (!course) {
         return null;
     }
 
@@ -67,19 +67,21 @@ export default function CourseEnrollmentDrawer({
     };
 
     return (
-        <div className="fixed inset-0 z-40 flex justify-end bg-black/50 backdrop-blur-sm">
-            <div className="h-full w-full max-w-xl overflow-y-auto border-l border-shell-border bg-shell-panel-b p-6 shadow-2xl shadow-black/40">
-                <div className="flex items-start justify-between gap-4">
-                    <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-foreground">Course Enrollments</p>
-                        <h3 className="mt-2 text-3xl font-black text-foreground">{course.code}</h3>
-                        <p className="mt-1 text-sm text-shell-muted-dim">{course.title}</p>
-                    </div>
-                    <Button variant="secondary" size="sm" onClick={onClose}>Close</Button>
+        <Drawer
+            isOpen={isOpen}
+            onClose={onClose}
+            title={course.code}
+            side="right"
+            widthClassName="w-full max-w-xl"
+        >
+            <div className="space-y-6">
+                <div>
+                    <p className="text-eyebrow font-semibold uppercase tracking-wide text-shell-muted-dim">Course</p>
+                    <p className="mt-1 text-body text-foreground">{course.title}</p>
                 </div>
 
                 {/* Mode tabs */}
-                <div className="mt-6 flex gap-1 rounded-xl border border-shell-border bg-shell-input p-1">
+                <div className="flex gap-1 rounded-xl border border-shell-border bg-shell-input p-1">
                     {(['single', 'bulk'] as const).map((mode) => (
                         <button
                             key={mode}
@@ -98,7 +100,7 @@ export default function CourseEnrollmentDrawer({
                 </div>
 
                 {enrollMode === 'single' ? (
-                    <div className="mt-4 rounded-card border border-shell-border bg-shell-surface/30 p-5">
+                    <div className="rounded-xl border border-shell-border bg-shell-surface/30 p-5">
                         <p className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim">Add Student</p>
                         <div className="mt-3 flex flex-col gap-3 md:flex-row">
                             <select
@@ -129,7 +131,7 @@ export default function CourseEnrollmentDrawer({
                         </div>
                     </div>
                 ) : (
-                    <div className="mt-4 rounded-card border border-shell-border bg-shell-surface/30 p-5 space-y-3">
+                    <div className="rounded-xl border border-shell-border bg-shell-surface/30 p-5 space-y-3">
                         <p className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim">Bulk Enroll</p>
                         <textarea
                             value={bulkEmails}
@@ -164,17 +166,17 @@ export default function CourseEnrollmentDrawer({
                     </div>
                 )}
 
-                <div className="mt-6 rounded-card border border-shell-border bg-shell-surface/20 p-5">
-                    <p className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim">Roster</p>
+                <div className="rounded-xl border border-shell-border bg-shell-surface/20 p-5">
+                    <p className="text-eyebrow font-semibold uppercase tracking-medium text-shell-muted-dim">Roster</p>
                     <div className="mt-4 space-y-3">
                         {enrollments.length === 0 ? (
                             <p className="text-sm text-shell-muted-dim">No students enrolled yet.</p>
                         ) : (
                             enrollments.map((enrollment) => (
-                                <div key={enrollment.id} className="flex items-center justify-between rounded-2xl border border-shell-border bg-shell-input px-4 py-3">
+                                <div key={enrollment.id} className="flex items-center justify-between rounded-xl border border-shell-border bg-shell-input px-4 py-3">
                                     <div>
                                         <p className="font-medium text-foreground">{enrollment.student_email}</p>
-                                        <p className="text-xs uppercase tracking-tight text-shell-muted-dim">
+                                        <p className="text-eyebrow uppercase tracking-tight text-shell-muted-dim">
                                             {enrollment.is_active ? 'Active' : 'Inactive'}
                                         </p>
                                     </div>
@@ -192,6 +194,6 @@ export default function CourseEnrollmentDrawer({
                     </div>
                 </div>
             </div>
-        </div>
+        </Drawer>
     );
 }

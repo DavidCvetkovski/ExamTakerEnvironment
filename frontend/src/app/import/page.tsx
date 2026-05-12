@@ -233,7 +233,7 @@ function ImportPageInner() {
                 </div>
             </div>
 
-            {showGuide && <FormatGuideModal onClose={() => setShowGuide(false)} />}
+            <FormatGuideModal isOpen={showGuide} onClose={() => setShowGuide(false)} />
         </div>
     );
 }

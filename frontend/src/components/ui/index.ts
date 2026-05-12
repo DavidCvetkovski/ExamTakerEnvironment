@@ -19,3 +19,5 @@ export type { ConfirmOptions } from './ConfirmDialog';
 export { default as RowActionMenu } from './RowActionMenu';
 export type { RowAction } from './RowActionMenu';
 export { default as Avatar } from './Avatar';
+export { default as Modal } from './Modal';
+export { default as Drawer } from './Drawer';

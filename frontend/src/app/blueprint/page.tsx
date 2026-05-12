@@ -431,7 +431,25 @@ function BlueprintPageInner() {
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {!isLoading && blueprints.length > 0 && displayedBlueprints.length === 0 && (
+                        <div className="min-h-[40vh] flex items-center justify-center">
+                            <div className="text-center max-w-md">
+                                <p className="text-h3 font-semibold text-foreground mb-2">No blueprints match this filter</p>
+                                <p className="text-meta text-shell-muted-dim mb-4">
+                                    Pick another filter or clear it to see all blueprints.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => setStatusFilter('ALL')}
+                                    className="text-meta text-brand font-medium hover:underline focus-ring rounded"
+                                >
+                                    Show all blueprints
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-[40vh]">
                         {displayedBlueprints.map((bp) => {
                             const usage = usageMap[bp.id];
                             const status: BlueprintStatus = usage?.status ?? 'NEW';
@@ -457,18 +475,23 @@ function BlueprintPageInner() {
                                         </p>
                                     )}
 
-                                    <div className="flex items-center justify-between pt-4 border-t border-shell-border text-xs text-shell-muted-dim font-medium tracking-wider uppercase mb-4">
-                                        <div className="flex items-center gap-4">
-                                            <span className="flex items-center gap-1.5">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-info"></span>
-                                                {bp.blocks.length} Sections
+                                    <div className="flex items-center justify-between gap-3 pt-4 border-t border-shell-border text-meta text-shell-muted-dim mb-4">
+                                        <div className="flex items-center gap-3 whitespace-nowrap">
+                                            <span className="inline-flex items-center gap-1.5">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-info" />
+                                                {bp.blocks.length} {bp.blocks.length === 1 ? 'section' : 'sections'}
                                             </span>
-                                            <span className="flex items-center gap-1.5">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-brand"></span>
-                                                {bp.duration_minutes} min
+                                            <span className="text-shell-border">·</span>
+                                            <span className="inline-flex items-center gap-1.5">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-brand" />
+                                                {bp.duration_minutes >= 60
+                                                    ? `${Math.floor(bp.duration_minutes / 60)}h ${bp.duration_minutes % 60 ? `${bp.duration_minutes % 60}m` : ''}`.trim()
+                                                    : `${bp.duration_minutes} min`}
                                             </span>
                                         </div>
-                                        <span title={formatAbsolute(bp.updated_at)}>{formatRelativeTime(bp.updated_at)}</span>
+                                        <span className="whitespace-nowrap" title={formatAbsolute(bp.updated_at)}>
+                                            {formatRelativeTime(bp.updated_at)}
+                                        </span>
                                     </div>
 
                                     {/* Actions */}

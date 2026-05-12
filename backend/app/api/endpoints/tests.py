@@ -139,6 +139,7 @@ async def duplicate_test_definition(
     original = await prisma.test_definitions.find_unique(where={"id": str(test_id)})
     if not original:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Blueprint not found.")
+    now = datetime.utcnow()
     copy = await prisma.test_definitions.create(data={
         "id": str(_uuid.uuid4()),
         "title": f"{original.title} (Copy)",
@@ -148,5 +149,9 @@ async def duplicate_test_definition(
         "duration_minutes": original.duration_minutes,
         "shuffle_questions": original.shuffle_questions,
         "scoring_config": Json(original.scoring_config),
+        # Explicit timestamps — `updated_at` has no DB default so leaving it
+        # off renders as the Unix epoch on the client (Stage 18i).
+        "created_at": now,
+        "updated_at": now,
     })
     return {"id": copy.id}

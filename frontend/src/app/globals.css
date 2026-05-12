@@ -571,9 +571,12 @@ body {
               0 0 0 4px color-mix(in oklab, var(--color-brand) 50%, transparent);
 }
 
-/* ── 8.3 — Stage 1: Ensure html element carries the theme background so the
-   overscroll/bounce area matches the shell rather than defaulting to white. ── */
-html {
+/* ── 8.3 / 8.4 — Carry the theme background on both html and body so the
+   overscroll/bounce area never exposes the default white below. The html
+   rule alone is not enough on warm/light-blue when a page uses min-h-full
+   instead of min-h-screen (Stage 18k). ── */
+html,
+body {
   background-color: var(--color-shell-bg);
 }
 

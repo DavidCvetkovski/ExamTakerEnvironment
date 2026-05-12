@@ -44,6 +44,7 @@
 | 15 | Design Token Hardening (color leaks, spinner, page shell, glyphs) | full app |
 | 16 | Cross-Surface Consistency (modal/drawer primitives, vocabulary, toast copy, sessions header, exam button) | full app |
 | 17 | Verification & Theme Matrix | full app |
+| 18 | User-Reported Punch List (auto-theme, dirty-nav guard, session flip, dark student grades, warm chrome, back-button standardisation, card meta, filter empty state, dup epoch bug, sort arrows, warm overscroll) | full app |
 
 ---
 
@@ -628,6 +629,123 @@ For each unique utility found:
 - A real `/account` settings page — Stage 7 leaves a placeholder route only.
 - Refactoring the TipTap toolbar (separate concern, may pair with Epoch 9 media uploads).
 - Color theme creation tooling for educators (custom brand palettes per institution) — interesting future epoch.
+
+---
+
+## Stage 18 — User-Reported Punch List (added mid-epoch)
+
+> Issues surfaced by the user after Stages 1–17 shipped. Treated as a single
+> stage so commits stay grouped under the epoch tag. Each item lists the
+> symptom in the user's words, the diagnosis, and the fix in one place so an
+> agent can execute without re-deriving context.
+
+### 18a — Time-of-day theme auto-switch
+
+- **Symptom:** "Change themes according to time of day maybe morning warm day light blue and night dark."
+- **Plan.**
+  - Add an `auto` mode to the theme toggle alongside `dark` / `warm` / `light-blue`.
+  - When `auto` is selected, derive the effective theme from local time:
+    - `05:00–11:59` → `warm` (morning)
+    - `12:00–18:59` → `light-blue` (day)
+    - `19:00–04:59` → `dark` (night)
+  - Recompute on a 5-minute interval so a long-lived tab transitions across boundaries without reload.
+  - Persist the *mode choice* (`auto | dark | warm | light-blue`) in `localStorage` under the existing theme key; persist `theme_preference` on the user record when implemented (TODO-004).
+  - Document the schedule in CLAUDE.md §7.12.
+- **Acceptance.** Toggling to `auto` at 22:00 local time renders `dark`; at 09:00 renders `warm`; at 14:00 renders `light-blue`. Manual override still wins.
+
+### 18b — Unsaved-blueprint guard on tab switch
+
+- **Symptom:** "When leaving blueprint creation to another tab I need a pop up asking if you really wanna leave changes unsaved."
+- **Plan.**
+  - The `/blueprint` editor already tracks `isDirty` via `savedSnapshot` vs `currentBlueprint`. Wire it into:
+    - The existing `beforeunload` listener (browser tab close / refresh).
+    - All in-app `router.push` / nav links emanating from the editor (top-bar nav, sidebar links, Back button — Back already uses `confirmDirty`, propagate the same pattern to the rest).
+  - Provide a single helper hook `useNavGuard(isDirty: boolean, message?: string)` in `lib/` that installs the `beforeunload` listener and exposes a `guardedNavigate(href)` wrapper using `useConfirm`. Editor consumes the hook; `GlobalHeader` listens for `data-nav-guard="dirty"` on `<html>` and prompts before pushing routes when set.
+- **Acceptance.** Closing the tab or clicking any header nav while a blueprint has unsaved changes raises the confirm dialog; closing without changes is silent.
+
+### 18c — Scheduled→Ongoing flip when start time passes
+
+- **Symptom:** "When timer runs out on a session that is scheduled and has to switch to ongoing switch it actually to ongoing and not that it starts counting up and still stays in scheduled."
+- **Diagnosis.** `derive_blueprint_status` already classifies status via `_effective_session_status`, but the *session* record's `status` column stays `SCHEDULED` because nothing writes the transition. The UI countdown is keyed off `starts_at`, not `status`, so it keeps counting after zero.
+- **Plan.**
+  - Backend: when a request reads a scheduled session (`scheduled_sessions` list endpoint, `tests/{id}/usage`, student `/student-sessions/joinable`), call `ensure_scheduled_session_current(record)` which persists `status = ACTIVE` once `now >= starts_at` and `status = CLOSED` once `now >= ends_at`. The function already exists per `blueprint_status_service` comments; promote it from read-only mirror to a write helper invoked on the hot paths. Idempotent — no-op when status is already terminal.
+  - Frontend: `ScheduledSessionsTable` and `StudentExamCard` should re-classify rows after each `useCountdown` tick reaches zero (force a refetch via `fetchScheduledSessions` rather than relying on stale `status`).
+- **Acceptance.** A session scheduled for `T+30s` flips visually from `Scheduled` → `Ongoing` within ~5s of `T`, with `ends_at` countdown taking over (`Ends in …`). DB row shows `status = ACTIVE`.
+
+### 18d — Student grade view broken in dark mode
+
+- **Symptom:** "Viewing exam grades as student in dark mode is fucked."
+- **Diagnosis.** `/my-results/[sessionId]` and `/my-grades` lean on `--color-student-*` and `--gradient-student-page` tokens that were designed under the warm palette only. Dark theme leaves the gradient white-on-dark, the student-border tokens unreadable, and pill backgrounds blown out.
+- **Plan.**
+  - Audit every `text-student-*` / `bg-student-*` / `border-student-*` / `bg-[image:var(--gradient-student-*)]` use in `/my-results`, `/my-grades`, `/my-exams`, and `SubmissionConfirmation`.
+  - Either: (a) define dark-theme overrides for each `--color-student-*` token (matching the existing warm / light-blue overrides in `globals.css`), or (b) decide on Path 2 from TODO-001 and replace student tokens with shell tokens entirely. **Recommendation:** Path 2 — eliminates a duplicate design surface and resolves this bug structurally.
+  - When Path 2 is chosen, remove `--color-student-*` and `--gradient-student-*` from `globals.css` after migrating call sites.
+- **Acceptance.** `/my-results/<id>` and `/my-grades` are legible and visually consistent across all three themes. WCAG AA on every text/background pair.
+
+### 18e — Warm theme: blueprint editor surface mismatched
+
+- **Symptom:** "The blueprint section is different color in warm theme."
+- **Diagnosis.** The editor canvas uses `bg-shell-surface/80` with a custom shadow, but neighbouring chrome uses `bg-shell-bg`. In warm mode the surface token is much brighter than the page, so the editor reads as a separate widget.
+- **Plan.**
+  - Inspect `/blueprint?id=…` editor: standardise the canvas to `bg-shell-surface` (no opacity) with `border-shell-border` on warm; rebalance the shadow with `--shadow-warm-card` instead of `shadow-2xl`.
+  - Run the visual matrix on dark / warm / light-blue before merging.
+
+### 18f — Back button + import entry-point standardisation
+
+- **Symptom:** "ALL BACKBUTTONS STANDARDISED PLS, for example the two places you access import are completely different."
+- **Plan.**
+  - **Back buttons:** confirm every back affordance routes through `<BackButton>`. Remaining outliers to grep for after this sweep:
+    - `/blueprint` editor uses an inline `← All Blueprints` button — migrate to `<BackButton>`.
+    - QuestionPicker's "← Back to list" inner button — keep (it's a sub-view, not page nav) but adopt the same SVG + label styling.
+    - Audit: `grep -rE "← |M10 19l-7-7|router\.push.*back" frontend/src` returns only `BackButton.tsx`.
+  - **Import entry points:** today `/items` has a `<Button variant="secondary">Import</Button>` while `/blueprint` has a different-looking link to the same destination. Standardise on a single `<Button variant="secondary" size="md">Import</Button>` on both surfaces, with identical placement (top-right of `PageHeader` actions). Same wording, same icon if any.
+
+### 18g — Card meta text legibility
+
+- **Symptom:** `4 SECTIONS`, `8 MIN`, `9 MINUTES AGO` wrap to two lines and "look ugly".
+- **Plan.**
+  - The current card meta row uses `text-xs uppercase tracking-wider` which wraps on smaller cards. Replace with `text-meta normal-case tracking-normal text-shell-muted-dim` (no caps, no wide tracking).
+  - Use the design system's existing `text-meta` (12px / 18px) and let the row breathe with `gap-3` instead of forcing uppercase.
+  - When duration is < 60 min show `8 min`; ≥ 60 show `1h 30m`. When section count is 1 use the singular ("1 section").
+- **Acceptance.** No wrap at viewport ≥ 1024px on three-column grid; lowercase and a single rhythm.
+
+### 18h — Filter chip with no matches collapses the page
+
+- **Symptom:** "When you select a section with lets say only New blueprints and there are none the whole page shrinks and then expands if you select all."
+- **Plan.**
+  - Reserve vertical space when a filter yields zero results: render `<EmptyState title="No <filter> blueprints yet" description="Pick another filter or clear it to see all blueprints." />` inside the same wrapper that holds the grid, so the column heights stay constant.
+  - Add `min-h-[40vh]` on the grid wrapper so layout doesn't reflow above the fold.
+
+### 18i — Epoch zero (`1970`) on duplicated blueprint
+
+- **Symptom:** "I clicked duplicate and the blueprint showed a date and year 1970."
+- **Diagnosis.** `duplicateBlueprint` copies the blueprint payload but does not set `created_at` / `updated_at` on the new row; the seed defaults to NULL which the card renders as the Unix epoch.
+- **Plan.**
+  - Backend `blueprints_service.duplicate_test_definition`: explicitly set `created_at = updated_at = now()` on the copy. Confirm Prisma's `@default(now())` actually fires on the `created_at` column for `test_definitions` (the schema has `default(now())` but only for `created_at`; `updated_at` is bare).
+  - Frontend `formatRelativeTime` is fine — the data is what's broken.
+  - Add a pytest: duplicate a fixture blueprint and assert both timestamps are within 5s of `datetime.utcnow()`.
+
+### 18j — Sort arrows on inactive columns
+
+- **Symptom:** "For the sorting I need the arrows to not be shown on EVERY column only on the column that is being used as the sort."
+- **Plan.**
+  - Update `SortArrow` (already centralised after Stage 11) to render `null` when `!active` and only show the arrow on the active column. Hover state can preview a faint up arrow if needed.
+  - Applies to `/items`, `/grading`, and future sortable tables.
+
+### 18k — Warm-theme overscroll flash
+
+- **Symptom:** "In warm theme everywhere but in blueprints tab when you scroll up too much a white thing pops up."
+- **Diagnosis.** `html { background-color: var(--color-shell-bg) }` is set globally, but the warm theme's overscroll behaviour exposes the default `body` background where a child sets `min-h-full` instead of `min-h-screen`. The blueprint page is the exception because it uses a full-bleed layout.
+- **Plan.**
+  - Set `body { background-color: var(--color-shell-bg) }` alongside the html rule.
+  - Verify by scrolling above the top on every warm-theme page after the change.
+
+### Verification (Stage 18)
+
+- Manual: walk all 11 reported issues against the original phrasing.
+- Theme matrix re-run on dark / warm / light-blue across the touched surfaces (student results, blueprint editor, blueprint grid filter, sort tables, overscroll).
+- Pytest for 18i (duplicate timestamps).
+- Conventional commits per logical group, e.g. `feat(8.4): time-of-day auto theme + warm overscroll fix`.
 
 ---
 

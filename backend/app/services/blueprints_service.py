@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 from uuid import UUID
 
@@ -11,6 +12,7 @@ async def create_test_definition(
 ) -> dict:
     blocks_data = [block.model_dump(mode="json") for block in payload.blocks]
 
+    now = datetime.utcnow()
     new_test = await prisma.test_definitions.create(
         data={
             "title": payload.title,
@@ -20,6 +22,10 @@ async def create_test_definition(
             "duration_minutes": payload.duration_minutes,
             "shuffle_questions": payload.shuffle_questions,
             "scoring_config": Json(payload.scoring_config),
+            # updated_at has no DB default — set it explicitly so the value
+            # is never NULL/1970 on freshly created blueprints (Stage 18i).
+            "created_at": now,
+            "updated_at": now,
         }
     )
     return new_test
@@ -50,6 +56,9 @@ async def update_test_definition(
             "duration_minutes": payload.duration_minutes,
             "shuffle_questions": payload.shuffle_questions,
             "scoring_config": Json(payload.scoring_config),
+            # Bump updated_at on every write so the blueprint card always
+            # reflects the latest edit time (Stage 18i).
+            "updated_at": datetime.utcnow(),
         }
     )
     return updated

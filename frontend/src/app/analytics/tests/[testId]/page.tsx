@@ -14,7 +14,7 @@ import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import { formatRelativeTime } from '@/lib/relativeTime';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import { Button, Spinner } from '@/components/ui';
+import { BackButton, Button, Spinner } from '@/components/ui';
 
 function formatMetric(value: number | null, digits = 1): string {
     return value === null ? '—' : value.toFixed(digits);
@@ -112,16 +112,14 @@ export default function TestAnalyticsDashboardPage() {
             <div className="min-h-full bg-shell-bg text-foreground">
                 <div className="border-b border-shell-border bg-shell-surface px-6 py-5">
                     <div className="mx-auto max-w-7xl">
-                        <Button
-                            variant="ghost"
-                            size="sm"
+                        <BackButton
                             onClick={() => {
                                 setLastTestId(null);
                                 router.push('/analytics');
                             }}
-                        >
-                            ← All tests
-                        </Button>
+                            label="All tests"
+                            className="mb-0"
+                        />
                         <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                             <div>
                                 <p className="text-eyebrow font-semibold uppercase tracking-medium text-shell-muted-dim">

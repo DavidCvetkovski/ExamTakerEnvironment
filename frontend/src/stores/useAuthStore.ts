@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { api } from '../lib/api';
 
-export type ThemePreference = 'dark' | 'warm' | 'light-blue';
+export type ThemePreference = 'dark' | 'warm' | 'light-blue' | 'auto';
+/** A concrete theme the page actually renders under (no `auto`). */
+export type EffectiveTheme = 'dark' | 'warm' | 'light-blue';
 const THEME_STORAGE_KEY = 'theme';
 
 export interface UserPublic {

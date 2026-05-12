@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import { DEFAULT_SCORING_CONFIG, useBlueprintStore, SelectionRule, TestDefinition, type BlueprintStatusFilter } from '@/stores/useBlueprintStore';
 import { useExamStore } from '@/stores/useExamStore';
 import { useImportStore } from '@/stores/useImportStore';
+import { useNavGuardStore } from '@/stores/useNavGuardStore';
 import { validateBlueprint } from '@/lib/validateBlueprint';
 import { canEditBlueprint, canDeleteBlueprint, type BlueprintStatus } from '@/lib/blueprintPermissions';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -12,7 +13,7 @@ import QuestionPickerModal from '@/components/blueprint/QuestionPickerModal';
 import BlueprintSaveIndicator from '@/components/blueprint/BlueprintSaveIndicator';
 import BlueprintStatusBadge from '@/components/blueprint/BlueprintStatusBadge';
 import BlueprintInspector from '@/components/blueprint/BlueprintInspector';
-import { Badge, Button, Input, Select, Spinner, cn, useToast, useConfirm, StatusDot } from '@/components/ui';
+import { BackButton, Badge, Button, Input, Select, Spinner, cn, useToast, useConfirm, StatusDot } from '@/components/ui';
 import { formatRelativeTime, formatAbsolute, formatScheduled } from '@/lib/relativeTime';
 
 type BlueprintDraft = Partial<TestDefinition>;
@@ -93,6 +94,27 @@ function BlueprintPageInner() {
     const isDirty = savedSnapshot !== null
         ? JSON.stringify(currentBlueprint) !== savedSnapshot
         : (currentBlueprint?.title?.trim() || currentBlueprint?.blocks?.some(b => b.rules.length > 0)) ?? false;
+
+    // Stage 18b — global nav guard. Browser-level events go via beforeunload;
+    // in-app nav goes via the shared store consumed by GlobalHeader.
+    const setNavGuard = useNavGuardStore((s) => s.setDirty);
+    useEffect(() => {
+        const active = Boolean(isDirty) && viewMode === 'editor';
+        setNavGuard(active, 'blueprint changes');
+
+        if (!active) return;
+        const handler = (e: BeforeUnloadEvent) => {
+            e.preventDefault();
+            // Modern browsers ignore the custom message and show their own prompt,
+            // but returnValue is still required to trigger it.
+            e.returnValue = '';
+        };
+        window.addEventListener('beforeunload', handler);
+        return () => {
+            window.removeEventListener('beforeunload', handler);
+            setNavGuard(false);
+        };
+    }, [isDirty, viewMode, setNavGuard]);
 
     const handleCreateNew = () => {
         setLastEditingId(null);
@@ -350,12 +372,12 @@ function BlueprintPageInner() {
                             <h1 className="text-4xl font-extrabold tracking-tight text-foreground">Test Blueprints</h1>
                             <p className="mt-2 text-shell-muted-dim">Design and manage rule-based exam definitions.</p>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <Button variant="ghost" size="sm" onClick={() => router.push('/import?mode=blueprint&from=blueprint')}>
-                                Import questions
+                        <div className="flex items-center gap-2">
+                            <Button variant="secondary" size="md" onClick={() => router.push('/import?mode=blueprint&from=blueprint')}>
+                                Import
                             </Button>
-                            <Button variant="primary" size="lg" onClick={handleCreateNew}>
-                                <span className="mr-2 text-xl">+</span> New Blueprint
+                            <Button variant="primary" size="md" onClick={handleCreateNew}>
+                                + New blueprint
                             </Button>
                         </div>
                     </div>
@@ -575,15 +597,7 @@ function BlueprintPageInner() {
                 <div className="text-foreground">
                     {ConfirmDialog}
                     <div className="mx-auto max-w-3xl px-4 sm:px-6 pt-8">
-                        <button
-                            onClick={handleBackToList}
-                            className="mb-4 inline-flex items-center gap-2 text-meta font-medium text-shell-muted hover:text-foreground transition-colors"
-                        >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                            All blueprints
-                        </button>
+                        <BackButton onClick={handleBackToList} label="All blueprints" />
                     </div>
                     <BlueprintInspector
                         blueprint={currentBlueprint as TestDefinition}
@@ -602,13 +616,8 @@ function BlueprintPageInner() {
                 <div className="flex gap-8">
                     {/* Main Editor */}
                     <div className="min-w-0 flex-1">
-                        <div className="mb-8 flex items-center gap-3">
-                            <button
-                                onClick={handleBackToList}
-                                className="group flex items-center text-shell-muted-dim hover:text-foreground transition-colors"
-                            >
-                                <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> All Blueprints
-                            </button>
+                        <div className="mb-6 flex items-center gap-3">
+                            <BackButton onClick={handleBackToList} label="All blueprints" className="mb-0" />
                             {currentBlueprint?.id && (
                                 <button
                                     type="button"
@@ -620,7 +629,7 @@ function BlueprintPageInner() {
                             )}
                         </div>
 
-                        <div className="min-h-blueprint-canvas overflow-hidden rounded-2xl border border-shell-border bg-shell-surface/80 shadow-2xl backdrop-blur-xl">
+                        <div className="min-h-blueprint-canvas overflow-hidden rounded-2xl border border-shell-border bg-shell-surface shadow-card">
                             {inspectMode && (
                                 <div className="px-8 py-3 bg-[var(--color-info-bg)] border-b border-[var(--color-info-border)]">
                                     <p className="text-sm font-medium text-[var(--color-info-fg)]">

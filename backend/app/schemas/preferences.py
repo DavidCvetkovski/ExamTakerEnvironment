@@ -5,7 +5,7 @@ from typing import Literal
 from pydantic import BaseModel
 
 
-ThemeName = Literal["dark", "warm", "light-blue"]
+ThemeName = Literal["dark", "warm", "light-blue", "auto"]
 
 
 class ThemePreferenceUpdate(BaseModel):

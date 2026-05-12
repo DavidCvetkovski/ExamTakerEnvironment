@@ -43,8 +43,8 @@ function MCQAnswerDisplay({ detail }: { detail: QuestionResultDetail }) {
     return (
         <div className="space-y-4 mt-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div className="rounded-2xl border border-student-border bg-shell-surface/60 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-student-accent mb-2">Your Answer</p>
+                <div className="rounded-2xl border border-shell-border bg-shell-surface/60 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-shell-muted-dim mb-2">Your Answer</p>
                     {allSelected.length > 0 ? (
                         <div className="space-y-2">
                             {allSelected.map((idx) => (
@@ -90,8 +90,8 @@ function MCQAnswerDisplay({ detail }: { detail: QuestionResultDetail }) {
             </div>
 
             {options.length > 0 && (
-                <div className="rounded-2xl border border-student-border bg-student-bg-alt p-4">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-student-accent mb-3">Available Options</p>
+                <div className="rounded-2xl border border-shell-border bg-shell-input-alt p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-shell-muted-dim mb-3">Available Options</p>
                     <div className="space-y-2">
                         {options.map((option, idx) => {
                             const isSelected = allSelected.includes(idx);
@@ -106,7 +106,7 @@ function MCQAnswerDisplay({ detail }: { detail: QuestionResultDetail }) {
                                                 ? 'border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)]'
                                                 : isCorrect
                                                     ? 'border-[var(--color-success-border)] bg-[var(--color-success-bg)]/50 text-[var(--color-success-fg)]'
-                                                    : 'border-student-border bg-shell-surface/80 text-foreground'
+                                                    : 'border-shell-border bg-shell-surface/80 text-foreground'
                                     }`}
                                 >
                                     <span className="mr-2 font-semibold">{String.fromCharCode(65 + idx)}.</span>
@@ -129,7 +129,7 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
     const isCorrect = detail.is_correct;
     const isPending = !detail.is_auto_graded && detail.is_correct === null;
 
-    let borderColor = 'border-student-border';
+    let borderColor = 'border-shell-border';
     let accentColor = 'bg-shell-input-alt text-shell-muted';
     if (isPending) {
         borderColor = 'border-[var(--color-warning-border)]';
@@ -168,7 +168,7 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
 
             {detail.question_content != null && (
                 <div
-                    className="prose max-w-none rounded-2xl border border-student-border bg-student-bg-alt px-4 py-3 text-foreground"
+                    className="prose max-w-none rounded-2xl border border-shell-border bg-shell-input-alt px-4 py-3 text-foreground"
                     dangerouslySetInnerHTML={{ __html: sanitizeHtml(toExamContentHtml(detail.question_content)) }}
                 />
             )}
@@ -176,8 +176,8 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
             {/* Answer display */}
             {isEssay ? (
                 <div className="space-y-3">
-                    <div className="rounded-2xl border border-student-border bg-student-bg-alt p-4">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-student-accent mb-2">Your Essay</p>
+                    <div className="rounded-2xl border border-shell-border bg-shell-input-alt p-4">
+                        <p className="text-xs font-semibold uppercase tracking-widest text-shell-muted-dim mb-2">Your Essay</p>
                         {extractEssayText(detail.student_answer) ? (
                             <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
                                 {extractEssayText(detail.student_answer)}
@@ -199,8 +199,8 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
 
             {/* Feedback */}
             {detail.feedback && (
-                <div className="rounded-2xl border border-student-primary/20 bg-student-hover-light p-4">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-student-primary mb-1">Grader Feedback</p>
+                <div className="rounded-2xl border border-brand/30 bg-brand/10 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-brand mb-1">Grader Feedback</p>
                     <p className="text-sm text-foreground leading-relaxed">{detail.feedback}</p>
                 </div>
             )}
@@ -229,7 +229,7 @@ export default function MyResultDetailPage() {
     const result = currentResultDetail;
 
     return (
-        <div className="min-h-full bg-[image:var(--gradient-student-page)] px-4 py-10 text-foreground sm:px-6 lg:px-8">
+        <div className="min-h-full bg-shell-bg px-4 py-10 text-foreground sm:px-6 lg:px-8">
             <div className="mx-auto max-w-3xl space-y-8">
                 {/* Back */}
                 <BackButton href="/my-exams" label="Back to my exams" className="mb-0" />
@@ -252,8 +252,8 @@ export default function MyResultDetailPage() {
                 {result && !detailLoading && (
                     <>
                         {/* Result header card */}
-                        <div className="rounded-2xl border border-student-border bg-[image:var(--gradient-student-hero)] p-8 shadow-warm-hero-md">
-                            <p className="text-xs font-semibold uppercase tracking-wider text-student-accent">Exam Result</p>
+                        <div className="rounded-2xl border border-shell-border bg-shell-surface p-8">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-shell-muted-dim">Exam Result</p>
                             <h1 className="mt-2 text-4xl font-black tracking-tight text-foreground">
                                 {result.test_title}
                             </h1>
@@ -265,15 +265,15 @@ export default function MyResultDetailPage() {
 
                             {/* Score summary */}
                             <div className="mt-6 grid grid-cols-3 gap-4">
-                                <div className="rounded-2xl border border-student-border bg-shell-surface/60 p-4 text-center">
+                                <div className="rounded-2xl border border-shell-border bg-shell-surface/60 p-4 text-center">
                                     <p className="text-3xl font-black text-foreground">{result.percentage.toFixed(1)}%</p>
                                     <p className="text-xs text-shell-muted-dim mt-1">Score</p>
                                 </div>
-                                <div className="rounded-2xl border border-student-border bg-shell-surface/60 p-4 text-center">
+                                <div className="rounded-2xl border border-shell-border bg-shell-surface/60 p-4 text-center">
                                     <p className="text-3xl font-black text-foreground">{result.total_points}</p>
                                     <p className="text-xs text-shell-muted-dim mt-1">Points (of {result.max_points})</p>
                                 </div>
-                                <div className="rounded-2xl border border-student-border bg-shell-surface/60 p-4 text-center">
+                                <div className="rounded-2xl border border-shell-border bg-shell-surface/60 p-4 text-center">
                                     {result.letter_grade ? (
                                         <>
                                             <p className={`text-3xl font-black ${result.passed ? 'text-[var(--color-success-fg)]' : 'text-[var(--color-danger-fg)]'}`}>

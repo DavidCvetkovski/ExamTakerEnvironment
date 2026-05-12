@@ -18,25 +18,6 @@
   --color-shell-panel-d: #050b13;
   --color-shell-panel-e: #040914;
 
-  --color-student-bg: #fffaf0;
-  --color-student-bg-alt: #fffaf4;
-  --color-student-surface: #fffdf9;
-  --color-student-wash: #f8f3ea;
-  --color-student-border: #e8dcc7;
-  --color-student-border-alt: #d8c7aa;
-  --color-student-accent: #8a6c3e;
-  --color-student-primary: #1055cc;
-  --color-student-primary-dark: #0d47ae;
-  --color-student-hover-wash: #e9f0ff;
-  --color-student-hover-light: #eef4ff;
-  --color-student-disabled-bg: #c7d6f5;
-  --color-student-disabled-text: #5e77aa;
-  --color-student-success-bg: #dff2e5;
-  --color-student-success-text: #156341;
-  --color-student-neutral-badge: #eef0f7;
-  --color-student-logout: #b2471f;
-  --color-student-logout-dark: #8f3411;
-  --color-student-logout-wash: #fff0e6;
 
   --color-editor-bg: #1a1a2e;
   --color-editor-toolbar: #16213e;
@@ -54,8 +35,6 @@
   --color-editor-code-bg: #0d1117;
   --color-editor-code-border: #30363d;
   --color-editor-code-text: #e6edf3;
-  --gradient-student-page: linear-gradient(180deg, #fff6e8 0%, #f9fcff 40%, #eef4ff 100%);
-  --gradient-student-hero: linear-gradient(135deg, #fffdf9 0%, #f4f8ff 100%);
   --font-size-eyebrow-xs: 9px;
   --font-size-eyebrow-sm: 10px;
   --font-size-eyebrow: 11px;
@@ -241,29 +220,7 @@
   --color-shell-panel-d: #fffaf0;
   --color-shell-panel-e: #fffdf9;
 
-  --color-student-bg: #fffaf0;
-  --color-student-bg-alt: #fffaf4;
-  --color-student-surface: #fffdf9;
-  --color-student-wash: #f8f3ea;
-  --color-student-border: #e8dcc7;
-  --color-student-border-alt: #d8c7aa;
-  --color-student-accent: #8a6c3e;
-  --color-student-primary: #1055cc;
-  --color-student-primary-dark: #0d47ae;
-  --color-student-hover-wash: #e9f0ff;
-  --color-student-hover-light: #eef4ff;
-  --color-student-disabled-bg: #c7d6f5;
-  --color-student-disabled-text: #5e77aa;
-  --color-student-success-bg: #dff2e5;
-  --color-student-success-text: #156341;
-  --color-student-neutral-badge: #eef0f7;
-  --color-student-logout: #b2471f;
-  --color-student-logout-dark: #8f3411;
-  --color-student-logout-wash: #fff0e6;
-  --gradient-student-page: linear-gradient(180deg, #fff6e8 0%, #f9fcff 40%, #eef4ff 100%);
-  --gradient-student-hero: linear-gradient(135deg, #fffdf9 0%, #f4f8ff 100%);
-
-  --color-background: var(--color-student-bg);
+  --color-background: var(--color-shell-bg);
   --color-foreground: #1f2937;
 
   /* ── 8.4 — Subject palette (warm theme: muted earth tones, deeper fg for contrast) ── */
@@ -326,27 +283,6 @@
   --color-shell-panel-d: #dcecff;
   --color-shell-panel-e: #f8fbff;
 
-  --color-student-bg: #f4f8ff;
-  --color-student-bg-alt: #edf6ff;
-  --color-student-surface: #ffffff;
-  --color-student-wash: #e8f2ff;
-  --color-student-border: #c7d9f2;
-  --color-student-border-alt: #9fbce4;
-  --color-student-accent: #396386;
-  --color-student-primary: #1769d2;
-  --color-student-primary-dark: #0f56ad;
-  --color-student-hover-wash: #dcecff;
-  --color-student-hover-light: #eaf3ff;
-  --color-student-disabled-bg: #c8d7eb;
-  --color-student-disabled-text: #617895;
-  --color-student-success-bg: #daf3ea;
-  --color-student-success-text: #136247;
-  --color-student-neutral-badge: #e6edf7;
-  --color-student-logout: #a33f2a;
-  --color-student-logout-dark: #84311f;
-  --color-student-logout-wash: #fff0ea;
-  --gradient-student-page: linear-gradient(180deg, #edf6ff 0%, #f4f8ff 50%, #eaf3ff 100%);
-  --gradient-student-hero: linear-gradient(135deg, #ffffff 0%, #e8f2ff 100%);
 
   --color-editor-bg: #eaf3ff;
   --color-editor-toolbar: #dcecff;
@@ -403,25 +339,6 @@
   --color-shell-panel-c: var(--color-shell-panel-c);
   --color-shell-panel-d: var(--color-shell-panel-d);
   --color-shell-panel-e: var(--color-shell-panel-e);
-  --color-student-bg: var(--color-student-bg);
-  --color-student-bg-alt: var(--color-student-bg-alt);
-  --color-student-surface: var(--color-student-surface);
-  --color-student-wash: var(--color-student-wash);
-  --color-student-border: var(--color-student-border);
-  --color-student-border-alt: var(--color-student-border-alt);
-  --color-student-accent: var(--color-student-accent);
-  --color-student-primary: var(--color-student-primary);
-  --color-student-primary-dark: var(--color-student-primary-dark);
-  --color-student-hover-wash: var(--color-student-hover-wash);
-  --color-student-hover-light: var(--color-student-hover-light);
-  --color-student-disabled-bg: var(--color-student-disabled-bg);
-  --color-student-disabled-text: var(--color-student-disabled-text);
-  --color-student-success-bg: var(--color-student-success-bg);
-  --color-student-success-text: var(--color-student-success-text);
-  --color-student-neutral-badge: var(--color-student-neutral-badge);
-  --color-student-logout: var(--color-student-logout);
-  --color-student-logout-dark: var(--color-student-logout-dark);
-  --color-student-logout-wash: var(--color-student-logout-wash);
   --color-editor-bg: var(--color-editor-bg);
   --color-editor-toolbar: var(--color-editor-toolbar);
   --color-editor-border: var(--color-editor-border);

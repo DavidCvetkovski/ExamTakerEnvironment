@@ -39,11 +39,11 @@ export default function PDValueTrendChart({ entries }: { entries: ItemHistoryEnt
         <div className="rounded-xl border border-shell-border bg-shell-surface px-5 py-5">
             <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-shell-muted">
                 <span className="inline-flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-cyan-400" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-chart-series-1)]" />
                     P-value
                 </span>
                 <span className="inline-flex items-center gap-2">
-                    <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[var(--color-chart-series-4)]" />
                     D-value
                 </span>
             </div>
@@ -77,7 +77,7 @@ export default function PDValueTrendChart({ entries }: { entries: ItemHistoryEnt
                         strokeWidth="3"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        className="text-cyan-400"
+                        className="text-[var(--color-chart-series-1)]"
                     />
                 ) : null}
 
@@ -89,7 +89,7 @@ export default function PDValueTrendChart({ entries }: { entries: ItemHistoryEnt
                         strokeWidth="3"
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        className="text-amber-400"
+                        className="text-[var(--color-chart-series-4)]"
                     />
                 ) : null}
 
@@ -110,10 +110,10 @@ export default function PDValueTrendChart({ entries }: { entries: ItemHistoryEnt
                 })}
 
                 {pPoints.map((point, index) => (
-                    <circle key={`p-${index}`} cx={point.x} cy={point.y} r="4.5" fill="currentColor" className="text-cyan-400" />
+                    <circle key={`p-${index}`} cx={point.x} cy={point.y} r="4.5" fill="currentColor" className="text-[var(--color-chart-series-1)]" />
                 ))}
                 {dPoints.map((point, index) => (
-                    <circle key={`d-${index}`} cx={point.x} cy={point.y} r="4.5" fill="currentColor" className="text-amber-400" />
+                    <circle key={`d-${index}`} cx={point.x} cy={point.y} r="4.5" fill="currentColor" className="text-[var(--color-chart-series-4)]" />
                 ))}
             </svg>
         </div>

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Button, Badge } from '@/components/ui';
+import { useState } from 'react';
+import { Badge, Button, Modal } from '@/components/ui';
 
 const QUICK_REFERENCE = [
     { token: '// comment', required: false, description: 'Comment line — stripped before parsing.' },
@@ -104,42 +104,36 @@ const FAQ = [
 ];
 
 interface Props {
+    isOpen: boolean;
     onClose: () => void;
 }
 
 type Tab = 'reference' | 'example' | 'faq';
 
-export default function FormatGuideModal({ onClose }: Props) {
+export default function FormatGuideModal({ isOpen, onClose }: Props) {
     const [tab, setTab] = useState<Tab>('reference');
-    const overlayRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-        document.addEventListener('keydown', onKey);
-        return () => document.removeEventListener('keydown', onKey);
-    }, [onClose]);
 
     return (
-        <div
-            ref={overlayRef}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-            onMouseDown={(e) => { if (e.target === overlayRef.current) onClose(); }}
-        >
-            <div className="w-full max-w-2xl rounded-2xl border border-shell-border bg-shell-surface shadow-elevated flex flex-col max-h-[85vh]">
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-shell-border shrink-0">
-                    <h2 className="text-h3 text-foreground font-semibold">Import Format Guide</h2>
-                    <button
-                        onClick={onClose}
-                        className="text-shell-muted-dim hover:text-foreground transition-colors focus-ring rounded"
-                        aria-label="Close"
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="Import Format Guide"
+            size="lg"
+            footer={
+                <div className="flex w-full items-center justify-between">
+                    <a
+                        href="/import-template.txt"
+                        download
+                        className="text-sm text-brand hover:underline focus-ring rounded"
                     >
-                        ✕
-                    </button>
+                        Download template (.txt)
+                    </a>
+                    <Button variant="secondary" onClick={onClose}>Close</Button>
                 </div>
-
-                {/* Tabs */}
-                <div className="flex gap-1 px-6 pt-3 shrink-0">
+            }
+        >
+            <div className="space-y-4">
+                <div className="flex gap-1">
                     {(['reference', 'example', 'faq'] as Tab[]).map((t) => (
                         <button
                             key={t}
@@ -155,8 +149,7 @@ export default function FormatGuideModal({ onClose }: Props) {
                     ))}
                 </div>
 
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto px-6 py-4">
+                <div>
                     {tab === 'reference' && (
                         <table className="w-full text-sm">
                             <thead>
@@ -204,19 +197,7 @@ export default function FormatGuideModal({ onClose }: Props) {
                         </div>
                     )}
                 </div>
-
-                {/* Footer */}
-                <div className="px-6 py-4 border-t border-shell-border shrink-0 flex justify-between items-center">
-                    <a
-                        href="/import-template.txt"
-                        download
-                        className="text-sm text-brand hover:underline focus-ring rounded"
-                    >
-                        Download template (.txt)
-                    </a>
-                    <Button variant="secondary" onClick={onClose}>Close</Button>
-                </div>
             </div>
-        </div>
+        </Modal>
     );
 }

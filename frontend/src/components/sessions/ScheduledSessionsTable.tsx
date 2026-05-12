@@ -179,7 +179,7 @@ export default function ScheduledSessionsTable({
         <div className="space-y-6">
             {/* Ongoing */}
             {ongoing.length > 0 && (
-                <div className="rounded-card-md border border-shell-border bg-shell-panel-a p-6">
+                <div className="rounded-2xl border border-shell-border bg-shell-panel-a p-6">
                     <div className="mb-4 flex items-center gap-3">
                         <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--color-success-fg)]" />
                         <h3 className="text-lg font-semibold text-foreground">Ongoing</h3>
@@ -201,7 +201,7 @@ export default function ScheduledSessionsTable({
 
             {/* Scheduled */}
             {scheduled.length > 0 && (
-                <div className="rounded-card-md border border-shell-border bg-shell-panel-a p-6">
+                <div className="rounded-2xl border border-shell-border bg-shell-panel-a p-6">
                     <div className="mb-4 flex items-center gap-3">
                         <h3 className="text-lg font-semibold text-foreground">Scheduled</h3>
                         <Badge tone="info" size="sm">{scheduled.length}</Badge>
@@ -222,7 +222,7 @@ export default function ScheduledSessionsTable({
 
             {/* Completed */}
             {completed.length > 0 && (
-                <div className="rounded-card-md border border-shell-border bg-shell-panel-a p-6">
+                <div className="rounded-2xl border border-shell-border bg-shell-panel-a p-6">
                     <button
                         type="button"
                         onClick={() => setShowCompleted((v) => !v)}

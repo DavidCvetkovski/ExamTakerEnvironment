@@ -75,7 +75,7 @@ export default function SessionCreateForm({
 
     return (
         <div className={isAdmin ? 'grid gap-6 xl:grid-cols-[1.2fr_0.8fr]' : 'mx-auto max-w-3xl'}>
-            <form onSubmit={handleSubmit} className="rounded-card-md border border-shell-border bg-shell-surface-deep p-6 shadow-card">
+            <form onSubmit={handleSubmit} className="rounded-2xl border border-shell-border bg-shell-surface-deep p-6 shadow-card">
                 <div className="mb-6">
                     <p className="text-xs font-semibold uppercase tracking-wide text-shell-muted-dim">Session Manager</p>
                     <h2 className="mt-2 text-3xl font-black text-foreground">Schedule an Exam Window</h2>
@@ -160,7 +160,7 @@ export default function SessionCreateForm({
             </form>
 
             {isAdmin && (
-                <form onSubmit={handleCreateCourse} className="rounded-card-md border border-shell-border-deep bg-shell-panel-c p-6 shadow-card">
+                <form onSubmit={handleCreateCourse} className="rounded-2xl border border-shell-border-deep bg-shell-panel-c p-6 shadow-card">
                     <p className="text-xs font-semibold uppercase tracking-wide text-shell-muted-dim">Course Setup</p>
                     <h3 className="mt-2 text-2xl font-black text-foreground">Create a New Course</h3>
                     <p className="mt-2 text-sm text-shell-muted-dim">

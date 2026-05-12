@@ -79,6 +79,8 @@ export interface AvailableItem {
 
 export interface BlueprintUsage {
     status: BlueprintStatus;
+    /** ISO timestamp of the earliest upcoming scheduled session, or null. */
+    next_session_at?: string | null;
     // Legacy fields — see directives/todo.md TODO-007. Read `status` instead.
     has_scheduled_sessions: boolean;
     has_past_sessions: boolean;
@@ -177,7 +179,7 @@ export const useBlueprintStore = create<BlueprintState>()(persist((set, get) => 
                         const u = await api.get<BlueprintUsage>(`tests/${bp.id}/usage`);
                         return [bp.id, u.data] as [string, BlueprintUsage];
                     } catch {
-                        return [bp.id, { status: 'NEW' as BlueprintStatus, has_scheduled_sessions: false, has_past_sessions: false, is_locked: false, is_permanently_locked: false }] as [string, BlueprintUsage];
+                        return [bp.id, { status: 'NEW' as BlueprintStatus, next_session_at: null, has_scheduled_sessions: false, has_past_sessions: false, is_locked: false, is_permanently_locked: false }] as [string, BlueprintUsage];
                     }
                 })
             );

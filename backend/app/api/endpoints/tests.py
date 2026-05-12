@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from uuid import UUID
 import uuid as _uuid
-from typing import List
+from datetime import datetime
+from typing import List, Optional
 
 from prisma import Json
 from app.core.dependencies import get_current_user, require_role
@@ -14,6 +15,7 @@ from app.services.blueprint_status_service import (
     can_delete_blueprint,
     can_edit_blueprint,
     derive_blueprint_status,
+    derive_next_session_at,
     mutation_error_message,
 )
 from app.services.blueprints_service import (
@@ -29,6 +31,9 @@ router = APIRouter()
 class BlueprintUsage(BaseModel):
     # Canonical lifecycle status (Epoch 8.4).
     status: BlueprintStatus
+    # Earliest upcoming scheduled session start (UTC). Used by the blueprint
+    # card subline; None when no future session exists. (Stage 8 tail.)
+    next_session_at: Optional[datetime] = None
     # Legacy fields — kept for one release for backwards compat. See directives/todo.md TODO-007.
     has_scheduled_sessions: bool
     has_past_sessions: bool
@@ -75,6 +80,7 @@ async def get_blueprint_usage(
 ):
     """Return the blueprint's lifecycle status (and legacy boolean flags)."""
     bp_status = await derive_blueprint_status(str(test_id))
+    next_at = await derive_next_session_at(str(test_id))
     # Legacy fields preserved for one release — drop after Epoch 8.5 (see TODO-007).
     has_scheduled = bp_status in (
         BlueprintStatus.SCHEDULED,
@@ -84,6 +90,7 @@ async def get_blueprint_usage(
     has_past = bp_status == BlueprintStatus.PASSED
     return BlueprintUsage(
         status=bp_status,
+        next_session_at=next_at,
         has_scheduled_sessions=has_scheduled,
         has_past_sessions=has_past,
         is_locked=bp_status in (BlueprintStatus.ONGOING, BlueprintStatus.PASSED),

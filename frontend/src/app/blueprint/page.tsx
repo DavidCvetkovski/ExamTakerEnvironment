@@ -13,7 +13,7 @@ import BlueprintSaveIndicator from '@/components/blueprint/BlueprintSaveIndicato
 import BlueprintStatusBadge from '@/components/blueprint/BlueprintStatusBadge';
 import BlueprintInspector from '@/components/blueprint/BlueprintInspector';
 import { Badge, Button, Input, Select, Spinner, cn, useToast, useConfirm, StatusDot } from '@/components/ui';
-import { formatRelativeTime, formatAbsolute } from '@/lib/relativeTime';
+import { formatRelativeTime, formatAbsolute, formatScheduled } from '@/lib/relativeTime';
 
 type BlueprintDraft = Partial<TestDefinition>;
 
@@ -437,6 +437,7 @@ function BlueprintPageInner() {
                             const status: BlueprintStatus = usage?.status ?? 'NEW';
                             const canEdit = canEditBlueprint(status);
                             const canDelete = canDeleteBlueprint(status);
+                            const nextSessionAt = usage?.next_session_at ?? null;
 
                             return (
                                 <div
@@ -449,7 +450,12 @@ function BlueprintPageInner() {
                                     </div>
 
                                     <h3 className="text-xl font-bold pr-24 line-clamp-2 text-foreground">{bp.title}</h3>
-                                    <p className="text-shell-muted-dim text-sm mt-2 mb-4 line-clamp-2 min-h-[40px]">{bp.description || 'No description provided.'}</p>
+                                    <p className="text-shell-muted-dim text-sm mt-2 mb-1 line-clamp-2 min-h-[40px]">{bp.description || 'No description provided.'}</p>
+                                    {nextSessionAt && (status === 'SCHEDULED' || status === 'ONGOING') && (
+                                        <p className="text-meta text-shell-muted-dim mb-3" title={formatAbsolute(nextSessionAt)}>
+                                            Next session: <span className="text-shell-muted">{formatScheduled(nextSessionAt)}</span>
+                                        </p>
+                                    )}
 
                                     <div className="flex items-center justify-between pt-4 border-t border-shell-border text-xs text-shell-muted-dim font-medium tracking-wider uppercase mb-4">
                                         <div className="flex items-center gap-4">
@@ -591,7 +597,7 @@ function BlueprintPageInner() {
                             )}
                         </div>
 
-                        <div className="min-h-blueprint-canvas overflow-hidden rounded-card-lg border border-shell-border bg-shell-surface/80 shadow-2xl backdrop-blur-xl">
+                        <div className="min-h-blueprint-canvas overflow-hidden rounded-2xl border border-shell-border bg-shell-surface/80 shadow-2xl backdrop-blur-xl">
                             {inspectMode && (
                                 <div className="px-8 py-3 bg-[var(--color-info-bg)] border-b border-[var(--color-info-border)]">
                                     <p className="text-sm font-medium text-[var(--color-info-fg)]">
@@ -898,7 +904,7 @@ function BlueprintPageInner() {
 
                     {/* Breakdown Sidebar — hidden below 1400px to prevent horizontal scroll */}
                     <div className="hidden 2xl:block w-80 shrink-0 space-y-6">
-                        <div className="sticky top-12 rounded-card-lg border border-shell-border bg-shell-surface/50 p-6 backdrop-blur-md">
+                        <div className="sticky top-12 rounded-2xl border border-shell-border bg-shell-surface/50 p-6 backdrop-blur-md">
                             <h4 className="text-xs font-black uppercase tracking-widest text-brand mb-6 flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-brand animate-pulse"></span>
                                 Live Breakdown

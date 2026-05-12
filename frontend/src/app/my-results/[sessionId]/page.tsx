@@ -143,7 +143,7 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
     }
 
     return (
-        <div className={`rounded-card border ${borderColor} bg-shell-surface/80 p-6 shadow-sm space-y-4`}>
+        <div className={`rounded-2xl border ${borderColor} bg-shell-surface/80 p-6 shadow-sm space-y-4`}>
             {/* Header row */}
             <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
@@ -252,7 +252,7 @@ export default function MyResultDetailPage() {
                 {result && !detailLoading && (
                     <>
                         {/* Result header card */}
-                        <div className="rounded-card-xl border border-student-border bg-[image:var(--gradient-student-hero)] p-8 shadow-warm-hero-md">
+                        <div className="rounded-2xl border border-student-border bg-[image:var(--gradient-student-hero)] p-8 shadow-warm-hero-md">
                             <p className="text-xs font-semibold uppercase tracking-wider text-student-accent">Exam Result</p>
                             <h1 className="mt-2 text-4xl font-black tracking-tight text-foreground">
                                 {result.test_title}

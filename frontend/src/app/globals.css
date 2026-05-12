@@ -161,6 +161,22 @@
 
   --color-background: var(--color-shell-bg);
   --color-foreground: #ffffff;
+
+  /* ── 8.4 — Subject palette (8 hashed tones; dark theme: deeper saturation) ── */
+  --color-subject-1-bg: rgba(96, 165, 250, 0.16);   --color-subject-1-fg: #93c5fd; --color-subject-1-border: rgba(96, 165, 250, 0.32);
+  --color-subject-2-bg: rgba(167, 139, 250, 0.16);  --color-subject-2-fg: #c4b5fd; --color-subject-2-border: rgba(167, 139, 250, 0.32);
+  --color-subject-3-bg: rgba(52, 211, 153, 0.16);   --color-subject-3-fg: #6ee7b7; --color-subject-3-border: rgba(52, 211, 153, 0.32);
+  --color-subject-4-bg: rgba(251, 191, 36, 0.16);   --color-subject-4-fg: #fcd34d; --color-subject-4-border: rgba(251, 191, 36, 0.32);
+  --color-subject-5-bg: rgba(244, 114, 182, 0.16);  --color-subject-5-fg: #f9a8d4; --color-subject-5-border: rgba(244, 114, 182, 0.32);
+  --color-subject-6-bg: rgba(45, 212, 191, 0.16);   --color-subject-6-fg: #5eead4; --color-subject-6-border: rgba(45, 212, 191, 0.32);
+  --color-subject-7-bg: rgba(248, 113, 113, 0.14);  --color-subject-7-fg: #fca5a5; --color-subject-7-border: rgba(248, 113, 113, 0.30);
+  --color-subject-8-bg: rgba(163, 230, 53, 0.14);   --color-subject-8-fg: #bef264; --color-subject-8-border: rgba(163, 230, 53, 0.30);
+
+  /* ── 8.4 — Chart series tokens (TODO-005) ── */
+  --color-chart-series-1: #60a5fa;
+  --color-chart-series-2: #a78bfa;
+  --color-chart-series-3: #34d399;
+  --color-chart-series-4: #fbbf24;
 }
 
 [data-theme="warm"] {
@@ -249,6 +265,21 @@
 
   --color-background: var(--color-student-bg);
   --color-foreground: #1f2937;
+
+  /* ── 8.4 — Subject palette (warm theme: muted earth tones, deeper fg for contrast) ── */
+  --color-subject-1-bg: rgba(16, 85, 204, 0.10);    --color-subject-1-fg: #0d47ae; --color-subject-1-border: rgba(16, 85, 204, 0.28);
+  --color-subject-2-bg: rgba(122, 76, 173, 0.10);   --color-subject-2-fg: #5b3a8c; --color-subject-2-border: rgba(122, 76, 173, 0.28);
+  --color-subject-3-bg: rgba(47, 143, 93, 0.10);    --color-subject-3-fg: #156341; --color-subject-3-border: rgba(47, 143, 93, 0.28);
+  --color-subject-4-bg: rgba(192, 130, 32, 0.14);   --color-subject-4-fg: #8a5a0e; --color-subject-4-border: rgba(192, 130, 32, 0.30);
+  --color-subject-5-bg: rgba(184, 76, 130, 0.10);   --color-subject-5-fg: #8b3963; --color-subject-5-border: rgba(184, 76, 130, 0.28);
+  --color-subject-6-bg: rgba(20, 138, 138, 0.10);   --color-subject-6-fg: #086e6e; --color-subject-6-border: rgba(20, 138, 138, 0.28);
+  --color-subject-7-bg: rgba(178, 71, 31, 0.12);    --color-subject-7-fg: #8f3411; --color-subject-7-border: rgba(178, 71, 31, 0.28);
+  --color-subject-8-bg: rgba(101, 134, 39, 0.10);   --color-subject-8-fg: #4a611a; --color-subject-8-border: rgba(101, 134, 39, 0.28);
+
+  --color-chart-series-1: #b8651a;
+  --color-chart-series-2: #5b3a8c;
+  --color-chart-series-3: #2f8f5d;
+  --color-chart-series-4: #8a5a0e;
 }
 
 [data-theme="light-blue"] {
@@ -336,6 +367,21 @@
 
   --color-background: var(--color-shell-bg);
   --color-foreground: #10233f;
+
+  /* ── 8.4 — Subject palette (light-blue theme: cool pastels, deeper fg for contrast) ── */
+  --color-subject-1-bg: rgba(23, 105, 210, 0.10);   --color-subject-1-fg: #0f56ad; --color-subject-1-border: rgba(23, 105, 210, 0.28);
+  --color-subject-2-bg: rgba(114, 88, 168, 0.10);   --color-subject-2-fg: #534084; --color-subject-2-border: rgba(114, 88, 168, 0.28);
+  --color-subject-3-bg: rgba(22, 163, 106, 0.10);   --color-subject-3-fg: #136247; --color-subject-3-border: rgba(22, 163, 106, 0.28);
+  --color-subject-4-bg: rgba(200, 123, 26, 0.14);   --color-subject-4-fg: #8a5a0e; --color-subject-4-border: rgba(200, 123, 26, 0.28);
+  --color-subject-5-bg: rgba(180, 73, 132, 0.10);   --color-subject-5-fg: #843760; --color-subject-5-border: rgba(180, 73, 132, 0.28);
+  --color-subject-6-bg: rgba(20, 138, 138, 0.10);   --color-subject-6-fg: #086e6e; --color-subject-6-border: rgba(20, 138, 138, 0.28);
+  --color-subject-7-bg: rgba(163, 63, 42, 0.12);    --color-subject-7-fg: #84311f; --color-subject-7-border: rgba(163, 63, 42, 0.28);
+  --color-subject-8-bg: rgba(101, 134, 39, 0.10);   --color-subject-8-fg: #4a611a; --color-subject-8-border: rgba(101, 134, 39, 0.28);
+
+  --color-chart-series-1: #1769d2;
+  --color-chart-series-2: #534084;
+  --color-chart-series-3: #16a36a;
+  --color-chart-series-4: #c87b1a;
 }
 
 @theme inline {

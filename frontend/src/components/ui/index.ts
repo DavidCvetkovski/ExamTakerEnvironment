@@ -16,3 +16,5 @@ export { DatePicker } from './DatePicker';
 export { TimePicker } from './TimePicker';
 export { useConfirm } from './ConfirmDialog';
 export type { ConfirmOptions } from './ConfirmDialog';
+export { default as RowActionMenu } from './RowActionMenu';
+export type { RowAction } from './RowActionMenu';

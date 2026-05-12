@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { formatAbsolute } from '@/lib/relativeTime';
 
 interface SubmissionConfirmationProps {
     submittedAt: string | null;
@@ -14,7 +15,7 @@ export default function SubmissionConfirmation({ submittedAt, returnPath, mode =
     }
 
     const formattedTime = submittedAt
-        ? new Date(submittedAt.endsWith('Z') ? submittedAt : `${submittedAt}Z`).toLocaleString()
+        ? formatAbsolute(submittedAt.endsWith('Z') ? submittedAt : `${submittedAt}Z`)
         : 'Just now';
     const returnLabel = returnPath === '/my-exams' ? 'Back to My Exams' : 'Back to Session Manager';
 
@@ -56,7 +57,7 @@ export default function SubmissionConfirmation({ submittedAt, returnPath, mode =
 
 function PracticeCompletionScreen({ returnPath, submittedAt }: { returnPath: string; submittedAt: string | null }) {
     const formattedTime = submittedAt
-        ? new Date(submittedAt.endsWith('Z') ? submittedAt : `${submittedAt}Z`).toLocaleString()
+        ? formatAbsolute(submittedAt.endsWith('Z') ? submittedAt : `${submittedAt}Z`)
         : 'Just now';
 
     return (

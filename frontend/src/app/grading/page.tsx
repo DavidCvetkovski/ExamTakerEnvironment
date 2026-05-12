@@ -23,6 +23,7 @@ import {
     cn,
 } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
+import { formatAbsolute, formatRelativeTime } from '@/lib/relativeTime';
 
 function statusBadge(status: GradingStatus) {
     const map: Record<GradingStatus, { label: string; tone: 'neutral' | 'info' | 'warning' | 'success' }> = {
@@ -306,8 +307,11 @@ export default function GradingDashboard() {
                                                                 {formatStudentLabel(session.student_email)}
                                                             </div>
                                                             {session.submitted_at && (
-                                                                <div className="text-shell-muted-dim text-meta mt-0.5">
-                                                                    {new Date(session.submitted_at).toLocaleString()}
+                                                                <div
+                                                                    className="text-shell-muted-dim text-meta mt-0.5"
+                                                                    title={formatAbsolute(session.submitted_at)}
+                                                                >
+                                                                    {formatRelativeTime(session.submitted_at)}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -326,10 +330,11 @@ export default function GradingDashboard() {
                                                     </div>
                                                 </TD>
                                                 <TD align="center">
-                                                    <div className="text-shell-muted-dim text-meta tabular-nums">
-                                                        {session.submitted_at
-                                                            ? new Date(session.submitted_at).toLocaleDateString()
-                                                            : '—'}
+                                                    <div
+                                                        className="text-shell-muted-dim text-meta tabular-nums"
+                                                        title={session.submitted_at ? formatAbsolute(session.submitted_at) : undefined}
+                                                    >
+                                                        {session.submitted_at ? formatRelativeTime(session.submitted_at) : '—'}
                                                     </div>
                                                 </TD>
                                                 <TD align="right">

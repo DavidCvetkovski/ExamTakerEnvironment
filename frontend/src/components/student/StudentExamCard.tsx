@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import type { StudentScheduledSession } from '@/stores/useStudentSessionsStore';
 import { Badge, Button, Card } from '@/components/ui';
+import { formatAbsolute, formatScheduled, formatRelativeTime } from '@/lib/relativeTime';
 
 interface StudentExamCardProps {
     session: StudentScheduledSession;
@@ -49,11 +50,21 @@ export default function StudentExamCard({ session, onJoin }: StudentExamCardProp
             <div className="mt-5 grid gap-4 rounded-lg bg-shell-input/50 border border-shell-border p-4 text-meta md:grid-cols-2">
                 <div>
                     <p className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim">Starts</p>
-                    <p className="mt-1 text-foreground font-medium tabular-nums">{startsAt.toLocaleString()}</p>
+                    <p
+                        className="mt-1 text-foreground font-medium tabular-nums"
+                        title={formatAbsolute(startsAt)}
+                    >
+                        {startsAt > new Date() ? formatScheduled(startsAt) : formatRelativeTime(startsAt)}
+                    </p>
                 </div>
                 <div>
                     <p className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim">Ends</p>
-                    <p className="mt-1 text-foreground font-medium tabular-nums">{endsAt.toLocaleString()}</p>
+                    <p
+                        className="mt-1 text-foreground font-medium tabular-nums"
+                        title={formatAbsolute(endsAt)}
+                    >
+                        {endsAt > new Date() ? formatScheduled(endsAt) : formatRelativeTime(endsAt)}
+                    </p>
                 </div>
             </div>
 

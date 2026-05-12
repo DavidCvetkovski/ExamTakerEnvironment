@@ -68,7 +68,11 @@ function ImportPageInner() {
     useEffect(() => {
         if (commitStatus === 'completed' && commitResult) {
             const count = commitResult.question_count;
-            toast({ tone: 'success', title: `Import complete — ${count} question${count !== 1 ? 's' : ''} added` });
+            toast({
+                tone: 'success',
+                title: 'Import complete',
+                description: `${count} question${count !== 1 ? 's' : ''} added to your library.`,
+            });
             if (commitResult.blueprint_id) {
                 toast({ tone: 'info', title: 'Blueprint created', description: 'A draft blueprint was created from this import.' });
             }

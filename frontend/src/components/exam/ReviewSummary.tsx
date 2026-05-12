@@ -44,24 +44,24 @@ export default function ReviewSummary({ onConfirm, onCancel }: ReviewSummaryProp
                 {/* Summary Stats */}
                 <div className="px-6 py-5 space-y-4">
                     <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 text-center">
-                            <p className="text-2xl font-bold text-emerald-400">{answeredItems.length}</p>
-                            <p className="text-xs text-emerald-400/70 uppercase tracking-wider mt-1">Answered</p>
+                        <div className="bg-[var(--color-success-bg)] border border-[var(--color-success-border)] rounded-xl p-4 text-center">
+                            <p className="text-2xl font-bold text-[var(--color-success-fg)]">{answeredItems.length}</p>
+                            <p className="text-eyebrow text-[var(--color-success-fg)]/80 uppercase tracking-wider mt-1">Answered</p>
                         </div>
-                        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-center">
-                            <p className="text-2xl font-bold text-red-400">{unansweredItems.length}</p>
-                            <p className="text-xs text-red-400/70 uppercase tracking-wider mt-1">Unanswered</p>
+                        <div className="bg-[var(--color-danger-bg)] border border-[var(--color-danger-border)] rounded-xl p-4 text-center">
+                            <p className="text-2xl font-bold text-[var(--color-danger-fg)]">{unansweredItems.length}</p>
+                            <p className="text-eyebrow text-[var(--color-danger-fg)]/80 uppercase tracking-wider mt-1">Unanswered</p>
                         </div>
-                        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-center">
-                            <p className="text-2xl font-bold text-amber-400">{flaggedItems.length}</p>
-                            <p className="text-xs text-amber-400/70 uppercase tracking-wider mt-1">Flagged</p>
+                        <div className="bg-[var(--color-warning-bg)] border border-[var(--color-warning-border)] rounded-xl p-4 text-center">
+                            <p className="text-2xl font-bold text-[var(--color-warning-fg)]">{flaggedItems.length}</p>
+                            <p className="text-eyebrow text-[var(--color-warning-fg)]/80 uppercase tracking-wider mt-1">Flagged</p>
                         </div>
                     </div>
 
                     {/* Unanswered question list */}
                     {unansweredItems.length > 0 && (
-                        <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4">
-                            <p className="text-sm font-semibold text-red-400 mb-2">⚠ Unanswered Questions</p>
+                        <div className="bg-[var(--color-danger-bg)] border border-[var(--color-danger-border)] rounded-xl p-4">
+                            <p className="text-sm font-semibold text-[var(--color-danger-fg)] mb-2">Unanswered questions</p>
                             <div className="flex flex-wrap gap-2">
                                 {unansweredItems.map((item) => {
                                     const idx = items.findIndex((i) => i.learning_object_id === item.learning_object_id);
@@ -69,7 +69,7 @@ export default function ReviewSummary({ onConfirm, onCancel }: ReviewSummaryProp
                                         <button
                                             key={item.learning_object_id}
                                             onClick={() => handleJumpTo(item.learning_object_id)}
-                                            className="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-red-300 text-sm transition-colors"
+                                            className="px-3 py-1 bg-[var(--color-danger-bg)] hover:brightness-110 border border-[var(--color-danger-border)] rounded-lg text-[var(--color-danger-fg)] text-sm transition-colors"
                                         >
                                             Q{idx + 1}
                                         </button>
@@ -81,8 +81,8 @@ export default function ReviewSummary({ onConfirm, onCancel }: ReviewSummaryProp
 
                     {/* Flagged question list */}
                     {flaggedItems.length > 0 && (
-                        <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4">
-                            <p className="text-sm font-semibold text-amber-400 mb-2">🚩 Flagged for Review</p>
+                        <div className="bg-[var(--color-warning-bg)] border border-[var(--color-warning-border)] rounded-xl p-4">
+                            <p className="text-sm font-semibold text-[var(--color-warning-fg)] mb-2">Flagged for review</p>
                             <div className="flex flex-wrap gap-2">
                                 {flaggedItems.map((item) => {
                                     const idx = items.findIndex((i) => i.learning_object_id === item.learning_object_id);
@@ -90,7 +90,7 @@ export default function ReviewSummary({ onConfirm, onCancel }: ReviewSummaryProp
                                         <button
                                             key={item.learning_object_id}
                                             onClick={() => handleJumpTo(item.learning_object_id)}
-                                            className="px-3 py-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg text-amber-300 text-sm transition-colors"
+                                            className="px-3 py-1 bg-[var(--color-warning-bg)] hover:brightness-110 border border-[var(--color-warning-border)] rounded-lg text-[var(--color-warning-fg)] text-sm transition-colors"
                                         >
                                             Q{idx + 1}
                                         </button>

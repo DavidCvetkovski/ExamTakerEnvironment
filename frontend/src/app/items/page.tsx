@@ -248,7 +248,7 @@ function ItemsLibraryPageInner() {
 
     const handleCopyId = (id: string) => {
         navigator.clipboard.writeText(id).then(() => {
-            toast({ tone: 'success', title: 'Question ID copied' });
+            toast({ tone: 'success', title: 'ID copied' });
         });
     };
 

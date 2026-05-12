@@ -68,7 +68,7 @@ function LoginPageInner() {
     const busy = isLoading || submitting;
 
     return (
-        <div className="min-h-full bg-shell-bg flex flex-col md:flex-row text-foreground">
+        <div data-theme-scope="login" className="min-h-full bg-shell-bg flex flex-col md:flex-row text-foreground">
 
             {/* ── Left panel: brand ── */}
             <div className="hidden md:flex md:w-[55%] relative bg-shell-surface overflow-hidden flex-col items-center justify-center px-12 py-16">

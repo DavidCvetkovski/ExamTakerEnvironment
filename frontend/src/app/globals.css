@@ -577,6 +577,30 @@ html {
   background-color: var(--color-shell-bg);
 }
 
+/* ── 8.4 Stage 13 — Login scope: overrides brand to a calm green so the
+   pre-auth surface is visually distinct without breaking theme tokens.
+   Active theme (shell + text) remains untouched — only --color-brand and
+   adjacent accents flip. ── */
+[data-theme-scope="login"] {
+  --color-brand: #2f8f5d;
+  --color-info: #2f8f5d;
+  --color-info-fg: #6bbf94;
+  --color-info-bg: rgba(47, 143, 93, 0.10);
+  --color-info-border: rgba(47, 143, 93, 0.28);
+}
+
+[data-theme="warm"] [data-theme-scope="login"],
+[data-theme-scope="login"][data-theme="warm"] {
+  --color-brand: #2f8f5d;
+  --color-info-fg: #156341;
+}
+
+[data-theme="light-blue"] [data-theme-scope="login"],
+[data-theme-scope="login"][data-theme="light-blue"] {
+  --color-brand: #16a36a;
+  --color-info-fg: #136247;
+}
+
 @keyframes ov-shake {
   0%,
   100% {

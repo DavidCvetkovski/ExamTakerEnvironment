@@ -1,20 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
 import ThemeToggle from '@/components/layout/ThemeToggle';
-import { Badge, cn } from '@/components/ui';
+import AccountMenu from '@/components/layout/AccountMenu';
+import { cn } from '@/components/ui';
 
 export default function GlobalHeader() {
     const pathname = usePathname();
-    const router = useRouter();
-    const { isAuthenticated, user, logout } = useAuthStore();
-
-    const handleSignOut = () => {
-        logout();           // clears state synchronously
-        router.push('/login');  // navigate immediately, don't wait for ProtectedRoute
-    };
+    const { isAuthenticated, user } = useAuthStore();
 
     if (!isAuthenticated || pathname === '/login' || pathname.startsWith('/exam/')) {
         return null;
@@ -72,23 +67,7 @@ export default function GlobalHeader() {
 
                     <div className="flex items-center gap-3">
                         <ThemeToggle />
-                        <div className="hidden sm:flex items-center gap-2">
-                            <span className="text-meta text-shell-muted-dim">{user?.email}</span>
-                            <Badge tone="neutral" size="sm">
-                                {user?.role}
-                            </Badge>
-                        </div>
-                        <button
-                            onClick={handleSignOut}
-                            className={cn(
-                                'text-meta font-medium px-2.5 py-1.5 rounded-md',
-                                'text-danger',
-                                'transition-colors duration-[var(--duration-fast)]',
-                                'hover:bg-[var(--color-danger-bg)]'
-                            )}
-                        >
-                            Sign out
-                        </button>
+                        <AccountMenu />
                     </div>
                 </div>
             </div>

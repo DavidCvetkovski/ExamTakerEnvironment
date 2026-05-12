@@ -66,11 +66,22 @@ def _classify(sessions: List[Any]) -> BlueprintStatus:
 
 
 async def derive_blueprint_status(test_definition_id: str) -> BlueprintStatus:
-    """Compute the lifecycle status of a blueprint based on its scheduled sessions."""
+    """Compute the lifecycle status of a blueprint based on its scheduled sessions.
+
+    Also persists any pending SCHEDULED→ACTIVE or ACTIVE→CLOSED transitions
+    on the underlying session rows so consumers that read raw `status` (the
+    sessions table, student card) see the same truth (Stage 18c).
+    """
     sessions = await prisma.scheduled_exam_sessions.find_many(
         where={"test_definition_id": test_definition_id}
     )
-    return _classify(sessions)
+    # Persist any pending status transitions. Import locally to avoid a cycle:
+    # scheduled_sessions_service already imports from this module.
+    from app.services.scheduled_sessions_service import ensure_scheduled_session_current
+    refreshed = []
+    for record in sessions:
+        refreshed.append(await ensure_scheduled_session_current(record))
+    return _classify(refreshed)
 
 
 async def derive_next_session_at(test_definition_id: str) -> datetime | None:

@@ -7,11 +7,11 @@ import { useLibraryStore } from '@/stores/useLibraryStore';
 import { deriveLockedQuestionIds, useBlueprintStore } from '@/stores/useBlueprintStore';
 import { api } from '@/lib/api';
 import {
-    Badge,
     Button,
     EmptyState,
     Input,
     PageHeader,
+    RowActionMenu,
     Select,
     Spinner,
     Table,
@@ -24,6 +24,9 @@ import {
     useToast,
 } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
+import { formatRelativeTime } from '@/lib/relativeTime';
+import { subjectTone } from '@/lib/subjectColor';
+import { cn } from '@/components/ui/cn';
 
 function getMetadataString(value: unknown): string | null {
     return typeof value === 'string' && value.trim() !== '' ? value : null;
@@ -32,24 +35,69 @@ function getMetadataNumber(value: unknown): number | undefined {
     return typeof value === 'number' ? value : undefined;
 }
 
-function formatRelativeTime(dateStr: string): string {
-    const date = new Date(dateStr);
-    const now = Date.now();
-    const diffMs = now - date.getTime();
-    const diffSec = Math.floor(diffMs / 1000);
-    const diffMin = Math.floor(diffSec / 60);
-    const diffHr = Math.floor(diffMin / 60);
-    const diffDay = Math.floor(diffHr / 24);
+function LockGlyph({ count }: { count: number }) {
+    return (
+        <span
+            className="inline-flex items-center text-shell-muted-dim"
+            title={`In use by ${count} blueprint${count === 1 ? '' : 's'}`}
+            aria-label={`Locked — in use by ${count} blueprint${count === 1 ? '' : 's'}`}
+        >
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <path d="M5 7V5a3 3 0 1 1 6 0v2h.5A1.5 1.5 0 0 1 13 8.5v4A1.5 1.5 0 0 1 11.5 14h-7A1.5 1.5 0 0 1 3 12.5v-4A1.5 1.5 0 0 1 4.5 7H5Zm1 0h4V5a2 2 0 1 0-4 0v2Z" />
+            </svg>
+        </span>
+    );
+}
 
-    if (diffDay > 30) {
-        return date.toLocaleDateString();
-    }
+type QType = 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY';
 
-    const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
-    if (diffDay >= 1) return rtf.format(-diffDay, 'day');
-    if (diffHr >= 1) return rtf.format(-diffHr, 'hour');
-    if (diffMin >= 1) return rtf.format(-diffMin, 'minute');
-    return 'just now';
+function TypeChip({ type }: { type: QType }) {
+    const map: Record<QType, { label: string; cls: string; title: string }> = {
+        MULTIPLE_CHOICE: {
+            label: 'SC',
+            cls: 'bg-[var(--color-info-bg)] text-[var(--color-info-fg)] border-[var(--color-info-border)]',
+            title: 'Single choice',
+        },
+        MULTIPLE_RESPONSE: {
+            label: 'MC',
+            cls: 'bg-[var(--color-subject-2-bg)] text-[var(--color-subject-2-fg)] border-[var(--color-subject-2-border)]',
+            title: 'Multiple choice',
+        },
+        ESSAY: {
+            label: 'ESS',
+            cls: 'bg-shell-input-alt text-shell-muted border-shell-border',
+            title: 'Essay',
+        },
+    };
+    const t = map[type];
+    return (
+        <span
+            title={t.title}
+            className={cn(
+                'inline-flex items-center justify-center min-w-[2.25rem] px-1.5 py-0.5 rounded-sm border text-eyebrow font-semibold tabular-nums',
+                t.cls,
+            )}
+        >
+            {t.label}
+        </span>
+    );
+}
+
+function SubjectPill({ subject }: { subject: string | null }) {
+    if (!subject) return <span className="text-shell-muted-dim italic">General</span>;
+    const tone = subjectTone(subject);
+    return (
+        <span
+            className={cn(
+                'inline-flex items-center px-2 py-0.5 rounded-full border text-meta font-medium',
+                tone.bg,
+                tone.fg,
+                tone.border,
+            )}
+        >
+            {subject}
+        </span>
+    );
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -104,6 +152,25 @@ function ItemsLibraryPageInner() {
         () => deriveLockedQuestionIds(blueprints, usageMap),
         [blueprints, usageMap],
     );
+
+    // Count blueprints (any status) referencing each LO — used for the lock-glyph tooltip.
+    const blueprintRefCount = useMemo(() => {
+        const counts = new Map<string, number>();
+        for (const bp of blueprints) {
+            const seen = new Set<string>();
+            for (const block of bp.blocks ?? []) {
+                for (const rule of block.rules ?? []) {
+                    if (rule.rule_type === 'FIXED' && rule.learning_object_id) {
+                        seen.add(rule.learning_object_id);
+                    }
+                }
+            }
+            for (const loId of seen) {
+                counts.set(loId, (counts.get(loId) ?? 0) + 1);
+            }
+        }
+        return counts;
+    }, [blueprints]);
 
     const uniqueSubjects = Array.from(
         new Set(items.map((item) => getMetadataString(item.metadata_tags?.topic)).filter((v): v is string => v !== null))
@@ -305,8 +372,14 @@ function ItemsLibraryPageInner() {
                                 <TBody>
                                     {filteredItems.map((item) => {
                                         const isLocked = lockedQuestionIds.has(item.id);
+                                        const refCount = blueprintRefCount.get(item.id) ?? 0;
+                                        const subject = getMetadataString(item.metadata_tags?.topic);
                                         return (
-                                            <TR key={item.id}>
+                                            <TR
+                                                key={item.id}
+                                                onClick={() => router.push(`/author?lo_id=${item.id}`)}
+                                                className="cursor-pointer"
+                                            >
                                                 <TD>
                                                     <div className="max-w-cell line-clamp-2 font-medium text-foreground leading-snug" title={item.latest_content_preview}>
                                                         {item.latest_content_preview || (
@@ -315,19 +388,16 @@ function ItemsLibraryPageInner() {
                                                     </div>
                                                 </TD>
                                                 <TD>
-                                                    {getMetadataString(item.metadata_tags?.topic) || (
-                                                        <span className="text-shell-muted-dim italic">General</span>
-                                                    )}
+                                                    <SubjectPill subject={subject} />
                                                 </TD>
                                                 <TD align="right" numeric className="font-medium">
                                                     {getMetadataNumber(item.metadata_tags?.points) ?? 1}
                                                 </TD>
-                                                <TD className="text-shell-muted">
-                                                    {item.latest_question_type === 'MULTIPLE_CHOICE'
-                                                        ? 'Single choice'
-                                                        : item.latest_question_type === 'MULTIPLE_RESPONSE'
-                                                        ? 'Multiple choice'
-                                                        : 'Essay'}
+                                                <TD>
+                                                    <div className="flex items-center gap-2">
+                                                        {refCount > 0 && <LockGlyph count={refCount} />}
+                                                        <TypeChip type={item.latest_question_type as QType} />
+                                                    </div>
                                                 </TD>
                                                 <TD className="text-shell-muted-dim tabular-nums">
                                                     {formatRelativeTime(item.updated_at || item.created_at)}
@@ -335,45 +405,22 @@ function ItemsLibraryPageInner() {
                                                 <TD className="text-shell-muted-dim tabular-nums">
                                                     {formatRelativeTime(item.created_at)}
                                                 </TD>
-                                                <TD align="right">
-                                                    <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                                                        {isLocked && (
-                                                            <Badge tone="info" size="sm">In Blueprint</Badge>
-                                                        )}
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={() => handleCopyId(item.id)}
-                                                            title="Copy question ID"
-                                                        >
-                                                            Copy ID
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            loading={duplicatingId === item.id}
-                                                            onClick={() => handleDuplicate(item.id)}
-                                                        >
-                                                            Duplicate
-                                                        </Button>
-                                                        {isLocked ? (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => router.push(`/author?lo_id=${item.id}`)}
-                                                            >
-                                                                View
-                                                            </Button>
-                                                        ) : (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => router.push(`/author?lo_id=${item.id}`)}
-                                                            >
-                                                                Edit →
-                                                            </Button>
-                                                        )}
-                                                    </div>
+                                                <TD align="right" onClick={(e) => e.stopPropagation()}>
+                                                    <RowActionMenu
+                                                        ariaLabel="Question actions"
+                                                        items={[
+                                                            { label: 'Copy ID', onClick: () => handleCopyId(item.id) },
+                                                            {
+                                                                label: duplicatingId === item.id ? 'Duplicating…' : 'Duplicate',
+                                                                onClick: () => handleDuplicate(item.id),
+                                                                disabled: duplicatingId === item.id,
+                                                            },
+                                                            {
+                                                                label: isLocked ? 'Inspect' : 'Edit',
+                                                                onClick: () => router.push(`/author?lo_id=${item.id}`),
+                                                            },
+                                                        ]}
+                                                    />
                                                 </TD>
                                             </TR>
                                         );

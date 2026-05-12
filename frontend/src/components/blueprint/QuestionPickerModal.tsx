@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useBlueprintStore, AvailableItem } from '@/stores/useBlueprintStore';
 import { Button, Badge } from '@/components/ui';
+import { api } from '@/lib/api';
+import { subjectTone } from '@/lib/subjectColor';
+import ReadOnlyTipTap from '@/components/editor/ReadOnlyTipTap';
 
 interface QuestionPickerModalProps {
     isOpen: boolean;
@@ -41,16 +44,58 @@ function typeTone(qt: string): 'info' | 'accent' | 'neutral' {
     return 'neutral';
 }
 
+type VersionResponse = {
+    id: string;
+    learning_object_id: string;
+    version_number: number;
+    question_type: string;
+    content: Record<string, unknown> | null;
+    options: { question_type: string; choices?: Array<{ id: string; text: string; is_correct: boolean }> } | null;
+    metadata_tags: Record<string, unknown> | null;
+};
+
 function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestionPickerModalProps) {
     const { availableItems, fetchAvailableItems, isLoading } = useBlueprintStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [typeFilter, setTypeFilter] = useState<string>('all');
     const [subjectFilter, setSubjectFilter] = useState<string>('all');
     const [inspectedItem, setInspectedItem] = useState<AvailableItem | null>(null);
+    const [inspectedVersion, setInspectedVersion] = useState<VersionResponse | null>(null);
+    const [versionLoading, setVersionLoading] = useState(false);
+    const [versionError, setVersionError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchAvailableItems();
     }, [fetchAvailableItems]);
+
+    // Fetch full latest version when an item is inspected (Stage 6).
+    useEffect(() => {
+        if (!inspectedItem) {
+            setInspectedVersion(null);
+            setVersionError(null);
+            return;
+        }
+        let cancelled = false;
+        setVersionLoading(true);
+        setVersionError(null);
+        api.get<VersionResponse[]>(`learning-objects/${inspectedItem.id}/versions`)
+            .then((res) => {
+                if (cancelled) return;
+                const versions = res.data ?? [];
+                const latest = versions.reduce<VersionResponse | null>(
+                    (acc, v) => (acc === null || v.version_number > acc.version_number ? v : acc),
+                    null,
+                );
+                setInspectedVersion(latest);
+            })
+            .catch(() => {
+                if (!cancelled) setVersionError('Failed to load question preview.');
+            })
+            .finally(() => {
+                if (!cancelled) setVersionLoading(false);
+            });
+        return () => { cancelled = true; };
+    }, [inspectedItem]);
 
     const handleClose = () => {
         setInspectedItem(null);
@@ -77,8 +122,8 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-5">
-            <div className="flex w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-shell-border bg-shell-surface shadow-elevated"
-                style={{ maxHeight: '80vh' }}>
+            <div className="flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-shell-border bg-shell-surface shadow-elevated"
+                style={{ maxHeight: '85vh' }}>
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-shell-border bg-shell-surface/80 px-6 py-5">
                     <h2 className="text-h2 font-semibold text-foreground">Select Question</h2>
@@ -130,14 +175,14 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto overflow-x-hidden p-3">
                     {isLoading ? (
-                        <div className="px-6 py-10 text-center text-shell-muted-dim text-sm">Loading questions...</div>
+                        <div className="px-6 py-10 text-center text-shell-muted-dim text-sm">Loading questions…</div>
                     ) : inspectedItem ? (
                         <div className="p-6 text-foreground">
                             <div className="mb-6 flex items-start justify-between">
                                 <button
                                     type="button"
                                     onClick={() => setInspectedItem(null)}
-                                    className="text-sm text-shell-muted hover:text-foreground transition-colors"
+                                    className="text-sm text-shell-muted hover:text-foreground transition-colors focus-ring rounded"
                                 >
                                     ← Back to list
                                 </button>
@@ -146,8 +191,9 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                                     size="md"
                                     disabled={excludeIds.includes(inspectedItem.id)}
                                     onClick={() => {
+                                        const item = inspectedItem;
                                         setInspectedItem(null);
-                                        onSelect(inspectedItem);
+                                        onSelect(item);
                                     }}
                                 >
                                     {excludeIds.includes(inspectedItem.id) ? 'Already Added' : 'Select This Question'}
@@ -156,26 +202,53 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
 
                             <div className="rounded-2xl border border-shell-border bg-shell-bg p-8 space-y-6">
                                 <div>
-                                    <p className="mb-2 text-xs font-bold uppercase tracking-widest text-shell-muted-dim">Content</p>
-                                    <p className="text-base leading-relaxed text-foreground break-words whitespace-pre-wrap">
-                                        {inspectedItem.latest_content_preview}
-                                    </p>
+                                    <p className="mb-2 text-eyebrow font-semibold uppercase tracking-widest text-shell-muted-dim">Content</p>
+                                    {versionLoading ? (
+                                        <p className="text-meta text-shell-muted-dim">Loading…</p>
+                                    ) : versionError ? (
+                                        <p className="text-meta text-[var(--color-danger-fg)]">{versionError}</p>
+                                    ) : (
+                                        <ReadOnlyTipTap content={inspectedVersion?.content ?? null} />
+                                    )}
                                 </div>
+
+                                {inspectedVersion?.options && 'choices' in inspectedVersion.options && Array.isArray(inspectedVersion.options.choices) && (
+                                    <div>
+                                        <p className="mb-2 text-eyebrow font-semibold uppercase tracking-widest text-shell-muted-dim">Options</p>
+                                        <ul className="space-y-2">
+                                            {inspectedVersion.options.choices.map((choice) => (
+                                                <li
+                                                    key={choice.id}
+                                                    className={[
+                                                        'flex items-start gap-2 rounded-lg border px-3 py-2 text-meta',
+                                                        choice.is_correct
+                                                            ? 'border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-fg)]'
+                                                            : 'border-shell-border bg-shell-input text-foreground',
+                                                    ].join(' ')}
+                                                >
+                                                    <span className="font-mono text-shell-muted-dim">{choice.is_correct ? '✓' : '·'}</span>
+                                                    <span className="flex-1">{choice.text}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
                                 <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
                                     <div>
-                                        <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-shell-muted-dim">Type</p>
+                                        <p className="mb-1.5 text-eyebrow font-semibold uppercase tracking-widest text-shell-muted-dim">Type</p>
                                         <Badge tone={typeTone(inspectedItem.latest_question_type)} size="sm">
                                             {inspectedItem.latest_question_type.replace('_', ' ')}
                                         </Badge>
                                     </div>
                                     <div>
-                                        <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-shell-muted-dim">Points</p>
+                                        <p className="mb-1.5 text-eyebrow font-semibold uppercase tracking-widest text-shell-muted-dim">Points</p>
                                         <span className="text-foreground font-semibold">{inspectedItem.metadata_tags?.points ?? 1}</span>
                                     </div>
                                     {inspectedItem.metadata_tags?.topic ? (
                                         <div>
-                                            <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-shell-muted-dim">Topic</p>
-                                            <span className="text-foreground">{inspectedItem.metadata_tags.topic as string}</span>
+                                            <p className="mb-1.5 text-eyebrow font-semibold uppercase tracking-widest text-shell-muted-dim">Subject</p>
+                                            <SubjectDot subject={inspectedItem.metadata_tags.topic as string} />
                                         </div>
                                     ) : null}
                                 </div>
@@ -190,6 +263,7 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                         <div className="grid gap-2.5">
                             {filteredItems.map((item) => {
                                 const excluded = excludeIds.includes(item.id);
+                                const topic = item.metadata_tags?.topic as string | undefined;
                                 return (
                                     <div
                                         key={item.id}
@@ -205,8 +279,8 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                                             <p className="line-clamp-3 text-sm font-medium text-foreground leading-snug">
                                                 {item.latest_content_preview}
                                             </p>
-                                            <div className="flex gap-3 text-xs text-shell-muted-dim">
-                                                {item.metadata_tags?.topic && <span>{item.metadata_tags.topic}</span>}
+                                            <div className="flex items-center gap-3 text-xs text-shell-muted-dim">
+                                                {topic && <SubjectDot subject={topic} />}
                                                 <span>{item.metadata_tags?.points ?? 1} pt(s)</span>
                                             </div>
                                         </div>
@@ -249,5 +323,15 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                 </div>
             </div>
         </div>
+    );
+}
+
+function SubjectDot({ subject }: { subject: string }) {
+    const tone = subjectTone(subject);
+    return (
+        <span className="inline-flex items-center gap-1.5">
+            <span className={`inline-block h-2 w-2 rounded-full ${tone.dot}`} aria-hidden="true" />
+            <span>{subject}</span>
+        </span>
     );
 }

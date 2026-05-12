@@ -73,6 +73,32 @@ async def derive_blueprint_status(test_definition_id: str) -> BlueprintStatus:
     return _classify(sessions)
 
 
+async def derive_next_session_at(test_definition_id: str) -> datetime | None:
+    """Earliest upcoming session start (UTC) for the blueprint, or None.
+
+    "Upcoming" means a session whose effective status is SCHEDULED — future
+    start, not yet active, not canceled. Used by the blueprint card subline
+    so users can see *when* the next instance fires without opening the
+    sessions page.
+    """
+    sessions = await prisma.scheduled_exam_sessions.find_many(
+        where={"test_definition_id": test_definition_id}
+    )
+    if not sessions:
+        return None
+
+    now = datetime.now(timezone.utc)
+    upcoming: List[datetime] = []
+    for session in sessions:
+        effective = _effective_session_status(session, now)
+        if effective == CourseSessionStatus.SCHEDULED.value:
+            upcoming.append(_ensure_utc(session.starts_at))
+        elif effective == CourseSessionStatus.ACTIVE.value:
+            # If a session is live right now, "next session" is effectively now.
+            upcoming.append(_ensure_utc(session.starts_at))
+    return min(upcoming) if upcoming else None
+
+
 def can_edit_blueprint(status: BlueprintStatus) -> bool:
     """Whether a blueprint in this status is mutable (title, blocks, scoring)."""
     return status in (BlueprintStatus.NEW, BlueprintStatus.SCHEDULED)

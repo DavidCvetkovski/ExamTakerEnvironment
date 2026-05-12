@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ScheduledSession } from '@/stores/useSessionManagerStore';
+import { useSessionManagerStore } from '@/stores/useSessionManagerStore';
 import { Button, Badge, EmptyState } from '@/components/ui';
 import { useCountdown } from '@/hooks/useCountdown';
 import { formatScheduled, formatAbsolute, formatRelativeTime } from '@/lib/relativeTime';
@@ -153,18 +154,40 @@ export default function ScheduledSessionsTable({
     onManageEnrollments,
 }: ScheduledSessionsTableProps) {
     const [showCompleted, setShowCompleted] = useState(false);
+    const fetchScheduledSessions = useSessionManagerStore((s) => s.fetchScheduledSessions);
+
+    // Stage 18c — keep client buckets honest. Backend already auto-syncs status
+    // on the list endpoint, but rows in memory go stale until the next refetch.
+    // (a) re-classify client-side so a SCHEDULED row whose starts_at has passed
+    //     renders in Ongoing immediately; (b) poll every 30s so the DB row
+    //     itself gets bumped via the next list call.
+    const [tick, setTick] = useState(0);
+    useEffect(() => {
+        const id = window.setInterval(() => setTick((n) => n + 1), 30_000);
+        return () => window.clearInterval(id);
+    }, []);
+    useEffect(() => {
+        if (tick === 0) return;
+        void fetchScheduledSessions();
+    }, [tick, fetchScheduledSessions]);
+
     const now = new Date();
 
-    const ongoing = sessions.filter((s) => s.status === 'ACTIVE');
-    const scheduled = sessions.filter(
-        (s) => s.status === 'SCHEDULED' && new Date(s.starts_at) > now
-    );
-    const completed = sessions.filter(
-        (s) =>
-            s.status === 'CLOSED' ||
-            s.status === 'CANCELED' ||
-            (s.status === 'SCHEDULED' && new Date(s.ends_at) <= now)
-    );
+    const effectiveStatus = (s: ScheduledSession): 'ACTIVE' | 'SCHEDULED' | 'CLOSED' | 'CANCELED' => {
+        if (s.status === 'CANCELED') return 'CANCELED';
+        const start = new Date(s.starts_at);
+        const end = new Date(s.ends_at);
+        if (now >= end) return 'CLOSED';
+        if (now >= start) return 'ACTIVE';
+        return s.status === 'ACTIVE' ? 'ACTIVE' : 'SCHEDULED';
+    };
+
+    const ongoing = sessions.filter((s) => effectiveStatus(s) === 'ACTIVE');
+    const scheduled = sessions.filter((s) => effectiveStatus(s) === 'SCHEDULED');
+    const completed = sessions.filter((s) => {
+        const e = effectiveStatus(s);
+        return e === 'CLOSED' || e === 'CANCELED';
+    });
 
     if (sessions.length === 0) {
         return (

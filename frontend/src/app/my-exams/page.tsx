@@ -17,6 +17,10 @@ export default function MyExamsPage() {
 
     useEffect(() => {
         fetchSessions();
+        // Stage 18c — poll every 30s so a session about to start flips to
+        // "Joinable now" without requiring a manual refresh.
+        const id = window.setInterval(() => fetchSessions(), 30_000);
+        return () => window.clearInterval(id);
     }, [fetchSessions]);
 
     const currentSessions = sessions.filter((s) => s.can_join);

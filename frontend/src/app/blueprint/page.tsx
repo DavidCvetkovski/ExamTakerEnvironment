@@ -11,6 +11,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import QuestionPickerModal from '@/components/blueprint/QuestionPickerModal';
 import BlueprintSaveIndicator from '@/components/blueprint/BlueprintSaveIndicator';
 import BlueprintStatusBadge from '@/components/blueprint/BlueprintStatusBadge';
+import BlueprintInspector from '@/components/blueprint/BlueprintInspector';
 import { Badge, Button, Input, Select, Spinner, cn, useToast, useConfirm, StatusDot } from '@/components/ui';
 import { formatRelativeTime, formatAbsolute } from '@/lib/relativeTime';
 
@@ -532,6 +533,39 @@ function BlueprintPageInner() {
         );
     }
 
+    // Stage 3 — Inspect view: render the read-only inspector when ?inspect=true
+    // or when the blueprint is locked (ONGOING / PASSED). Hides the entire editor
+    // tree; only Back + Practice remain reachable from the page.
+    const currentStatus: BlueprintStatus =
+        currentBlueprint?.id ? (usageMap[currentBlueprint.id]?.status ?? 'NEW') : 'NEW';
+    const lockedByStatus = currentStatus === 'ONGOING' || currentStatus === 'PASSED';
+
+    if (currentBlueprint && (inspectMode || lockedByStatus)) {
+        return (
+            <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
+                <div className="text-foreground">
+                    {ConfirmDialog}
+                    <div className="mx-auto max-w-3xl px-4 sm:px-6 pt-8">
+                        <button
+                            onClick={handleBackToList}
+                            className="mb-4 inline-flex items-center gap-2 text-meta font-medium text-shell-muted hover:text-foreground transition-colors"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                            All blueprints
+                        </button>
+                    </div>
+                    <BlueprintInspector
+                        blueprint={currentBlueprint as TestDefinition}
+                        status={currentStatus}
+                        availableItems={availableItems}
+                    />
+                </div>
+            </ProtectedRoute>
+        );
+    }
+
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
             <div className="max-w-page mx-auto px-4 py-12 text-foreground sm:px-6 lg:px-8">
@@ -539,12 +573,23 @@ function BlueprintPageInner() {
                 <div className="flex gap-8">
                     {/* Main Editor */}
                     <div className="min-w-0 flex-1">
-                        <button
-                            onClick={handleBackToList}
-                            className="group flex items-center text-shell-muted-dim hover:text-foreground mb-8 transition-colors"
-                        >
-                            <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> All Blueprints
-                        </button>
+                        <div className="mb-8 flex items-center gap-3">
+                            <button
+                                onClick={handleBackToList}
+                                className="group flex items-center text-shell-muted-dim hover:text-foreground transition-colors"
+                            >
+                                <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span> All Blueprints
+                            </button>
+                            {currentBlueprint?.id && (
+                                <button
+                                    type="button"
+                                    onClick={() => router.push(`/blueprint?id=${currentBlueprint.id}&inspect=true`)}
+                                    className="ml-auto text-meta text-shell-muted hover:text-foreground transition-colors focus-ring rounded"
+                                >
+                                    Inspect →
+                                </button>
+                            )}
+                        </div>
 
                         <div className="min-h-blueprint-canvas overflow-hidden rounded-card-lg border border-shell-border bg-shell-surface/80 shadow-2xl backdrop-blur-xl">
                             {inspectMode && (

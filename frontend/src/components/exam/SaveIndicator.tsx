@@ -1,23 +1,40 @@
 'use client';
 
 import { useExamStore, SaveStatus } from '@/stores/useExamStore';
+import { Spinner } from '@/components/ui';
 
 /**
  * Small persistent badge showing heartbeat save status.
  * - idle: hidden
- * - saving: "Saving..." with animated dot
- * - saved: "Saved ✓" with green checkmark (auto-fades after 2s)
- * - error: "Save failed" with red indicator
+ * - saving: "Saving…" with spinner
+ * - saved: "Saved" with check icon (auto-fades after 2s)
+ * - error: "Save failed — retrying…" with cross icon
  */
+function CheckIcon() {
+    return (
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.5L6.5 12L13 5" />
+        </svg>
+    );
+}
+
+function XIcon() {
+    return (
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4l8 8M12 4l-8 8" />
+        </svg>
+    );
+}
+
 export default function SaveIndicator() {
     const saveStatus = useExamStore((s) => s.saveStatus);
     if (saveStatus === 'idle') return null;
 
-    const config: Record<SaveStatus, { text: string; color: string; icon: string }> = {
-        idle: { text: '', color: '', icon: '' },
-        saving: { text: 'Saving...', color: 'text-shell-muted', icon: '⟳' },
-        saved: { text: 'Saved', color: 'text-emerald-400', icon: '✓' },
-        error: { text: 'Save failed — retrying...', color: 'text-red-400', icon: '✗' },
+    const config: Record<SaveStatus, { text: string; color: string; icon: React.ReactNode }> = {
+        idle: { text: '', color: '', icon: null },
+        saving: { text: 'Saving…', color: 'text-shell-muted', icon: <Spinner size="xs" tone="current" /> },
+        saved: { text: 'Saved', color: 'text-[var(--color-success-fg)]', icon: <CheckIcon /> },
+        error: { text: 'Save failed — retrying…', color: 'text-[var(--color-danger-fg)]', icon: <XIcon /> },
     };
 
     const { text, color, icon } = config[saveStatus];
@@ -26,7 +43,7 @@ export default function SaveIndicator() {
         <div
             className={`flex items-center gap-1.5 text-xs font-medium transition-opacity duration-300 ${color} opacity-100`}
         >
-            <span className={saveStatus === 'saving' ? 'animate-spin' : ''}>{icon}</span>
+            {icon}
             <span>{text}</span>
         </div>
     );

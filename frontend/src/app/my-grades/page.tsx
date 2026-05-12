@@ -6,6 +6,7 @@ import Link from 'next/link';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useResultsStore } from '@/stores/useResultsStore';
 import { Badge, Card, EmptyState, PageHeader, SectionHeader, Spinner } from '@/components/ui';
+import { formatRelativeTime } from '@/lib/relativeTime';
 
 export default function MyGradesPage() {
     const { myResults, myResultsLoading, fetchMyResults } = useResultsStore();
@@ -55,7 +56,7 @@ export default function MyGradesPage() {
                                                         </p>
                                                         {result.submitted_at ? (
                                                             <p className="text-meta text-shell-muted-dim mt-0.5">
-                                                                Submitted {new Date(result.submitted_at).toLocaleDateString()}
+                                                                Submitted {formatRelativeTime(result.submitted_at)}
                                                             </p>
                                                         ) : null}
                                                     </div>
@@ -86,7 +87,7 @@ export default function MyGradesPage() {
                                                             </p>
                                                             {result.submitted_at ? (
                                                                 <p className="text-meta text-shell-muted-dim mt-0.5">
-                                                                    Submitted {new Date(result.submitted_at).toLocaleDateString()}
+                                                                    Submitted {formatRelativeTime(result.submitted_at)}
                                                                 </p>
                                                             ) : null}
                                                         </div>

@@ -140,7 +140,7 @@ function BlueprintPageInner() {
         setDuplicatingId(bp.id);
         try {
             await duplicateBlueprint(bp.id);
-            toast({ tone: 'success', title: 'Duplicate created — you can edit it now.' });
+            toast({ tone: 'success', title: 'Blueprint duplicated', description: 'You can edit the new copy now.' });
         } catch (err) {
             toast({ tone: 'danger', title: 'Duplicate failed', description: err instanceof Error ? err.message : 'Try again.' });
         } finally {
@@ -880,7 +880,7 @@ function BlueprintPageInner() {
                                             loading={isStarting}
                                             title={isDirty ? 'Save your changes before practicing' : undefined}
                                         >
-                                            {isStarting ? 'Loading...' : 'Practice Blueprint'}
+                                            {isStarting ? 'Loading…' : 'Practice Blueprint'}
                                         </Button>
                                     )}
                                     <Button

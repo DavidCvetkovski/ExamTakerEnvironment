@@ -7,6 +7,7 @@ import { useResultsStore, QuestionResultDetail } from '@/stores/useResultsStore'
 import { useAuthStore } from '@/stores/useAuthStore';
 import { getExamChoiceContent, toExamContentHtml, toExamContentText } from '@/lib/examContent';
 import { BackButton, Spinner } from '@/components/ui';
+import { formatAbsolute } from '@/lib/relativeTime';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -258,9 +259,7 @@ export default function MyResultDetailPage() {
                             </h1>
                             {result.submitted_at && (
                                 <p className="mt-2 text-sm text-shell-muted-dim">
-                                    Submitted on {new Date(result.submitted_at).toLocaleDateString('en-GB', {
-                                        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-                                    })}
+                                    Submitted on {formatAbsolute(result.submitted_at)}
                                 </p>
                             )}
 

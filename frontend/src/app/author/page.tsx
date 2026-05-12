@@ -87,7 +87,7 @@ function AuthorPageInner() {
     const handleCopyId = () => {
         if (!learningObjectId) return;
         navigator.clipboard.writeText(learningObjectId).then(() => {
-            toast({ tone: 'success', title: 'ID copied to clipboard' });
+            toast({ tone: 'success', title: 'ID copied' });
         });
     };
 

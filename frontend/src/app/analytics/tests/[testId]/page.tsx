@@ -11,6 +11,7 @@ import HistogramChart from '@/components/analytics/HistogramChart';
 import StatCard from '@/components/analytics/StatCard';
 import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 import { useBlueprintStore } from '@/stores/useBlueprintStore';
+import { formatRelativeTime } from '@/lib/relativeTime';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { Button, Spinner } from '@/components/ui';
 
@@ -109,7 +110,7 @@ export default function TestAnalyticsDashboardPage() {
                                 <p className="mt-2 text-sm text-shell-muted">
                                     {bundle
                                         ? `${bundle.test.total_sessions} published sessions · computed ${
-                                            bundle.test.computed_at ? new Date(bundle.test.computed_at).toLocaleString() : 'recently'
+                                            bundle.test.computed_at ? formatRelativeTime(bundle.test.computed_at) : 'recently'
                                         }`
                                         : 'Loading analytics snapshot...'}
                                 </p>

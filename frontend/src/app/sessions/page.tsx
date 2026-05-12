@@ -4,11 +4,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import CancelSessionModal from '@/components/sessions/CancelSessionModal';
 import CourseEnrollmentDrawer from '@/components/sessions/CourseEnrollmentDrawer';
 import ScheduledSessionsTable from '@/components/sessions/ScheduledSessionsTable';
 import SessionCreateForm from '@/components/sessions/SessionCreateForm';
-import { PageHeader, useToast } from '@/components/ui';
+import { PageHeader, useConfirm, useToast } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useBlueprintStore } from '@/stores/useBlueprintStore';
@@ -44,7 +43,19 @@ export default function SessionsPage() {
     } = useSessionManagerStore();
 
     const [drawerCourseId, setDrawerCourseId] = useState<string | null>(null);
-    const [cancelTarget, setCancelTarget] = useState<string | null>(null);
+    const { confirm, ConfirmDialog } = useConfirm();
+
+    const handleRequestCancel = async (sessionId: string) => {
+        const ok = await confirm({
+            title: 'Cancel this session?',
+            message: 'This will prevent students from joining. Already active attempts are unaffected. This action cannot be undone.',
+            confirmLabel: 'Yes, cancel',
+            tone: 'danger',
+        });
+        if (!ok) return;
+        await cancelScheduledSession(sessionId);
+        toast({ tone: 'success', title: 'Session canceled' });
+    };
 
     useEffect(() => {
         if (authLoading || !isAuthenticated || !user) {
@@ -98,7 +109,7 @@ export default function SessionsPage() {
                     <ScheduledSessionsTable
                         sessions={scheduledSessions}
                         isBusy={sessionsLoading}
-                        onRequestCancel={(id) => setCancelTarget(id)}
+                        onRequestCancel={handleRequestCancel}
                         onManageEnrollments={async (courseId) => {
                             setDrawerCourseId(courseId);
                             await fetchEnrollments(courseId);
@@ -121,16 +132,7 @@ export default function SessionsPage() {
                     onRemoveEnrollment={removeEnrollment}
                 />
 
-                <CancelSessionModal
-                    sessionId={cancelTarget}
-                    onConfirm={async (id) => {
-                        await cancelScheduledSession(id);
-                        setCancelTarget(null);
-                        toast({ tone: 'success', title: 'Session cancelled' });
-                    }}
-                    onClose={() => setCancelTarget(null)}
-                    isBusy={sessionsLoading}
-                />
+                {ConfirmDialog}
             </PageShell>
         </ProtectedRoute>
     );

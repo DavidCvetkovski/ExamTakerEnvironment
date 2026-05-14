@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useResultsStore, QuestionResultDetail } from '@/stores/useResultsStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { getExamChoiceContent, toExamContentHtml, toExamContentText } from '@/lib/examContent';
-import { BackButton, Spinner } from '@/components/ui';
+import { BackButton, Spinner, CheckIcon, XIcon } from '@/components/ui';
 import { formatAbsolute } from '@/lib/relativeTime';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -148,7 +148,7 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
             <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${accentColor}`}>
-                        {isPending ? '?' : isCorrect ? '✓' : isEssay ? '#' : '✗'}
+                        {isPending ? '?' : isCorrect ? <CheckIcon size={16} /> : isEssay ? '#' : <XIcon size={16} />}
                     </div>
                     <div>
                         <p className="font-bold text-foreground text-sm">{getQuestionHeading(detail.question_content, index)}</p>
@@ -293,12 +293,13 @@ export default function MyResultDetailPage() {
                             {/* Pass/fail badge */}
                             {result.passed !== null && (
                                 <div className="mt-4">
-                                    <span className={`inline-block px-4 py-1.5 rounded-full text-sm font-bold ${
+                                    <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold ${
                                         result.passed
                                             ? 'bg-[var(--color-success-bg)] text-[var(--color-success-fg)] border border-[var(--color-success-border)]'
                                             : 'bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] border border-[var(--color-danger-border)]'
                                     }`}>
-                                        {result.passed ? '✓ Passed' : '✗ Did not pass'}
+                                        {result.passed ? <CheckIcon size={14} /> : <XIcon size={14} />}
+                                        {result.passed ? 'Passed' : 'Did not pass'}
                                     </span>
                                 </div>
                             )}

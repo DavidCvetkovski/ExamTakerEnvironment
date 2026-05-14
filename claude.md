@@ -145,7 +145,7 @@ A single hierarchy. Do not introduce magic-number z-indexes (`z-[9999]`, `z-[100
   - `narrow` = `max-w-4xl` — forms, single-column reading (author, exam-take, home dashboard).
   - `standard` = `max-w-5xl` — drill-down detail pages (grading session, my-results).
   - `wide` = `max-w-[1400px]` — data tables and grids (items, sessions, grading list, blueprints, analytics index).
-- **Documented exceptions:** `/login` (centered hero) and `/exam/[id]` (full-bleed focus mode) bypass `PageShell` deliberately. New exceptions require justification in the PR.
+- **Documented exceptions:** `/login` (centered hero) and `/exam/[id]` (full-bleed focus mode) bypass `PageShell` deliberately. `GlobalHeader` and the `/analytics/tests/[testId]` full-bleed sticky header set their own max-width to align with page content (`max-w-[1400px]` / `max-w-6xl` respectively) — they are not pages, so they cannot use `PageShell`. New exceptions require justification in the PR.
 - **Padding inside PageShell:** `px-4 sm:px-6 lg:px-8 py-8`. Compact mode `py-6` allowed for detail pages.
 - **Component spacing:** prefer `gap-` over `space-x-`/`space-y-` for flex/grid children. Vertical rhythm in stacks: `space-y-6` for major sections, `space-y-4` for grouped controls, `space-y-3` for tight groups.
 

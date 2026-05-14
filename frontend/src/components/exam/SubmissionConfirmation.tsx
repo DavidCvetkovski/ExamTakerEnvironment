@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { formatAbsolute } from '@/lib/relativeTime';
+import { CheckIcon } from '@/components/ui';
 
 interface SubmissionConfirmationProps {
     submittedAt: string | null;
@@ -84,7 +85,7 @@ function PracticeCompletionScreen({ returnPath, submittedAt }: { returnPath: str
                         'Identify knowledge gaps before the real exam',
                     ].map((item) => (
                         <div key={item} className="flex items-start gap-2 text-sm text-foreground">
-                            <span className="text-brand shrink-0 mt-0.5">✓</span>
+                            <span className="text-brand shrink-0 mt-0.5"><CheckIcon size={14} /></span>
                             <span>{item}</span>
                         </div>
                     ))}

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useBlueprintStore, AvailableItem } from '@/stores/useBlueprintStore';
-import { Button, Badge } from '@/components/ui';
+import { Button, Badge, CheckIcon } from '@/components/ui';
 import { api } from '@/lib/api';
 import { subjectTone } from '@/lib/subjectColor';
 import ReadOnlyTipTap from '@/components/editor/ReadOnlyTipTap';
@@ -226,7 +226,7 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                                                             : 'border-shell-border bg-shell-input text-foreground',
                                                     ].join(' ')}
                                                 >
-                                                    <span className="font-mono text-shell-muted-dim">{choice.is_correct ? '✓' : '·'}</span>
+                                                    <span className="inline-flex items-center justify-center w-4 font-mono text-shell-muted-dim">{choice.is_correct ? <CheckIcon size={12} /> : '·'}</span>
                                                     <span className="flex-1">{choice.text}</span>
                                                 </li>
                                             ))}

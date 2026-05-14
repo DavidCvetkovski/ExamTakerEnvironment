@@ -111,7 +111,7 @@ export default function TestAnalyticsDashboardPage() {
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
             <div className="min-h-full bg-shell-bg text-foreground">
                 <div className="border-b border-shell-border bg-shell-surface px-6 py-5">
-                    <div className="mx-auto max-w-7xl">
+                    <div className="mx-auto max-w-6xl">
                         <BackButton
                             onClick={() => {
                                 setLastTestId(null);
@@ -155,7 +155,7 @@ export default function TestAnalyticsDashboardPage() {
                     </div>
                 </div>
 
-                <div className="mx-auto max-w-7xl px-6 py-6">
+                <div className="mx-auto max-w-6xl px-6 py-6">
                     {error ? (
                         <div className="mb-6 flex items-start justify-between gap-4 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-danger">
                             <span>{error}</span>

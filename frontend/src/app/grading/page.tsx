@@ -21,6 +21,7 @@ import {
     THead,
     TR,
     cn,
+    XIcon,
 } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
 import { formatAbsolute, formatRelativeTime } from '@/lib/relativeTime';
@@ -169,7 +170,7 @@ export default function GradingDashboard() {
                 {error && (
                     <div className="mb-6 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] px-4 py-3 flex justify-between items-start text-meta">
                         <span>{error}</span>
-                        <button onClick={clearError} className="ml-4 opacity-70 hover:opacity-100">✕</button>
+                        <button onClick={clearError} aria-label="Dismiss" className="ml-4 opacity-70 hover:opacity-100"><XIcon size={14} /></button>
                     </div>
                 )}
 

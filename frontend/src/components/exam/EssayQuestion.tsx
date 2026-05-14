@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useExamStore, ExamItem } from '@/stores/useExamStore';
+import { AlertIcon } from '@/components/ui';
 
 interface EssayQuestionProps {
     item: ExamItem;
@@ -80,8 +81,9 @@ export default function EssayQuestion({ item }: EssayQuestionProps) {
                     {maxWords ? ` / ${maxWords} max` : ''}
                 </span>
                 {maxWords && wordCount > maxWords && (
-                    <span className="text-amber-400">
-                        ⚠ Over word limit
+                    <span className="inline-flex items-center gap-1 text-[var(--color-warning-fg)]">
+                        <AlertIcon size={12} />
+                        Over word limit
                     </span>
                 )}
             </div>

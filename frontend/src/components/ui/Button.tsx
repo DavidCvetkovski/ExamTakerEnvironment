@@ -2,6 +2,7 @@
 
 import { ButtonHTMLAttributes, forwardRef, ReactNode } from 'react';
 import { cn } from './cn';
+import Spinner from './Spinner';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'destructive' | 'success' | 'warning';
 type Size = 'sm' | 'md' | 'lg';
@@ -81,10 +82,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
             {...rest}
         >
             {loading ? (
-                <span
-                    aria-hidden
-                    className="inline-block w-3.5 h-3.5 rounded-full border-[1.5px] border-current border-t-transparent animate-spin"
-                />
+                <Spinner size="xs" tone="current" />
             ) : leadingIcon ? (
                 <span className="shrink-0 inline-flex items-center justify-center">{leadingIcon}</span>
             ) : null}

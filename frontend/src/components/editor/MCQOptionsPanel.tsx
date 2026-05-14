@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuthoringStore } from '@/stores/useAuthoringStore';
+import { XIcon } from '@/components/ui';
 import './MCQOptionsPanel.css';
 
 interface MCQOption {
@@ -64,8 +65,8 @@ export default function MCQOptionsPanel() {
                                 : (opt.is_correct ? '☑' : '☐')}
                         </span>
                     </label>
-                    <button className="remove-btn" onClick={() => removeOption(opt.id)} title="Remove">
-                        ✕
+                    <button className="remove-btn" onClick={() => removeOption(opt.id)} title="Remove" aria-label="Remove option">
+                        <XIcon size={14} />
                     </button>
                 </div>
             ))}

@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { BackButton, Button, Badge, Spinner, useToast, useConfirm } from '@/components/ui';
+import { BackButton, Button, Badge, Spinner, useToast, useConfirm, CheckIcon, XIcon } from '@/components/ui';
+import PageShell from '@/components/layout/PageShell';
 import { useImportStore, ParseError } from '@/stores/useImportStore';
 import FormatGuideModal from '@/components/import/FormatGuideModal';
 
@@ -127,9 +128,8 @@ function ImportPageInner() {
     const isCommitting = commitStatus === 'running';
 
     return (
-        <div className="min-h-full bg-shell-bg">
+        <PageShell width="wide">
             {ConfirmDialog}
-            <div className="max-w-7xl mx-auto px-6 py-8">
                 {/* Back button — canonical top-left position */}
                 <BackButton onClick={() => handleNavAway(backDest)} label={backLabel} />
 
@@ -231,10 +231,9 @@ function ImportPageInner() {
                         />
                     </div>
                 </div>
-            </div>
 
             <FormatGuideModal isOpen={showGuide} onClose={() => setShowGuide(false)} />
-        </div>
+        </PageShell>
     );
 }
 
@@ -279,10 +278,11 @@ function ResultPanel({ previewResult, previewLoading, previewError, onJumpToLine
     return (
         <div className="space-y-4">
             <div className={`rounded-2xl border p-4 ${can_commit ? 'border-[var(--color-success-border)] bg-[var(--color-success-bg)]' : 'border-[var(--color-danger-border)] bg-[var(--color-danger-bg)]'}`}>
-                <p className={`font-semibold text-sm ${can_commit ? 'text-[var(--color-success-fg)]' : 'text-[var(--color-danger-fg)]'}`}>
+                <p className={`flex items-center gap-1.5 font-semibold text-sm ${can_commit ? 'text-[var(--color-success-fg)]' : 'text-[var(--color-danger-fg)]'}`}>
+                    {can_commit ? <CheckIcon size={14} /> : <XIcon size={14} />}
                     {can_commit
-                        ? `✓ ${question_count} question${question_count !== 1 ? 's' : ''} parsed across ${blocks.length} block${blocks.length !== 1 ? 's' : ''}`
-                        : `✗ ${errors.length} error${errors.length !== 1 ? 's' : ''} — fix before importing`
+                        ? `${question_count} question${question_count !== 1 ? 's' : ''} parsed across ${blocks.length} block${blocks.length !== 1 ? 's' : ''}`
+                        : `${errors.length} error${errors.length !== 1 ? 's' : ''} — fix before importing`
                     }
                 </p>
                 {has_blueprint_header && blueprint_title && (

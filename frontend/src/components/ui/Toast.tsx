@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useToastStore, ToastItem, ToastTone } from './useToast';
+import { CheckIcon, XIcon } from './icons';
 
 const TONE_STYLES: Record<ToastTone, string> = {
     success: 'border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-fg)]',
@@ -11,11 +12,11 @@ const TONE_STYLES: Record<ToastTone, string> = {
     danger: 'border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)]',
 };
 
-const TONE_ICON: Record<ToastTone, string> = {
-    success: '✓',
+const TONE_ICON: Record<ToastTone, ReactNode> = {
+    success: <CheckIcon size={12} />,
     info: 'i',
     warning: '!',
-    danger: '✕',
+    danger: <XIcon size={12} />,
 };
 
 function Toast({ toast }: { toast: ToastItem }) {
@@ -46,9 +47,9 @@ function Toast({ toast }: { toast: ToastItem }) {
                 type="button"
                 aria-label="Dismiss"
                 onClick={() => dismiss(toast.id)}
-                className="flex-shrink-0 mt-0.5 opacity-60 hover:opacity-100 transition-opacity text-sm leading-none"
+                className="flex-shrink-0 mt-0.5 opacity-60 hover:opacity-100 transition-opacity leading-none"
             >
-                ×
+                <XIcon size={14} />
             </button>
         </div>
     );
@@ -69,7 +70,7 @@ export function ToastProvider() {
     return createPortal(
         <div
             aria-label="Notifications"
-            className="fixed top-4 right-4 z-[9999] flex flex-col gap-2"
+            className="fixed top-4 right-4 z-[60] flex flex-col gap-2"
         >
             {toasts.map((t) => (
                 <Toast key={t.id} toast={t} />

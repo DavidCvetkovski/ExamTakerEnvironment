@@ -13,7 +13,8 @@ import QuestionPickerModal from '@/components/blueprint/QuestionPickerModal';
 import BlueprintSaveIndicator from '@/components/blueprint/BlueprintSaveIndicator';
 import BlueprintStatusBadge from '@/components/blueprint/BlueprintStatusBadge';
 import BlueprintInspector from '@/components/blueprint/BlueprintInspector';
-import { BackButton, Badge, Button, Input, Select, Spinner, cn, useToast, useConfirm, StatusDot } from '@/components/ui';
+import { BackButton, Badge, Button, Input, Select, Spinner, cn, useToast, useConfirm, StatusDot, XIcon, PageHeader } from '@/components/ui';
+import PageShell from '@/components/layout/PageShell';
 import { formatRelativeTime, formatAbsolute, formatScheduled } from '@/lib/relativeTime';
 
 type BlueprintDraft = Partial<TestDefinition>;
@@ -365,22 +366,22 @@ function BlueprintPageInner() {
     if (!isEditing) {
         return (
             <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-foreground">
+                <PageShell width="wide">
                     {ConfirmDialog}
-                    <div className="flex justify-between items-end mb-8">
-                        <div>
-                            <h1 className="text-4xl font-extrabold tracking-tight text-foreground">Test Blueprints</h1>
-                            <p className="mt-2 text-shell-muted-dim">Design and manage rule-based exam definitions.</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Button variant="secondary" size="md" onClick={() => router.push('/import?mode=blueprint&from=blueprint')}>
-                                Import
-                            </Button>
-                            <Button variant="primary" size="md" onClick={handleCreateNew}>
-                                + New blueprint
-                            </Button>
-                        </div>
-                    </div>
+                    <PageHeader
+                        title="Test Blueprints"
+                        subtitle="Design and manage rule-based exam definitions."
+                        actions={
+                            <>
+                                <Button variant="secondary" size="md" onClick={() => router.push('/import?mode=blueprint&from=blueprint')}>
+                                    Import
+                                </Button>
+                                <Button variant="primary" size="md" onClick={handleCreateNew}>
+                                    + New blueprint
+                                </Button>
+                            </>
+                        }
+                    />
 
                     {/* Sort + Search toolbar */}
                     <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -471,7 +472,7 @@ function BlueprintPageInner() {
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 min-h-[40vh]">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {displayedBlueprints.map((bp) => {
                             const usage = usageMap[bp.id];
                             const status: BlueprintStatus = usage?.status ?? 'NEW';
@@ -579,7 +580,7 @@ function BlueprintPageInner() {
                             );
                         })}
                     </div>
-                </div>
+                </PageShell>
             </ProtectedRoute>
         );
     }
@@ -855,9 +856,10 @@ function BlueprintPageInner() {
                                                                         newBlocks[bIdx].rules.splice(rIdx, 1);
                                                                         saveState({ blocks: newBlocks });
                                                                     }}
+                                                                    aria-label="Remove rule"
                                                                     className="opacity-0 group-hover:opacity-100 p-2 text-shell-muted hover:text-danger transition-all ml-auto"
                                                                 >
-                                                                    ✕
+                                                                    <XIcon size={14} />
                                                                 </button>
                                                             </div>
                                                         </div>

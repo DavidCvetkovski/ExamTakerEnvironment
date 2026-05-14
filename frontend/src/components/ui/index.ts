@@ -21,3 +21,4 @@ export type { RowAction } from './RowActionMenu';
 export { default as Avatar } from './Avatar';
 export { default as Modal } from './Modal';
 export { default as Drawer } from './Drawer';
+export { CheckIcon, XIcon, AlertIcon } from './icons';

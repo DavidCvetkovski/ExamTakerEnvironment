@@ -3,7 +3,7 @@
 import { useState } from 'react';
 
 import type { Course, Enrollment, StudentCandidate } from '@/stores/useCourseStore';
-import { Button, Drawer } from '@/components/ui';
+import { Button, Drawer, CheckIcon, XIcon } from '@/components/ui';
 
 interface CourseEnrollmentDrawerProps {
     course: Course | null;
@@ -154,8 +154,8 @@ export default function CourseEnrollmentDrawer({
                             <div className="space-y-1.5 mt-2">
                                 {bulkResults.map((r, i) => (
                                     <div key={i} className="flex items-center gap-2 text-xs">
-                                        <span className={r.status === 'ok' ? 'text-[var(--color-success-fg)]' : 'text-danger'}>
-                                            {r.status === 'ok' ? '✓' : '✗'}
+                                        <span className={`inline-flex items-center ${r.status === 'ok' ? 'text-[var(--color-success-fg)]' : 'text-danger'}`}>
+                                            {r.status === 'ok' ? <CheckIcon size={12} /> : <XIcon size={12} />}
                                         </span>
                                         <span className="text-foreground">{r.email}</span>
                                         {r.message && <span className="text-shell-muted-dim">— {r.message}</span>}

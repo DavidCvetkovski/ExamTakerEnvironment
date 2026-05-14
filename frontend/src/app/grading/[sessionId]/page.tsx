@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useGradingStore, QuestionGrade, ManualGradePayload } from '@/stores/useGradingStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { getExamChoiceContent, toExamContentHtml, toExamContentText } from '@/lib/examContent';
-import { BackButton, Spinner } from '@/components/ui';
+import { BackButton, Spinner, CheckIcon, XIcon, AlertIcon } from '@/components/ui';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -58,8 +58,9 @@ function AutoGradeResult({ grade }: { grade: QuestionGrade }) {
                 <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-semibold text-shell-muted">STUDENT ANSWER</span>
                     {grade.is_correct !== null && (
-                        <span className={`text-xs font-bold ${grade.is_correct ? 'text-[var(--color-success-fg)]' : 'text-[var(--color-danger-fg)]'}`}>
-                            {grade.is_correct ? '✓ CORRECT' : '✗ INCORRECT'}
+                        <span className={`inline-flex items-center gap-1 text-xs font-bold ${grade.is_correct ? 'text-[var(--color-success-fg)]' : 'text-[var(--color-danger-fg)]'}`}>
+                            {grade.is_correct ? <CheckIcon size={12} /> : <XIcon size={12} />}
+                            {grade.is_correct ? 'CORRECT' : 'INCORRECT'}
                         </span>
                     )}
                 </div>
@@ -209,12 +210,12 @@ function EssayGradingPanel({
                 <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="px-4 py-2 bg-brand hover:bg-brand/90 text-white text-xs font-semibold rounded-lg disabled:opacity-50 transition-colors"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand hover:bg-brand/90 text-white text-xs font-semibold rounded-lg disabled:opacity-50 transition-colors"
                 >
-                    {saving ? 'Saving…' : '✓ Save Grade'}
+                    {saving ? 'Saving…' : <><CheckIcon size={12} /> Save Grade</>}
                 </button>
                 {grade.feedback !== null && !grade.is_auto_graded && (
-                    <span className="text-xs text-[var(--color-success-fg)]">✓ Graded</span>
+                    <span className="inline-flex items-center gap-1 text-xs text-[var(--color-success-fg)]"><CheckIcon size={12} /> Graded</span>
                 )}
             </div>
         </div>
@@ -276,8 +277,9 @@ export default function SessionGradingPage() {
                                 </span>
                             )}
                             {pendingEssays.length > 0 && (
-                                <span className="text-xs text-[var(--color-warning-fg)]">
-                                    ⚠ {pendingEssays.length} essay{pendingEssays.length > 1 ? 's' : ''} pending
+                                <span className="inline-flex items-center gap-1 text-xs text-[var(--color-warning-fg)]">
+                                    <AlertIcon size={12} />
+                                    {pendingEssays.length} essay{pendingEssays.length > 1 ? 's' : ''} pending
                                 </span>
                             )}
                         </div>
@@ -290,7 +292,7 @@ export default function SessionGradingPage() {
                 {error && (
                     <div className="border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] rounded-lg px-4 py-3 text-sm flex justify-between">
                         <span>{error}</span>
-                        <button onClick={clearError} className="text-[var(--color-danger-fg)] hover:opacity-80">✕</button>
+                        <button onClick={clearError} aria-label="Dismiss" className="text-[var(--color-danger-fg)] hover:opacity-80"><XIcon size={14} /></button>
                     </div>
                 )}
 
@@ -322,7 +324,7 @@ export default function SessionGradingPage() {
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex items-center gap-3">
                                     <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isGraded ? 'bg-[var(--color-success-bg)] text-[var(--color-success-fg)]' : 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]'}`}>
-                                        {isGraded ? '✓' : idx + 1}
+                                        {isGraded ? <CheckIcon size={14} /> : idx + 1}
                                     </span>
                                     <div>
                                         <p className="text-foreground font-semibold text-sm">{getQuestionHeading(grade.question_content, idx)}</p>

@@ -632,6 +632,25 @@
 
 ---
 
+## Epoch 8.5 — Verification Debt: Token Audit, Auth Persistence & Test Hygiene
+
+**Goal:** Close the loop on items surfaced during the Epoch 8.4 Stage 17/18 in-browser verification pass that fell outside 8.4's documented scope. Debt paydown, not a polish pass. See `directives/epoch_8_5_blueprint.md`.
+
+### Stages
+1. **Complete the Color-Token Audit** — 8.4's audit regex missed `amber|emerald|gray` etc.; the exam components (`QuestionRenderer`, `TimelineNavigator`) use them directly for current/answered/flagged states. Define an exam-navigation token family across all three themes, remap the five sites, and widen the §7.1 audit regex to the full Tailwind palette. Needs a live exam session to verify visually.
+2. **Auth Session Persistence** — the access token is in-memory only; a hard refresh or deep-link logs the user out (`ProtectedRoute` bounces to `/login`). Implement rehydrate-on-load via the refresh-token cookie. Strictly an Epoch 3 concern; captured here because verification surfaced it.
+3. **Pre-Existing Backend Test Failures** — 4 `pytest` failures predating 8.4 (2× accommodations, 2× versioning immutability — `assert 2 == 1` on draft-overwrite). Triage code-vs-test and fix; they block the "pytest clean" gate.
+4. **Minor Polish Punch List** — `1 SECTIONS` plural bug on `/analytics` index cards (8.4 Stage 18g fixed it for blueprint cards only); extract a shared `pluralize` util.
+
+**Exit Criteria:**
+- Widened color audit returns zero hits; exam-taking screen verified across dark/warm/light-blue with a live session.
+- Hard refresh / deep-link on a protected route no longer logs the user out.
+- `pytest` exits 0 — all 4 pre-existing failures resolved.
+- `tsc --noEmit` + `next build` pass.
+- Aikido: zero new Critical/High findings.
+
+---
+
 ## Epoch 9 — Media Management & Resource Library
 
 **Goal:** Enable rich media uploads, build a reusable resource library, and support CDN-backed delivery for scalable media serving.

@@ -4,6 +4,7 @@ import "./globals.css";
 import GlobalHeader from "@/components/layout/GlobalHeader";
 import ThemeProvider from "@/components/layout/ThemeProvider";
 import { ToastProvider } from "@/components/ui";
+import AuthBootstrap from "@/components/auth/AuthBootstrap";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,6 +31,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased h-screen overflow-hidden flex flex-col`}
       >
+        <AuthBootstrap />
         <ThemeProvider />
         <GlobalHeader />
         <main className="flex-1 overflow-y-auto flex flex-col">

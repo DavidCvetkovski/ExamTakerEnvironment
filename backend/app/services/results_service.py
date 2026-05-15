@@ -79,6 +79,67 @@ async def get_grading_overview(
     return overview
 
 
+async def get_all_grading_sessions(
+    user_id: str,
+    is_admin: bool,
+) -> List[Dict[str, Any]]:
+    """
+    List all SUBMITTED sessions across blueprints owned by user_id (or all for admins).
+    Includes ungraded_response_count — number of manual-grading questions not yet graded.
+    Sorted: ungraded DESC, submitted_at DESC.
+    """
+    if is_admin:
+        test_defs = await prisma.test_definitions.find_many(
+            select={"id": True, "title": True},
+        )
+    else:
+        test_defs = await prisma.test_definitions.find_many(
+            where={"created_by": user_id},
+            select={"id": True, "title": True},
+        )
+
+    if not test_defs:
+        return []
+
+    test_def_ids = [td.id for td in test_defs]
+    test_def_map = {td.id: td.title for td in test_defs}
+
+    sessions = await prisma.exam_sessions.find_many(
+        where={"test_definition_id": {"in": test_def_ids}, "status": "SUBMITTED"},
+        order={"submitted_at": "desc"},
+        include={"users": True},
+    )
+
+    rows: List[Dict[str, Any]] = []
+    for sess in sessions:
+        sr = await prisma.session_results.find_unique(where={"session_id": sess.id})
+        ungraded_count = await prisma.question_grades.count(
+            where={"session_id": sess.id, "is_auto_graded": False, "feedback": None}
+        )
+        rows.append({
+            "session_id": sess.id,
+            "test_definition_id": sess.test_definition_id,
+            "test_title": test_def_map.get(sess.test_definition_id, "Unknown"),
+            "student_id": sess.student_id,
+            "student_email": sess.users.email if sess.users else None,
+            "submitted_at": sess.submitted_at,
+            "grading_status": sr.grading_status if sr else GradingStatus.UNGRADED.value,
+            "questions_graded": sr.questions_graded if sr else 0,
+            "questions_total": sr.questions_total if sr else 0,
+            "ungraded_response_count": ungraded_count,
+            "total_points": float(sr.total_points) if sr else 0.0,
+            "max_points": float(sr.max_points) if sr else 0.0,
+            "percentage": float(sr.percentage) if sr else 0.0,
+            "is_published": sr.is_published if sr else False,
+        })
+
+    rows.sort(key=lambda x: (
+        -x["ungraded_response_count"],
+        -(x["submitted_at"].timestamp() if x["submitted_at"] else 0),
+    ))
+    return rows
+
+
 async def get_grading_queue(
     test_definition_id: str,
     question_lo_id: Optional[str] = None,

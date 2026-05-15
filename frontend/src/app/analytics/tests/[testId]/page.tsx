@@ -20,9 +20,16 @@ function formatMetric(value: number | null, digits = 1): string {
     return value === null ? '—' : value.toFixed(digits);
 }
 
+const SHOW_BLUEPRINTS_TAB = process.env.NEXT_PUBLIC_ANALYTICS_BLUEPRINT_TAB !== 'false';
+
 export default function TestAnalyticsDashboardPage() {
     const { testId } = useParams<{ testId: string }>();
     const router = useRouter();
+
+    // When the blueprint tab is disabled, this route is hidden — redirect to analytics home.
+    useEffect(() => {
+        if (!SHOW_BLUEPRINTS_TAB) router.replace('/analytics');
+    }, [router]);
     const {
         bundles,
         scenarios,

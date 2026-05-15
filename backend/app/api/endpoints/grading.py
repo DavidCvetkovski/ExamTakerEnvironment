@@ -178,6 +178,22 @@ async def update_manual_grade(
 # Grading overview / queue (instructor dashboard)
 # ─────────────────────────────────────────────
 
+@router.get("/sessions", summary="All submitted sessions across owned blueprints")
+async def list_grading_sessions(
+    current_user=Depends(_require_instructor_or_admin),
+) -> List[Dict[str, Any]]:
+    """
+    List all SUBMITTED exam sessions for blueprints the caller created (admin: all blueprints).
+    Includes ungraded_response_count. Sorted: ungraded DESC, submitted_at DESC.
+    """
+    from app.models.user import UserRole as _Role
+    is_admin = current_user.role == _Role.ADMIN.value
+    return await results_service.get_all_grading_sessions(
+        user_id=str(current_user.id),
+        is_admin=is_admin,
+    )
+
+
 @router.get("/tests/{test_definition_id}/grading-overview", summary="Grading progress overview")
 async def get_grading_overview(
     test_definition_id: UUID,

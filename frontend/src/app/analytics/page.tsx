@@ -8,6 +8,7 @@ import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
 import { Badge, Button, Card, EmptyState, PageHeader, Spinner } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
+import { pluralizeCount } from '@/lib/pluralize';
 
 export default function AnalyticsIndexPage() {
     const router = useRouter();
@@ -67,7 +68,7 @@ export default function AnalyticsIndexPage() {
                                         </Button>
                                     </div>
                                     <div className="mt-4 flex flex-wrap gap-1.5">
-                                        <Badge tone="neutral" size="sm">{blueprint.blocks.length} sections</Badge>
+                                        <Badge tone="neutral" size="sm">{pluralizeCount(blueprint.blocks.length, 'section')}</Badge>
                                         <Badge tone="neutral" size="sm">{blueprint.duration_minutes} min</Badge>
                                         <Badge tone="accent" size="sm">
                                             Pass {blueprint.scoring_config?.pass_percentage ?? 55}%

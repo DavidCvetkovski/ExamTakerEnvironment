@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui';
 import BlueprintStatusBadge from '@/components/blueprint/BlueprintStatusBadge';
 import { subjectTone } from '@/lib/subjectColor';
 import type { BlueprintStatus } from '@/lib/blueprintPermissions';
+import { pluralize, pluralizeCount } from '@/lib/pluralize';
 
 interface BlueprintInspectorProps {
     blueprint: TestDefinition;
@@ -34,7 +35,7 @@ export default function BlueprintInspector({ blueprint, status, availableItems }
                 <div className="flex flex-wrap items-center gap-3">
                     <BlueprintStatusBadge status={status} />
                     <span className="text-meta text-shell-muted-dim">
-                        {blueprint.duration_minutes} min · {blueprint.blocks.length} section{blueprint.blocks.length === 1 ? '' : 's'} · {totalRules} rule{totalRules === 1 ? '' : 's'}
+                        {blueprint.duration_minutes} min · {pluralizeCount(blueprint.blocks.length, 'section')} · {pluralizeCount(totalRules, 'rule')}
                     </span>
                 </div>
                 <h1 className="text-h1 font-bold text-foreground">{blueprint.title}</h1>
@@ -54,7 +55,7 @@ export default function BlueprintInspector({ blueprint, status, availableItems }
                                     {block.title || `Section ${idx + 1}`}
                                 </h2>
                                 <span className="text-meta text-shell-muted-dim">
-                                    Section {idx + 1} · {block.rules.length} rule{block.rules.length === 1 ? '' : 's'}
+                                    Section {idx + 1} · {pluralizeCount(block.rules.length, 'rule')}
                                 </span>
                             </div>
 
@@ -96,7 +97,7 @@ export default function BlueprintInspector({ blueprint, status, availableItems }
                                                     Random selection
                                                 </div>
                                                 <p className="text-body text-foreground">
-                                                    Pick <span className="font-semibold">{rule.count ?? 1}</span> question{(rule.count ?? 1) === 1 ? '' : 's'} from{' '}
+                                                    Pick <span className="font-semibold">{rule.count ?? 1}</span> {pluralize(rule.count ?? 1, 'question')} from{' '}
                                                     {rule.subject ? <Badge tone="info" size="sm">{rule.subject}</Badge> : null}
                                                     {rule.topic ? <> <Badge tone="info" size="sm">{rule.topic}</Badge></> : null}
                                                     {(!rule.subject && !rule.topic) && <span className="text-shell-muted-dim italic">the entire library</span>}

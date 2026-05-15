@@ -7,6 +7,7 @@ import { useImportStore } from '@/stores/useImportStore';
 import { useNavGuardStore } from '@/stores/useNavGuardStore';
 import { validateBlueprint } from '@/lib/validateBlueprint';
 import { canEditBlueprint, canDeleteBlueprint, type BlueprintStatus } from '@/lib/blueprintPermissions';
+import { pluralizeCount } from '@/lib/pluralize';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useRouter, useSearchParams } from 'next/navigation';
 import QuestionPickerModal from '@/components/blueprint/QuestionPickerModal';
@@ -502,7 +503,7 @@ function BlueprintPageInner() {
                                         <div className="flex items-center gap-3 whitespace-nowrap">
                                             <span className="inline-flex items-center gap-1.5">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-info" />
-                                                {bp.blocks.length} {bp.blocks.length === 1 ? 'section' : 'sections'}
+                                                {pluralizeCount(bp.blocks.length, 'section')}
                                             </span>
                                             <span className="text-shell-border">·</span>
                                             <span className="inline-flex items-center gap-1.5">

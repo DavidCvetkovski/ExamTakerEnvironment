@@ -25,6 +25,31 @@
 
 ---
 
+## Progress Matrix
+
+Implementation status against the stage spec. Updated as work lands on `feature/epoch-8.5-verification-debt`.
+
+| # | Stage | Status | Commits | Visual verification |
+|---|---|---|---|---|
+| 1 | Color-token audit | ⏳ Pending | — | — |
+| 2 | Auth session persistence | ⏳ Pending | — | — |
+| 3 | Backend test failures | ⏳ Pending | — | — |
+| 4a | `pluralize` util + analytics card fix | ✅ Code complete | `2fa574f` | ⏳ Pending (three themes on `/analytics`) |
+| 5 | Blueprint inspect — full questions | ⏳ Pending | — | — |
+| 6 | `<QuestionInspector>` primitive | 🟡 Partial — author-route locked-state branch done; picker preview entry point deferred to Stage 7 per spec | `a2e04a6`, `475b3e0` (doc) | ⏳ Pending (three themes on `/author?lo_id=<locked-id>`) |
+| 7 | Picker preview reliability + buttons | ⏳ Pending | — | — |
+| 8 | Analytics IA split | ⏳ Pending | — | — |
+| 9 | Grading IA restructure | ⏳ Pending | — | — |
+| 10 | Exam next button | ⏳ Pending | — | — |
+
+**Doc commits:** `77943f1` (blueprint + roadmap expansion), `475b3e0` (Stage 6 path correction).
+
+**Gates passed so far:** `tsc --noEmit` clean after each code-stage commit.
+
+**Outstanding before stage close:** Visual verification across `dark` / `warm` / `light-blue` for any stage marked code-complete; per-theme screenshots per the cross-cutting artefact requirement.
+
+---
+
 ## Stage 1 — Complete the Color-Token Audit
 
 **Problem.** Epoch 8.4 Stage 15a's audit regex only covered `blue|cyan|red|green|yellow|orange|purple|pink|indigo`. Tailwind has more color families, and the exam-taking components use several of them directly — so the drift sailed past every 8.4 grep gate.

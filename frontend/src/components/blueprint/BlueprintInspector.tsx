@@ -1,12 +1,30 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import type { TestDefinition, AvailableItem } from '@/stores/useBlueprintStore';
 import { Badge } from '@/components/ui';
 import BlueprintStatusBadge from '@/components/blueprint/BlueprintStatusBadge';
 import { subjectTone } from '@/lib/subjectColor';
 import type { BlueprintStatus } from '@/lib/blueprintPermissions';
 import { pluralize, pluralizeCount } from '@/lib/pluralize';
+import { api } from '@/lib/api';
+import QuestionInspector from '@/components/editor/QuestionInspector';
+
+type VersionResponse = {
+    id: string;
+    version_number: number;
+    question_type: string;
+    content: Record<string, unknown> | null;
+    options: { question_type: string; choices?: Array<{ id: string; text: string; is_correct: boolean }>; min_words?: number; max_words?: number } | null;
+    metadata_tags: Record<string, unknown> | null;
+};
+
+function normaliseOptions(v: VersionResponse): Array<{ id: string; text: string; is_correct: boolean }> | { min_words?: number; max_words?: number } | null {
+    if (!v.options) return null;
+    if (v.options.choices) return v.options.choices;
+    if (v.question_type === 'ESSAY') return { min_words: v.options.min_words, max_words: v.options.max_words };
+    return null;
+}
 
 interface BlueprintInspectorProps {
     blueprint: TestDefinition;
@@ -28,6 +46,34 @@ export default function BlueprintInspector({ blueprint, status, availableItems }
     }, [availableItems]);
 
     const totalRules = blueprint.blocks.reduce((sum, b) => sum + b.rules.length, 0);
+
+    const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+    const [selectedVersion, setSelectedVersion] = useState<VersionResponse | null>(null);
+    const [versionLoading, setVersionLoading] = useState(false);
+    const [versionError, setVersionError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!selectedItemId) {
+            setSelectedVersion(null);
+            setVersionError(null);
+            return;
+        }
+        let cancelled = false;
+        setVersionLoading(true);
+        setVersionError(null);
+        api.get<VersionResponse[]>(`learning-objects/${selectedItemId}/versions`)
+            .then((res) => {
+                if (cancelled) return;
+                const latest = (res.data ?? []).reduce<VersionResponse | null>(
+                    (acc, v) => (acc === null || v.version_number > acc.version_number ? v : acc),
+                    null,
+                );
+                setSelectedVersion(latest);
+            })
+            .catch(() => { if (!cancelled) setVersionError('Failed to load question.'); })
+            .finally(() => { if (!cancelled) setVersionLoading(false); });
+        return () => { cancelled = true; };
+    }, [selectedItemId]);
 
     return (
         <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 space-y-10">
@@ -65,25 +111,56 @@ export default function BlueprintInspector({ blueprint, status, availableItems }
                                 <ol className="space-y-3">
                                     {block.rules.map((rule, ruleIdx) => {
                                         if (rule.rule_type === 'FIXED' && rule.learning_object_id) {
-                                            const item = itemById.get(rule.learning_object_id);
+                                            const loId = rule.learning_object_id;
+                                            const item = itemById.get(loId);
                                             const topic = item?.metadata_tags?.topic;
                                             const tone = topic ? subjectTone(topic) : null;
+                                            const isSelected = selectedItemId === loId;
                                             return (
-                                                <li
-                                                    key={ruleIdx}
-                                                    className="rounded-xl border border-shell-border bg-shell-surface px-4 py-3"
-                                                >
-                                                    <div className="flex items-center gap-2 text-eyebrow font-semibold uppercase tracking-wide text-shell-muted-dim mb-1">
-                                                        <span>Fixed question</span>
-                                                        {topic && tone && (
-                                                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-meta normal-case font-medium ${tone.bg} ${tone.fg} ${tone.border}`}>
-                                                                {topic}
+                                                <li key={ruleIdx} className="space-y-0">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSelectedItemId(isSelected ? null : loId)}
+                                                        className={[
+                                                            'w-full text-left rounded-xl border px-4 py-3 transition-colors',
+                                                            isSelected
+                                                                ? 'border-brand/40 bg-brand/5'
+                                                                : 'border-shell-border bg-shell-surface hover:border-brand/20 hover:bg-shell-input/30',
+                                                        ].join(' ')}
+                                                    >
+                                                        <div className="flex items-center gap-2 text-eyebrow font-semibold uppercase tracking-wide text-shell-muted-dim mb-1">
+                                                            <span>Fixed question</span>
+                                                            {topic && tone && (
+                                                                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-meta normal-case font-medium ${tone.bg} ${tone.fg} ${tone.border}`}>
+                                                                    {topic}
+                                                                </span>
+                                                            )}
+                                                            <span className="ml-auto text-xs font-normal normal-case text-brand/70">
+                                                                {isSelected ? 'Collapse ↑' : 'Inspect →'}
                                                             </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-body text-foreground line-clamp-3 leading-snug">
-                                                        {item?.latest_content_preview ?? <span className="text-shell-muted-dim italic">Question not found</span>}
-                                                    </p>
+                                                        </div>
+                                                        <p className="text-body text-foreground line-clamp-3 leading-snug">
+                                                            {item?.latest_content_preview ?? <span className="text-shell-muted-dim italic">Question not found</span>}
+                                                        </p>
+                                                    </button>
+
+                                                    {isSelected && (
+                                                        <div className="mt-2 pl-4 border-l-2 border-brand/20">
+                                                            {versionLoading ? (
+                                                                <div className="py-6 text-center text-shell-muted-dim text-sm">Loading…</div>
+                                                            ) : versionError ? (
+                                                                <p className="py-4 text-meta text-[var(--color-danger-fg)]">{versionError}</p>
+                                                            ) : selectedVersion ? (
+                                                                <QuestionInspector
+                                                                    questionType={selectedVersion.question_type}
+                                                                    content={selectedVersion.content}
+                                                                    options={normaliseOptions(selectedVersion)}
+                                                                    metadataTags={item?.metadata_tags ?? null}
+                                                                    showCorrectness
+                                                                />
+                                                            ) : null}
+                                                        </div>
+                                                    )}
                                                 </li>
                                             );
                                         }

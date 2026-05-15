@@ -158,7 +158,10 @@ async def get_item_versions(lo_id: UUID) -> List[dict]:
     return [v.__dict__ for v in versions] # Convert to dict if necessary, or let Prisma handle
 
 async def create_new_revision(lo_id: UUID, payload: ItemVersionCreate, current_user_id: str) -> dict:
-    """Core Immutability Controller logic for revisions."""
+    """
+    Immutability Controller: overwrite the current DRAFT in-place, or create a new DRAFT
+    version when the latest version has already been advanced past DRAFT status.
+    """
     latest = await prisma.item_versions.find_first(
         where={"learning_object_id": str(lo_id)},
         order={"version_number": "desc"}
@@ -168,8 +171,22 @@ async def create_new_revision(lo_id: UUID, payload: ItemVersionCreate, current_u
     options_obj = payload.options.model_dump()
     metadata_obj = payload.metadata_tags
 
+    if latest and latest.status == ItemStatus.DRAFT.value:
+        # Overwrite in place — same ID and version_number.
+        return await prisma.item_versions.update(
+            where={"id": latest.id},
+            data={
+                "created_by": current_user_id,
+                "question_type": payload.question_type.value,
+                "content": Json(content_obj),
+                "options": Json(options_obj),
+                "metadata_tags": Json(metadata_obj) if metadata_obj else Json(None),
+            }
+        )
+
+    # Latest version has been advanced (READY_FOR_REVIEW, APPROVED, etc.) — create next version.
     next_v = (latest.version_number + 1) if latest else 1
-    new_version = await prisma.item_versions.create(
+    return await prisma.item_versions.create(
         data={
             "learning_object_id": str(lo_id),
             "created_by": current_user_id,
@@ -181,7 +198,6 @@ async def create_new_revision(lo_id: UUID, payload: ItemVersionCreate, current_u
             "metadata_tags": Json(metadata_obj) if metadata_obj else Json(None),
         }
     )
-    return new_version
 
 async def transition_item_status(
     lo_id: UUID, 

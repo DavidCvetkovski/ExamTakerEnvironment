@@ -141,15 +141,15 @@ Small items noticed in passing during verification. Each is a few minutes.
 - Options: render as static rows (no `<input>` elements). Correctness: muted icon, not a toggle. Metadata fields: plain text, not form inputs.
 - **Scope — three entry points must route to `<QuestionInspector>`, not the editor:**
   1. The blueprint inspector's question-detail pane (Stage 5 host).
-  2. The standalone item route `/author/items/[id]` when the item is **locked** (referenced by an `ONGOING` / `PASSED` blueprint per `CLAUDE.md` §8.2). Today this surface shows the editor with disabled inputs — the same §7.7 footgun on a different surface; fix it here.
+  2. The standalone item route `/author?lo_id=…` when the item is **locked** (referenced by an `ONGOING` / `PASSED` blueprint per `CLAUDE.md` §8.2). Today this surface shows the editor with disabled inputs — the same §7.7 footgun on a different surface; fix it here.
   3. The `QuestionPickerModal` preview panel (Stage 7) — once `<QuestionInspector>` exists, the picker's inline preview should render through it for consistency.
 - Cross-check `lib/blueprintPermissions.ts` and the `lockedQuestionIds` derivation (`CLAUDE.md` §8.1, §8.2) so the inspect surface and the lock guard share the same source of truth.
-- **Authoring vs. inspect signal.** The route guard at `/author/items/[id]` decides which component to render: `lockedQuestionIds.has(id)` → `<QuestionInspector>`; else → editor. No URL change — same route, branched render — so existing deep links keep working.
+- **Authoring vs. inspect signal.** The route guard at `/author?lo_id=…` decides which component to render: `lockedQuestionIds.has(id)` → `<QuestionInspector>`; else → editor. No URL change — same route, branched render — so existing deep links keep working.
 
 ### Verification
 - Open a question via the blueprint inspector → no input is focusable, no text is selectable in a way that suggests edits, no save/cancel chrome present.
 - Direct keyboard input on what was previously an editable field produces no visible change.
-- Navigate directly to `/author/items/[id]` for an item locked by an `ONGOING` blueprint → renders `<QuestionInspector>`, not a disabled editor.
+- Navigate directly to `/author?lo_id=…` for an item locked by an `ONGOING` blueprint → renders `<QuestionInspector>`, not a disabled editor.
 
 ---
 

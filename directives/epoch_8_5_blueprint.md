@@ -31,16 +31,16 @@ Implementation status against the stage spec. Updated as work lands on `feature/
 
 | # | Stage | Status | Commits | Visual verification |
 |---|---|---|---|---|
-| 1 | Color-token audit | ⏳ Pending | — | — |
-| 2 | Auth session persistence | ⏳ Pending | — | — |
-| 3 | Backend test failures | ⏳ Pending | — | — |
+| 1 | Color-token audit | ✅ Code complete | `ac03e10` | ⏳ Pending (live exam session, three themes) |
+| 2 | Auth session persistence | ✅ Code complete | `a2f94e4` | ⏳ Pending (hard-refresh on protected route) |
+| 3 | Backend test failures | ✅ Code complete | `814fb9a` | ⏳ Pending (pytest run in backend container) |
 | 4a | `pluralize` util + analytics card fix | ✅ Code complete | `2fa574f` | ⏳ Pending (three themes on `/analytics`) |
-| 5 | Blueprint inspect — full questions | ⏳ Pending | — | — |
-| 6 | `<QuestionInspector>` primitive | 🟡 Partial — author-route locked-state branch done; picker preview entry point deferred to Stage 7 per spec | `a2e04a6`, `475b3e0` (doc) | ⏳ Pending (three themes on `/author?lo_id=<locked-id>`) |
-| 7 | Picker preview reliability + buttons | ⏳ Pending | — | — |
-| 8 | Analytics IA split | ⏳ Pending | — | — |
-| 9 | Grading IA restructure | ⏳ Pending | — | — |
-| 10 | Exam next button | ⏳ Pending | — | — |
+| 5 | Blueprint inspect — full questions | ✅ Code complete | `e3d18d8` | ⏳ Pending (three themes, blueprint inspect) |
+| 6 | `<QuestionInspector>` primitive | ✅ Code complete | `a2e04a6`, `e3d18d8` | ⏳ Pending (three themes on `/author?lo_id=<locked-id>`) |
+| 7 | Picker preview reliability + buttons | ✅ Code complete | `e3d18d8` | ⏳ Pending (three themes, picker) |
+| 8 | Analytics IA split | ✅ Code complete | `49f2e16` | ⏳ Pending (three themes on `/analytics`) |
+| 9 | Grading IA restructure | ✅ Code complete | `49f2e16` | ⏳ Pending (three themes on `/grading`) |
+| 10 | Exam next button | ✅ Code complete | `ac03e10` | ⏳ Pending (600px viewport, three themes) |
 
 **Doc commits:** `77943f1` (blueprint + roadmap expansion), `475b3e0` (Stage 6 path correction).
 

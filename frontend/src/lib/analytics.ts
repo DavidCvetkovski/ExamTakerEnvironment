@@ -52,10 +52,14 @@ interface BackendVersionHistory {
 
 // ─── Public fetch functions ───────────────────────────────────────────────────
 
-export async function fetchTestAnalytics(testId: string): Promise<TestAnalyticsBundle> {
+export async function fetchTestAnalytics(
+    testId: string,
+    runId: string | null = null,
+): Promise<TestAnalyticsBundle> {
+    const params = runId ? { run_id: runId } : undefined;
     const [statsRes, itemsRes] = await Promise.all([
-        api.get<BackendTestStats>(`analytics/tests/${testId}/stats`),
-        api.get<BackendItemStats>(`analytics/tests/${testId}/item-stats`),
+        api.get<BackendTestStats>(`analytics/tests/${testId}/stats`, { params }),
+        api.get<BackendItemStats>(`analytics/tests/${testId}/item-stats`, { params }),
     ]);
 
     const items: ItemAnalyticsResponse[] = itemsRes.data.items.map((item) => ({
@@ -78,13 +82,21 @@ export async function fetchTestAnalytics(testId: string): Promise<TestAnalyticsB
 }
 
 // Our API recomputes live on every call — recompute is the same as fetch.
-export async function recomputeTestAnalytics(testId: string): Promise<TestAnalyticsBundle> {
-    return fetchTestAnalytics(testId);
+export async function recomputeTestAnalytics(
+    testId: string,
+    runId: string | null = null,
+): Promise<TestAnalyticsBundle> {
+    return fetchTestAnalytics(testId, runId);
 }
 
-export async function fetchFlaggedItems(testId: string): Promise<ItemAnalyticsResponse[]> {
+export async function fetchFlaggedItems(
+    testId: string,
+    runId: string | null = null,
+): Promise<ItemAnalyticsResponse[]> {
+    const params = runId ? { run_id: runId } : undefined;
     const res = await api.get<{ items: ItemAnalyticsResponse[] }>(
-        `analytics/tests/${testId}/flagged-items`
+        `analytics/tests/${testId}/flagged-items`,
+        { params },
     );
     return (res.data.items ?? []).map((item) => ({
         ...item,
@@ -121,10 +133,35 @@ export async function fetchItemHistory(loId: string): Promise<ItemAnalyticsHisto
 export async function fetchCutScoreScenarios(
     testId: string,
     cuts: number[],
+    runId: string | null = null,
 ): Promise<CutScoreScenario[]> {
+    const params: Record<string, string> = { cut_scores: cuts.join(',') };
+    if (runId) params.run_id = runId;
     const res = await api.get<BackendTestStats>(
         `analytics/tests/${testId}/stats`,
-        { params: { cut_scores: cuts.join(',') } }
+        { params },
     );
     return res.data.cut_score_analysis;
+}
+
+/**
+ * Per-run aggregates for the analytics runs picker. Includes the pinned
+ * "Combined" sentinel row marked is_recommended_default=true.
+ */
+export interface AnalyticsRun {
+    run_id: string;
+    kind: 'COMBINED' | 'ASSIGNED' | 'PRACTICE';
+    course_id: string | null;
+    course_code: string | null;
+    course_title: string | null;
+    starts_at: string | null;
+    ends_at: string | null;
+    lifecycle_status: 'SCHEDULED' | 'ACTIVE' | 'CLOSED' | 'CANCELED';
+    submissions_total: number;
+    is_recommended_default: boolean;
+}
+
+export async function fetchAnalyticsRuns(testId: string): Promise<AnalyticsRun[]> {
+    const res = await api.get<AnalyticsRun[]>(`analytics/tests/${testId}/runs`);
+    return res.data ?? [];
 }

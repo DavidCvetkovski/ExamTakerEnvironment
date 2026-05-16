@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { ScheduledSession } from '@/stores/useSessionManagerStore';
 import { useSessionManagerStore } from '@/stores/useSessionManagerStore';
 import { Button, Badge, EmptyState } from '@/components/ui';
 import { useCountdown } from '@/hooks/useCountdown';
+import { useLifecycleSync } from '@/hooks/useLifecycleSync';
+import { useServerNow } from '@/hooks/useServerNow';
+import { deriveScheduledStatus } from '@/lib/sessionLifecycle';
 import { formatScheduled, formatAbsolute, formatRelativeTime } from '@/lib/relativeTime';
 
 interface ScheduledSessionsTableProps {
@@ -34,7 +37,8 @@ function SessionRow({
     countdownLabel?: string;
     countdownTone?: string;
 }) {
-    const countdown = useCountdown(countdownTarget ?? session.starts_at);
+    const { display: countdown } = useCountdown(countdownTarget ?? session.starts_at);
+    const now = useServerNow(60_000);
     const canCancel = session.status !== 'CLOSED' && session.status !== 'CANCELED';
 
     return (
@@ -45,12 +49,12 @@ function SessionRow({
             </td>
             <td className="py-4 pr-4 text-foreground">{session.test_title}</td>
             <td className="py-4 pr-4 text-shell-muted text-sm" title={formatAbsolute(session.starts_at)}>
-                {new Date(session.starts_at) > new Date()
+                {new Date(session.starts_at) > now
                     ? formatScheduled(session.starts_at)
                     : formatRelativeTime(session.starts_at)}
             </td>
             <td className="py-4 pr-4 text-shell-muted-dim text-sm" title={formatAbsolute(session.ends_at)}>
-                {new Date(session.ends_at) > new Date()
+                {new Date(session.ends_at) > now
                     ? formatScheduled(session.ends_at)
                     : formatRelativeTime(session.ends_at)}
             </td>
@@ -156,36 +160,18 @@ export default function ScheduledSessionsTable({
     const [showCompleted, setShowCompleted] = useState(false);
     const fetchScheduledSessions = useSessionManagerStore((s) => s.fetchScheduledSessions);
 
-    // Stage 18c — keep client buckets honest. Backend already auto-syncs status
-    // on the list endpoint, but rows in memory go stale until the next refetch.
-    // (a) re-classify client-side so a SCHEDULED row whose starts_at has passed
-    //     renders in Ongoing immediately; (b) poll every 30s so the DB row
-    //     itself gets bumped via the next list call.
-    const [tick, setTick] = useState(0);
-    useEffect(() => {
-        const id = window.setInterval(() => setTick((n) => n + 1), 30_000);
-        return () => window.clearInterval(id);
-    }, []);
-    useEffect(() => {
-        if (tick === 0) return;
-        void fetchScheduledSessions();
-    }, [tick, fetchScheduledSessions]);
+    // Epoch 8.6 Stage 1 — reactive lifecycle.
+    // `useServerNow(1000)` re-renders every second with skew-corrected time so
+    // bucket placement flips the moment `starts_at`/`ends_at` is crossed.
+    // `useLifecycleSync` schedules a precise refetch at the next transition
+    // (plus a 60s safety heartbeat) so the DB row is in sync with the UI.
+    const now = useServerNow(1000);
+    useLifecycleSync(sessions, fetchScheduledSessions);
 
-    const now = new Date();
-
-    const effectiveStatus = (s: ScheduledSession): 'ACTIVE' | 'SCHEDULED' | 'CLOSED' | 'CANCELED' => {
-        if (s.status === 'CANCELED') return 'CANCELED';
-        const start = new Date(s.starts_at);
-        const end = new Date(s.ends_at);
-        if (now >= end) return 'CLOSED';
-        if (now >= start) return 'ACTIVE';
-        return s.status === 'ACTIVE' ? 'ACTIVE' : 'SCHEDULED';
-    };
-
-    const ongoing = sessions.filter((s) => effectiveStatus(s) === 'ACTIVE');
-    const scheduled = sessions.filter((s) => effectiveStatus(s) === 'SCHEDULED');
+    const ongoing = sessions.filter((s) => deriveScheduledStatus(s, now) === 'ACTIVE');
+    const scheduled = sessions.filter((s) => deriveScheduledStatus(s, now) === 'SCHEDULED');
     const completed = sessions.filter((s) => {
-        const e = effectiveStatus(s);
+        const e = deriveScheduledStatus(s, now);
         return e === 'CLOSED' || e === 'CANCELED';
     });
 

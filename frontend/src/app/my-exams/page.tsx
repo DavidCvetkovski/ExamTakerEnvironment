@@ -8,6 +8,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import StudentExamCard from '@/components/student/StudentExamCard';
 import { useExamStore } from '@/stores/useExamStore';
 import { useStudentSessionsStore } from '@/stores/useStudentSessionsStore';
+import { useLifecycleSync } from '@/hooks/useLifecycleSync';
 import { EmptyState, PageHeader, SectionHeader } from '@/components/ui';
 
 export default function MyExamsPage() {
@@ -17,11 +18,12 @@ export default function MyExamsPage() {
 
     useEffect(() => {
         fetchSessions();
-        // Stage 18c — poll every 30s so a session about to start flips to
-        // "Joinable now" without requiring a manual refresh.
-        const id = window.setInterval(() => fetchSessions(), 30_000);
-        return () => window.clearInterval(id);
     }, [fetchSessions]);
+
+    // Epoch 8.6 Stage 1 — replace the blunt 30s poll with a transition-aware
+    // refetch. A card flips from "Upcoming" → "Joinable now" within ~500ms of
+    // `starts_at`, instead of waiting up to 30 seconds.
+    useLifecycleSync(sessions, fetchSessions);
 
     const currentSessions = sessions.filter((s) => s.can_join);
     const upcomingSessions = sessions.filter((s) => !s.can_join);

@@ -1,4 +1,3 @@
-from typing import List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
@@ -7,6 +6,7 @@ from app.core.dependencies import require_role
 from app.models.user import User, UserRole
 from app.schemas.scheduled_session import (
     ScheduledSessionCreate,
+    ScheduledSessionListResponse,
     ScheduledSessionResponse,
     ScheduledSessionUpdate,
 )
@@ -29,11 +29,15 @@ async def create_scheduled_session_endpoint(
     return await create_scheduled_session(payload, str(current_user.id))
 
 
-@router.get("/", response_model=List[ScheduledSessionResponse])
+@router.get("/", response_model=ScheduledSessionListResponse)
 async def list_scheduled_sessions_endpoint(
     current_user: User = Depends(require_role(UserRole.CONSTRUCTOR, UserRole.ADMIN)),
 ):
-    """List scheduled course exam sessions."""
+    """List scheduled course exam sessions.
+
+    Returns an envelope ``{sessions, server_now}`` so the frontend can correct
+    for client-clock skew when deriving lifecycle states.
+    """
     return await list_scheduled_sessions()
 
 

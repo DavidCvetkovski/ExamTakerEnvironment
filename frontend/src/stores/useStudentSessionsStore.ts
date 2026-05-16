@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 
 import { api } from '@/lib/api';
+import { recordServerNow } from '@/lib/serverTime';
+
+interface StudentScheduledSessionListEnvelope {
+    sessions: StudentScheduledSession[];
+    server_now: string;
+}
 
 export interface StudentScheduledSession {
     id: string;
@@ -32,8 +38,11 @@ export const useStudentSessionsStore = create<StudentSessionsState>((set) => ({
     fetchSessions: async () => {
         set({ isLoading: true, error: null });
         try {
-            const response = await api.get<StudentScheduledSession[]>('/student/sessions/');
-            set({ sessions: response.data, isLoading: false });
+            const response = await api.get<StudentScheduledSessionListEnvelope>(
+                '/student/sessions/',
+            );
+            recordServerNow(response.data.server_now);
+            set({ sessions: response.data.sessions, isLoading: false });
         } catch (err: unknown) {
             const message = (err as { response?: { data?: { detail?: string } } })
                 ?.response?.data?.detail || 'Failed to fetch your sessions';

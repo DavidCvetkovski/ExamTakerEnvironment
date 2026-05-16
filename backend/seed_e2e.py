@@ -10,6 +10,7 @@ from app.core.security import hash_password
 from app.models import (
     Course,
     CourseEnrollment,
+    CourseSessionStatus,
     ExamSession,
     ExamSessionMode,
     GradingStatus,
@@ -474,16 +475,22 @@ def create_submitted_attempt(
     started_at: datetime,
     submitted_at: datetime,
     published: bool,
+    scheduled_session_id=None,
+    session_mode: ExamSessionMode = ExamSessionMode.ASSIGNED,
 ) -> ExamSession:
+    """Create a graded ASSIGNED attempt. ``scheduled_session_id`` links the
+    attempt back to a scheduled exam window (the Epoch 8.6 per-run drill-in
+    uses this); ``session_mode`` switches to PRACTICE for the practice bucket.
+    """
     snapshots = [build_item_snapshot(item_versions[slug]) for slug in item_slugs]
 
     exam_session = ExamSession(
         test_definition_id=blueprint.id,
         student_id=student.id,
-        scheduled_session_id=None,
+        scheduled_session_id=scheduled_session_id,
         items=snapshots,
         status=SessionStatus.SUBMITTED,
-        session_mode=ExamSessionMode.ASSIGNED,
+        session_mode=session_mode,
         started_at=started_at,
         submitted_at=submitted_at,
         expires_at=submitted_at + timedelta(minutes=2),
@@ -744,19 +751,22 @@ def create_bulk_attempt(
     submitted_at: datetime,
     published: bool,
     wave: str = "v1",
+    scheduled_session_id=None,
+    session_mode: ExamSessionMode = ExamSessionMode.ASSIGNED,
 ) -> ExamSession:
     """Create a graded exam session whose answers are derived from the student's
     ability profile and per-item target P-values. Used to bulk-populate the
-    analytics dashboard with realistic dummy data."""
+    analytics dashboard with realistic dummy data. ``scheduled_session_id``
+    optionally links the attempt to a specific scheduled-session run."""
     snapshots = [build_item_snapshot(item_versions_for_attempt[slug]) for slug in item_slugs]
 
     exam_session = ExamSession(
         test_definition_id=blueprint.id,
         student_id=student.id,
-        scheduled_session_id=None,
+        scheduled_session_id=scheduled_session_id,
         items=snapshots,
         status=SessionStatus.SUBMITTED,
-        session_mode=ExamSessionMode.ASSIGNED,
+        session_mode=session_mode,
         started_at=started_at,
         submitted_at=submitted_at,
         expires_at=submitted_at + timedelta(minutes=2),
@@ -1131,9 +1141,35 @@ def seed():
                 )
             )
 
+        # Epoch 8.6 Stage 2 — two CLOSED scheduled runs for "Shuffle Lab:
+        # Numbers in Motion" so the per-run picker has something to drill into.
+        # Same blueprint, two different course offerings, three days apart.
+        shuffle_lab_blueprint = blueprints["Shuffle Lab: Numbers in Motion"]
+        shuffle_run_a = ScheduledExamSession(
+            course_id=courses["MATH-140"].id,
+            test_definition_id=shuffle_lab_blueprint.id,
+            created_by=constructor.id,
+            starts_at=now - timedelta(days=2, minutes=30),
+            ends_at=now - timedelta(days=2, minutes=5),
+            status=CourseSessionStatus.CLOSED,
+            duration_minutes_override=25,
+        )
+        shuffle_run_b = ScheduledExamSession(
+            course_id=courses["XLAB-200"].id,
+            test_definition_id=shuffle_lab_blueprint.id,
+            created_by=constructor.id,
+            starts_at=now - timedelta(days=1, minutes=30),
+            ends_at=now - timedelta(days=1, minutes=5),
+            status=CourseSessionStatus.CLOSED,
+            duration_minutes_override=25,
+        )
+        db.add_all([shuffle_run_a, shuffle_run_b])
+        db.flush()  # need the IDs below
+
+        # Run A — MATH-140, three days ago. Alex and Maya wrote it.
         create_submitted_attempt(
             db,
-            blueprint=blueprints["Shuffle Lab: Numbers in Motion"],
+            blueprint=shuffle_lab_blueprint,
             student=alex,
             grader=constructor,
             publisher=admin,
@@ -1147,10 +1183,11 @@ def seed():
             started_at=now - timedelta(days=2, minutes=18),
             submitted_at=now - timedelta(days=2, minutes=16),
             published=True,
+            scheduled_session_id=shuffle_run_a.id,
         )
         create_submitted_attempt(
             db,
-            blueprint=blueprints["Shuffle Lab: Numbers in Motion"],
+            blueprint=shuffle_lab_blueprint,
             student=maya,
             grader=constructor,
             publisher=admin,
@@ -1164,10 +1201,13 @@ def seed():
             started_at=now - timedelta(days=2, minutes=14),
             submitted_at=now - timedelta(days=2, minutes=12),
             published=True,
+            scheduled_session_id=shuffle_run_a.id,
         )
+        # Run B — XLAB-200, one day ago. Noor wrote it (timestamps shifted
+        # from the original 2-days-ago slot to fit Run B's window).
         create_submitted_attempt(
             db,
-            blueprint=blueprints["Shuffle Lab: Numbers in Motion"],
+            blueprint=shuffle_lab_blueprint,
             student=noor,
             grader=constructor,
             publisher=admin,
@@ -1178,9 +1218,32 @@ def seed():
                 "math_tangent_slope": "C",
                 "math_probability": "B",
             },
-            started_at=now - timedelta(days=2, minutes=10),
-            submitted_at=now - timedelta(days=2, minutes=8),
+            started_at=now - timedelta(days=1, minutes=20),
+            submitted_at=now - timedelta(days=1, minutes=18),
             published=True,
+            scheduled_session_id=shuffle_run_b.id,
+        )
+        # Practice bucket — Liam took the same blueprint outside any
+        # scheduled run, a few hours ago. Demonstrates the synthetic
+        # "practice" row in the runs picker.
+        create_submitted_attempt(
+            db,
+            blueprint=shuffle_lab_blueprint,
+            student=liam,
+            grader=constructor,
+            publisher=admin,
+            item_versions=item_versions,
+            item_slugs=["math_break_even", "math_tangent_slope", "math_probability"],
+            answers={
+                "math_break_even": "B",
+                "math_tangent_slope": "A",
+                "math_probability": "B",
+            },
+            started_at=now - timedelta(hours=6, minutes=12),
+            submitted_at=now - timedelta(hours=6, minutes=10),
+            published=False,  # practice attempts don't get published to the gradebook
+            scheduled_session_id=None,
+            session_mode=ExamSessionMode.PRACTICE,
         )
         create_submitted_attempt(
             db,

@@ -662,6 +662,27 @@
 
 ---
 
+## Epoch 8.6 — Reactive Lifecycle & Per-Run Drill-Ins
+
+**Goal:** Fix two distinct UX bugs that surfaced during continued use of the Epoch 8.5 build (2026-05-16): (1) scheduled-session countdowns count *up* past `ends_at` instead of moving the row to Completed, and the Scheduled → Ongoing transition has the same lag; (2) grading and analytics treat one blueprint as one bucket of submissions, with no way to drill into "which scheduled run of this blueprint do I want to grade / analyze?". See `directives/epoch_8_6_blueprint.md`.
+
+### Stages
+1. **Reactive Lifecycle Transitions on the Sessions Dashboard** — extract a singleton `useNow` primitive + a pure `sessionLifecycle.ts` deriver mirroring the backend rules; fix the `useCountdown` `Math.abs` bug that's the visible "counting up" symptom; replace the blunt 30s poll with a transition-aware precise refetch (`setTimeout` at the next `starts_at`/`ends_at` + 500ms). Add `server_now` to the scheduled-sessions response so the frontend can correct for client-clock skew.
+2. **Per-Run Grading & Analytics Drill-Ins** — surface `exam_sessions.scheduled_session_id` (existing FK, unused today) through grading + psychometrics services; insert a runs-picker page between blueprint cards and the per-blueprint dashboard for both `/grading` and `/analytics`; gate the grading runs picker to *closed* runs (with disabled-but-visible cards for ongoing/scheduled). Refit `seed_e2e.py` to give one demo blueprint two scheduled runs with submissions split across them, plus one Practice attempt.
+
+**Exit Criteria:**
+- A row in **Ongoing** moves to **Completed** within 1 second of `ends_at`; the countdown never shows a positive value past zero. Same for Scheduled → Ongoing.
+- Hard-refresh of `/sessions` shows the same bucket placement the backend reports — no flicker.
+- Client clock set 5 minutes ahead does not misclassify rows (server-now skew correction works).
+- `/grading` → blueprint cards → runs picker (per scheduled session, gated to closed) → per-run grading dashboard. Cross-tenant `run_id` is rejected with 403/404, not silently filtered.
+- `/analytics` mirrors the same structure, with a pinned "Combined" card preserving today's all-runs behavior as the default.
+- Seed shows at least one blueprint with two closed runs whose submissions can be graded independently.
+- `tsc --noEmit` + `next build` pass.
+- Widened color audit returns zero hits across the new surfaces.
+- Aikido: zero new Critical/High findings.
+
+---
+
 ## Epoch 9 — Media Management & Resource Library
 
 **Goal:** Enable rich media uploads, build a reusable resource library, and support CDN-backed delivery for scalable media serving.

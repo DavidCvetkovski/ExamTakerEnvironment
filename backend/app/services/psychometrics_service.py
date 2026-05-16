@@ -9,9 +9,11 @@ This module contains only the DB-backed orchestration layer.
 """
 import math
 from collections import defaultdict
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from app.core.prisma_db import prisma
+from app.models.scheduled_exam_session import CourseSessionStatus
 from app.services.ctt_metrics import (
     _parse_json,
     _parse_options,
@@ -28,22 +30,40 @@ from app.services.reliability import (
     score_distribution as _score_distribution,
     std_dev as _std_dev,
 )
+from app.services.run_filter import (
+    PRACTICE_SENTINEL,
+    build_session_results_run_filter,
+)
+from app.services.scheduled_sessions_service import ensure_utc
 
 
 # ─────────────────────────────────────────────
 # DB-backed service functions
 # ─────────────────────────────────────────────
 
-async def compute_test_item_stats(test_definition_id: str) -> Dict:
+async def compute_test_item_stats(
+    test_definition_id: str,
+    run_id: Optional[str] = None,
+) -> Dict:
     """
     For a given test, compute P-value, D-value, distractor analysis, and flags
     for every item used in graded sessions.
 
     Only sessions with a grading_status other than UNGRADED are included so that
     partially graded tests (e.g. essays still pending) still return MCQ stats.
+
+    ``run_id`` narrows the cohort to one scheduled-session run, the practice
+    bucket, or (default) all sessions for the test. The combined cohort is the
+    statistically right default — splitting halves the data per run and tanks
+    reliability — but per-run drill-in is useful for cohort comparisons.
+    Caller is responsible for ``assert_run_belongs_to_test`` first.
     """
     all_results = await prisma.session_results.find_many(
-        where={"test_definition_id": test_definition_id, "is_published": True}
+        where={
+            "test_definition_id": test_definition_id,
+            "is_published": True,
+            **build_session_results_run_filter(run_id),
+        }
     )
     graded_results = [r for r in all_results if r.grading_status != "UNGRADED"]
 
@@ -209,6 +229,7 @@ async def compute_item_version_history(learning_object_id: str) -> Dict:
 async def compute_test_stats(
     test_definition_id: str,
     cut_scores: Optional[List[float]] = None,
+    run_id: Optional[str] = None,
 ) -> Dict:
     """
     Per-test analytics for Stage 2:
@@ -216,12 +237,18 @@ async def compute_test_stats(
     - Cronbach's Alpha (or KR-20 for binary items) and SEM
     - Pass rate (based on stored passed flag)
     - Cut-score analysis for a configurable list of thresholds
+
+    ``run_id`` narrows the cohort exactly as in :func:`compute_test_item_stats`.
     """
     if cut_scores is None:
         cut_scores = _DEFAULT_CUT_SCORES
 
     all_results = await prisma.session_results.find_many(
-        where={"test_definition_id": test_definition_id, "is_published": True}
+        where={
+            "test_definition_id": test_definition_id,
+            "is_published": True,
+            **build_session_results_run_filter(run_id),
+        }
     )
     graded_results = [r for r in all_results if r.grading_status != "UNGRADED"]
 
@@ -332,16 +359,17 @@ async def compute_test_stats(
 async def compute_dashboard(
     test_definition_id: str,
     cut_scores: Optional[List[float]] = None,
+    run_id: Optional[str] = None,
 ) -> Dict:
     """
     Combined dashboard response: test-level stats + per-item stats + flagged items list.
-    Runs Stage 1 and Stage 2 concurrently.
+    Runs Stage 1 and Stage 2 concurrently. ``run_id`` propagates to both legs.
     """
     import asyncio
 
     test_stats, item_stats = await asyncio.gather(
-        compute_test_stats(test_definition_id, cut_scores=cut_scores),
-        compute_test_item_stats(test_definition_id),
+        compute_test_stats(test_definition_id, cut_scores=cut_scores, run_id=run_id),
+        compute_test_item_stats(test_definition_id, run_id=run_id),
     )
     flagged = [item for item in item_stats["items"] if item["flags"]]
     return {
@@ -352,9 +380,12 @@ async def compute_dashboard(
     }
 
 
-async def get_flagged_items_for_test(test_definition_id: str) -> Dict:
+async def get_flagged_items_for_test(
+    test_definition_id: str,
+    run_id: Optional[str] = None,
+) -> Dict:
     """Return only flagged items (any quality flag) from a test's item stats."""
-    result = await compute_test_item_stats(test_definition_id)
+    result = await compute_test_item_stats(test_definition_id, run_id=run_id)
     flagged = [item for item in result["items"] if item["flags"]]
     return {
         "test_definition_id": test_definition_id,
@@ -431,7 +462,10 @@ async def get_flagged_items_for_bank(bank_id: str) -> Dict:
     return {"bank_id": bank_id, "total_flagged": len(flagged_items), "items": flagged_items}
 
 
-async def export_test_analytics_report(test_definition_id: str) -> str:
+async def export_test_analytics_report(
+    test_definition_id: str,
+    run_id: Optional[str] = None,
+) -> str:
     """
     Build a UTF-8 CSV analytics report for a test.
     Section 1: test-level summary.  Section 2: per-item statistics.
@@ -441,8 +475,8 @@ async def export_test_analytics_report(test_definition_id: str) -> str:
     import io
 
     test_stats, item_stats = await asyncio.gather(
-        compute_test_stats(test_definition_id),
-        compute_test_item_stats(test_definition_id),
+        compute_test_stats(test_definition_id, run_id=run_id),
+        compute_test_item_stats(test_definition_id, run_id=run_id),
     )
 
     output = io.StringIO()
@@ -495,16 +529,109 @@ async def export_test_analytics_report(test_definition_id: str) -> str:
     return output.getvalue()
 
 
+async def list_analytics_runs(test_definition_id: str) -> List[Dict[str, Any]]:
+    """Per-run analytics aggregates for a single test definition.
+
+    Mirrors :func:`app.services.results_service.get_grading_runs` but uses
+    *all* submitted attempts (not just gradable closed runs) — analytics
+    cares about every cohort with data, including ongoing windows.
+
+    A "Combined" sentinel row is pinned at the top with the unfiltered
+    submission count so the picker UI can present today's all-runs
+    aggregate as the recommended default.
+
+    Caller is responsible for ``assert_test_access(test_definition_id, user)``.
+    """
+    scheduled_runs = await prisma.scheduled_exam_sessions.find_many(
+        where={"test_definition_id": test_definition_id},
+        include={"courses": True},
+        order={"starts_at": "asc"},
+    )
+
+    now = datetime.now(timezone.utc)
+    rows: List[Dict[str, Any]] = []
+
+    # Combined sentinel — always the recommended default for analytics.
+    combined_total = await prisma.exam_sessions.count(
+        where={"test_definition_id": test_definition_id, "status": "SUBMITTED"},
+    )
+    rows.append({
+        "run_id": "combined",
+        "kind": "COMBINED",
+        "course_id": None,
+        "course_code": None,
+        "course_title": None,
+        "starts_at": None,
+        "ends_at": None,
+        "lifecycle_status": "CLOSED",
+        "submissions_total": combined_total,
+        "is_recommended_default": True,
+    })
+
+    for run in scheduled_runs:
+        if run.status == CourseSessionStatus.CANCELED.value:
+            lifecycle = "CANCELED"
+        else:
+            starts_at = ensure_utc(run.starts_at)
+            ends_at = ensure_utc(run.ends_at)
+            if now >= ends_at:
+                lifecycle = "CLOSED"
+            elif now >= starts_at:
+                lifecycle = "ACTIVE"
+            else:
+                lifecycle = "SCHEDULED"
+        submissions_total = await prisma.exam_sessions.count(
+            where={"scheduled_session_id": run.id, "status": "SUBMITTED"},
+        )
+        rows.append({
+            "run_id": run.id,
+            "kind": "ASSIGNED",
+            "course_id": run.course_id,
+            "course_code": run.courses.code if run.courses else None,
+            "course_title": run.courses.title if run.courses else None,
+            "starts_at": run.starts_at,
+            "ends_at": run.ends_at,
+            "lifecycle_status": lifecycle,
+            "submissions_total": submissions_total,
+            "is_recommended_default": False,
+        })
+
+    practice_total = await prisma.exam_sessions.count(
+        where={
+            "test_definition_id": test_definition_id,
+            "scheduled_session_id": None,
+            "session_mode": "PRACTICE",
+            "status": "SUBMITTED",
+        }
+    )
+    if practice_total > 0:
+        rows.append({
+            "run_id": PRACTICE_SENTINEL,
+            "kind": "PRACTICE",
+            "course_id": None,
+            "course_code": None,
+            "course_title": None,
+            "starts_at": None,
+            "ends_at": None,
+            "lifecycle_status": "CLOSED",
+            "submissions_total": practice_total,
+            "is_recommended_default": False,
+        })
+
+    return rows
+
+
 async def get_latest_test_analytics_bundle(
     test_definition_id: str,
     cut_scores: Optional[List[float]] = None,
+    run_id: Optional[str] = None,
 ) -> Optional[Dict]:
     """Return a live analytics bundle based on the latest published graded results."""
     import asyncio
 
     test_stats, item_stats = await asyncio.gather(
-        compute_test_stats(test_definition_id, cut_scores=cut_scores),
-        compute_test_item_stats(test_definition_id),
+        compute_test_stats(test_definition_id, cut_scores=cut_scores, run_id=run_id),
+        compute_test_item_stats(test_definition_id, run_id=run_id),
     )
     if test_stats["total_sessions"] == 0:
         return None
@@ -519,35 +646,48 @@ async def get_latest_test_analytics_bundle(
 async def recompute_test_analytics_bundle(
     test_definition_id: str,
     cut_scores: Optional[List[float]] = None,
+    run_id: Optional[str] = None,
 ) -> Dict:
     """Recompute and return the live analytics bundle."""
     bundle = await get_latest_test_analytics_bundle(
         test_definition_id,
         cut_scores=cut_scores,
+        run_id=run_id,
     )
     if bundle is None:
-        test_stats = await compute_test_stats(test_definition_id, cut_scores=cut_scores)
+        test_stats = await compute_test_stats(
+            test_definition_id, cut_scores=cut_scores, run_id=run_id,
+        )
         if test_stats["total_sessions"] == 0:
             raise ValueError("No published analytics data available for this test.")
     return bundle or {"test": test_stats, "items": [], "flagged_items_count": 0}
 
 
-async def list_flagged_items_for_test(test_definition_id: str) -> List[Dict]:
+async def list_flagged_items_for_test(
+    test_definition_id: str,
+    run_id: Optional[str] = None,
+) -> List[Dict]:
     """Return the flagged items list for a test as a flat array."""
-    result = await compute_test_item_stats(test_definition_id)
+    result = await compute_test_item_stats(test_definition_id, run_id=run_id)
     return [item for item in result["items"] if item["flags"]]
 
 
 async def get_cut_score_scenarios(
     test_definition_id: str,
     cut_scores: List[float],
+    run_id: Optional[str] = None,
 ) -> List[Dict]:
     """Return pass-rate scenarios for the supplied cut scores."""
-    test_stats = await compute_test_stats(test_definition_id, cut_scores=cut_scores)
+    test_stats = await compute_test_stats(
+        test_definition_id, cut_scores=cut_scores, run_id=run_id,
+    )
     return test_stats["cut_score_analysis"]
 
 
-async def compute_section_analytics(test_definition_id: str) -> Dict:
+async def compute_section_analytics(
+    test_definition_id: str,
+    run_id: Optional[str] = None,
+) -> Dict:
     """
     Per-section (per-block) aggregate analytics for a test (Epoch 8.4 Stage 9).
 
@@ -571,7 +711,7 @@ async def compute_section_analytics(test_definition_id: str) -> Dict:
             if rule.get("rule_type") == "FIXED" and rule.get("learning_object_id"):
                 lo_to_section[str(rule["learning_object_id"])] = idx
 
-    item_stats = await compute_test_item_stats(test_definition_id)
+    item_stats = await compute_test_item_stats(test_definition_id, run_id=run_id)
     items = item_stats.get("items", [])
 
     section_items: Dict[int, List[Dict]] = defaultdict(list)

@@ -18,6 +18,7 @@ from app.schemas.grading import (
     SessionGradingSummary,
 )
 from app.services import grading_service, results_service
+from app.services.run_filter import assert_run_belongs_to_test, assert_test_access
 
 router = APIRouter()
 
@@ -194,29 +195,59 @@ async def list_grading_sessions(
     )
 
 
-@router.get("/tests/{test_definition_id}/grading-overview", summary="Grading progress overview")
-async def get_grading_overview(
+@router.get("/tests/{test_definition_id}/runs", summary="Per-run grading aggregates")
+async def get_grading_runs(
     test_definition_id: UUID,
     current_user=Depends(_require_instructor_or_admin),
 ) -> List[Dict[str, Any]]:
-    """List all submitted sessions for a test with per-session grading progress."""
-    return await results_service.get_grading_overview(str(test_definition_id))
+    """
+    List per-scheduled-session grading aggregates for a test.
+
+    Each row carries lifecycle status, submission count, ungraded response
+    count, and an ``is_gradable`` flag (true once the window has closed
+    and there is at least one submission to review). A synthetic
+    ``run_id="practice"`` bucket is appended when practice submissions exist.
+    """
+    await assert_test_access(str(test_definition_id), current_user)
+    return await results_service.get_grading_runs(str(test_definition_id))
+
+
+@router.get("/tests/{test_definition_id}/grading-overview", summary="Grading progress overview")
+async def get_grading_overview(
+    test_definition_id: UUID,
+    run_id: Optional[str] = Query(default=None, description="Scoped to one scheduled run, 'practice', or 'combined' / omit for all."),
+    current_user=Depends(_require_instructor_or_admin),
+) -> List[Dict[str, Any]]:
+    """List all submitted sessions for a test with per-session grading progress.
+
+    When ``run_id`` is set to a scheduled-session UUID or the ``"practice"``
+    sentinel, results are narrowed to that bucket. Cross-tenant ``run_id``
+    is rejected with 404 by ``assert_run_belongs_to_test``.
+    """
+    await assert_run_belongs_to_test(run_id, str(test_definition_id))
+    return await results_service.get_grading_overview(
+        str(test_definition_id), run_id=run_id,
+    )
 
 
 @router.get("/tests/{test_definition_id}/grading-queue", summary="Get ungraded essay queue")
 async def get_grading_queue(
     test_definition_id: UUID,
     question_lo_id: Optional[str] = Query(default=None),
+    run_id: Optional[str] = Query(default=None, description="Scoped to one scheduled run, 'practice', or 'combined' / omit for all."),
     current_user=Depends(_require_instructor_or_admin),
 ) -> List[Dict[str, Any]]:
     """
     Get all ungraded essay question records for a test.
     If ?question_lo_id=<UUID> is provided, filters to one specific question
-    (useful for "grade by question" batch workflow).
+    (useful for "grade by question" batch workflow). ``run_id`` further
+    narrows to a specific scheduled run or the practice bucket.
     """
+    await assert_run_belongs_to_test(run_id, str(test_definition_id))
     return await results_service.get_grading_queue(
         test_definition_id=str(test_definition_id),
         question_lo_id=question_lo_id,
+        run_id=run_id,
     )
 
 

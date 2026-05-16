@@ -181,7 +181,10 @@ def _flagged_table(items: List[Dict[str, Any]]) -> Table:
     return tbl
 
 
-async def render_pdf(test_definition_id: str) -> bytes:
+async def render_pdf(
+    test_definition_id: str,
+    run_id: "str | None" = None,
+) -> bytes:
     """
     Generate a complete PDF analytics report for the given test definition.
 
@@ -192,13 +195,16 @@ async def render_pdf(test_definition_id: str) -> bytes:
       - flagged items table
       - footer
 
+    ``run_id`` narrows the report to one scheduled-session cohort (or
+    practice). Defaults to combined when omitted.
+
     Returns the PDF as raw bytes.
     """
     from app.services import psychometrics_service  # local import avoids circular deps
 
     test_stats, item_stats = await asyncio.gather(
-        psychometrics_service.compute_test_stats(test_definition_id),
-        psychometrics_service.compute_test_item_stats(test_definition_id),
+        psychometrics_service.compute_test_stats(test_definition_id, run_id=run_id),
+        psychometrics_service.compute_test_item_stats(test_definition_id, run_id=run_id),
     )
 
     styles = getSampleStyleSheet()

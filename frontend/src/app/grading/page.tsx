@@ -1,95 +1,98 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import {
     Badge,
     Button,
+    Card,
     EmptyState,
     PageHeader,
     Spinner,
-    Table,
-    TableContainer,
-    TBody,
-    TD,
-    TH,
-    THead,
-    TR,
 } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
 import { api } from '@/lib/api';
-import { formatRelativeTime, formatAbsolute } from '@/lib/relativeTime';
 import { pluralizeCount } from '@/lib/pluralize';
 
 interface GradingSession {
     session_id: string;
     test_definition_id: string;
     test_title: string;
-    student_email: string | null;
-    submitted_at: string | null;
     grading_status: 'UNGRADED' | 'PARTIALLY_GRADED' | 'FULLY_GRADED' | 'AUTO_GRADED';
-    questions_graded: number;
-    questions_total: number;
     ungraded_response_count: number;
-    percentage: number;
 }
 
-type GradingStatusLabel = 'Not started' | 'In progress' | 'Complete';
-
-function statusInfo(status: GradingSession['grading_status']): { label: GradingStatusLabel; tone: 'neutral' | 'warning' | 'success' } {
-    if (status === 'FULLY_GRADED' || status === 'AUTO_GRADED') return { label: 'Complete', tone: 'success' };
-    if (status === 'PARTIALLY_GRADED') return { label: 'In progress', tone: 'warning' };
-    return { label: 'Not started', tone: 'neutral' };
+interface BlueprintBucket {
+    test_definition_id: string;
+    test_title: string;
+    total_submissions: number;
+    ungraded_submissions: number;
+    pending_responses: number;
 }
 
-function SortArrow({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
-    if (!active) return null;
-    return <span className="text-xs text-brand ml-1">{dir === 'asc' ? '↑' : '↓'}</span>;
-}
-
-type SortKey = 'test_title' | 'ungraded' | 'submitted_at' | 'status';
-
-export default function GradingPage() {
+export default function GradingLandingPage() {
     const router = useRouter();
     const { user } = useAuthStore();
+    const { blueprints, fetchBlueprints } = useBlueprintStore();
     const [sessions, setSessions] = useState<GradingSession[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [sortKey, setSortKey] = useState<SortKey>('ungraded');
-    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
     useEffect(() => {
-        if (user?.role === 'STUDENT') { router.replace('/my-exams'); return; }
+        if (user?.role === 'STUDENT') {
+            router.replace('/my-exams');
+            return;
+        }
+        fetchBlueprints();
         api.get<GradingSession[]>('grading/sessions')
             .then((res) => setSessions(res.data ?? []))
             .catch(() => setError('Failed to load grading sessions.'))
             .finally(() => setIsLoading(false));
-    }, [user, router]);
+    }, [user, router, fetchBlueprints]);
 
-    const toggleSort = (key: SortKey) => {
-        if (sortKey === key) {
-            setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortKey(key);
-            setSortDir(key === 'ungraded' || key === 'submitted_at' ? 'desc' : 'asc');
+    // Bucket sessions by blueprint to show per-test counts on each card.
+    const buckets: BlueprintBucket[] = useMemo(() => {
+        const map = new Map<string, BlueprintBucket>();
+        for (const s of sessions) {
+            const existing = map.get(s.test_definition_id);
+            const isUngraded =
+                s.grading_status === 'UNGRADED' || s.grading_status === 'PARTIALLY_GRADED';
+            if (existing) {
+                existing.total_submissions += 1;
+                if (isUngraded) existing.ungraded_submissions += 1;
+                existing.pending_responses += s.ungraded_response_count;
+            } else {
+                map.set(s.test_definition_id, {
+                    test_definition_id: s.test_definition_id,
+                    test_title: s.test_title,
+                    total_submissions: 1,
+                    ungraded_submissions: isUngraded ? 1 : 0,
+                    pending_responses: s.ungraded_response_count,
+                });
+            }
         }
-    };
+        // Sort: blueprints with pending work first, then by submission count desc.
+        return Array.from(map.values()).sort((a, b) => {
+            if (a.pending_responses !== b.pending_responses) {
+                return b.pending_responses - a.pending_responses;
+            }
+            return b.total_submissions - a.total_submissions;
+        });
+    }, [sessions]);
 
-    const sorted = [...sessions].sort((a, b) => {
-        let cmp = 0;
-        if (sortKey === 'test_title') cmp = a.test_title.localeCompare(b.test_title);
-        else if (sortKey === 'ungraded') cmp = a.ungraded_response_count - b.ungraded_response_count;
-        else if (sortKey === 'status') cmp = a.grading_status.localeCompare(b.grading_status);
-        else cmp = (a.submitted_at ?? '').localeCompare(b.submitted_at ?? '');
-        return sortDir === 'asc' ? cmp : -cmp;
-    });
+    const blueprintMeta = useMemo(() => {
+        const m = new Map<string, (typeof blueprints)[number]>();
+        for (const b of blueprints) m.set(b.id, b);
+        return m;
+    }, [blueprints]);
 
     return (
         <PageShell width="wide">
             <PageHeader
                 title="Grading"
-                subtitle="Review and grade submitted exam sessions."
+                subtitle="Choose a blueprint to review and grade its submitted sessions."
             />
 
             {error && (
@@ -100,85 +103,66 @@ export default function GradingPage() {
 
             {isLoading ? (
                 <div className="flex items-center justify-center py-24 gap-3 text-shell-muted-dim text-meta">
-                    <Spinner size="sm" /> Loading sessions…
+                    <Spinner size="sm" /> Loading blueprints…
                 </div>
-            ) : sessions.length === 0 ? (
+            ) : buckets.length === 0 ? (
                 <EmptyState
-                    title="No sessions to grade"
-                    description="Completed sessions appear here when they need manual grading."
+                    title="No submissions to grade yet"
+                    description="Blueprints with completed sessions appear here once students submit."
                 />
             ) : (
-                <TableContainer>
-                    <Table>
-                        <THead>
-                            <TR>
-                                <TH>
-                                    <button onClick={() => toggleSort('test_title')} className="flex items-center gap-1 hover:text-foreground transition-colors">
-                                        Blueprint
-                                        <SortArrow active={sortKey === 'test_title'} dir={sortDir} />
-                                    </button>
-                                </TH>
-                                <TH>
-                                    <button onClick={() => toggleSort('submitted_at')} className="flex items-center gap-1 hover:text-foreground transition-colors">
-                                        Submitted
-                                        <SortArrow active={sortKey === 'submitted_at'} dir={sortDir} />
-                                    </button>
-                                </TH>
-                                <TH>
-                                    <button onClick={() => toggleSort('ungraded')} className="flex items-center gap-1 hover:text-foreground transition-colors">
-                                        Ungraded
-                                        <SortArrow active={sortKey === 'ungraded'} dir={sortDir} />
-                                    </button>
-                                </TH>
-                                <TH>
-                                    <button onClick={() => toggleSort('status')} className="flex items-center gap-1 hover:text-foreground transition-colors">
-                                        Status
-                                        <SortArrow active={sortKey === 'status'} dir={sortDir} />
-                                    </button>
-                                </TH>
-                                <TH align="right"></TH>
-                            </TR>
-                        </THead>
-                        <TBody>
-                            {sorted.map((s) => {
-                                const { label, tone } = statusInfo(s.grading_status);
-                                return (
-                                    <TR key={s.session_id}>
-                                        <TD>
-                                            <div className="font-medium text-foreground">{s.test_title}</div>
-                                            <div className="text-meta text-shell-muted-dim">{s.student_email ?? 'Anonymous'}</div>
-                                        </TD>
-                                        <TD>
-                                            <div
-                                                className="text-meta text-shell-muted-dim tabular-nums"
-                                                title={s.submitted_at ? formatAbsolute(s.submitted_at) : undefined}
-                                            >
-                                                {s.submitted_at ? formatRelativeTime(s.submitted_at) : '—'}
-                                            </div>
-                                        </TD>
-                                        <TD>
-                                            <span className="tabular-nums text-meta">
-                                                {pluralizeCount(s.ungraded_response_count, 'response')}
-                                            </span>
-                                        </TD>
-                                        <TD>
-                                            <Badge tone={tone} size="sm">{label}</Badge>
-                                        </TD>
-                                        <TD align="right">
-                                            <Button
-                                                variant="secondary"
-                                                size="sm"
-                                                onClick={() => router.push(`/grading/${s.session_id}`)}
-                                            >
-                                                Open →
-                                            </Button>
-                                        </TD>
-                                    </TR>
-                                );
-                            })}
-                        </TBody>
-                    </Table>
-                </TableContainer>
+                <div className="grid gap-4 lg:grid-cols-2">
+                    {buckets.map((bucket) => {
+                        const bp = blueprintMeta.get(bucket.test_definition_id);
+                        const hasPending = bucket.pending_responses > 0;
+                        return (
+                            <Card
+                                key={bucket.test_definition_id}
+                                variant="surface"
+                                padding="md"
+                                interactive
+                            >
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="min-w-0">
+                                        <p className="text-h3 font-semibold text-foreground">
+                                            {bucket.test_title}
+                                        </p>
+                                        <p className="mt-1 text-meta text-shell-muted-dim line-clamp-2">
+                                            {bp?.description || 'No description provided.'}
+                                        </p>
+                                    </div>
+                                    <Button
+                                        variant="primary"
+                                        size="sm"
+                                        onClick={() =>
+                                            router.push(`/grading/test/${bucket.test_definition_id}`)
+                                        }
+                                    >
+                                        Open →
+                                    </Button>
+                                </div>
+                                <div className="mt-4 flex flex-wrap gap-1.5">
+                                    <Badge tone="neutral" size="sm">
+                                        {pluralizeCount(bucket.total_submissions, 'submission')}
+                                    </Badge>
+                                    {hasPending ? (
+                                        <Badge tone="warning" size="sm">
+                                            {pluralizeCount(bucket.pending_responses, 'ungraded response')}
+                                        </Badge>
+                                    ) : (
+                                        <Badge tone="success" size="sm">All graded</Badge>
+                                    )}
+                                    {bucket.ungraded_submissions > 0 && (
+                                        <Badge tone="neutral" size="sm">
+                                            {bucket.ungraded_submissions} pending session
+                                            {bucket.ungraded_submissions === 1 ? '' : 's'}
+                                        </Badge>
+                                    )}
+                                </div>
+                            </Card>
+                        );
+                    })}
+                </div>
             )}
         </PageShell>
     );

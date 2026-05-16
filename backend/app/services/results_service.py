@@ -89,13 +89,10 @@ async def get_all_grading_sessions(
     Sorted: ungraded DESC, submitted_at DESC.
     """
     if is_admin:
-        test_defs = await prisma.test_definitions.find_many(
-            select={"id": True, "title": True},
-        )
+        test_defs = await prisma.test_definitions.find_many()
     else:
         test_defs = await prisma.test_definitions.find_many(
             where={"created_by": user_id},
-            select={"id": True, "title": True},
         )
 
     if not test_defs:

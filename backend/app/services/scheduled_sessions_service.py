@@ -121,8 +121,12 @@ async def create_scheduled_session(payload: Any, current_user_id: str) -> Dict[s
     return build_scheduled_session_response(record)
 
 
-async def list_scheduled_sessions() -> List[Dict[str, Any]]:
-    """Return every scheduled exam session after syncing derived statuses."""
+async def list_scheduled_sessions() -> Dict[str, Any]:
+    """Return every scheduled exam session after syncing derived statuses.
+
+    Wrapped in an envelope with ``server_now`` so the frontend can detect
+    and correct for client-clock skew when deriving lifecycle states.
+    """
     records = await prisma.scheduled_exam_sessions.find_many(
         include={"courses": True, "test_definitions": True},
         order={"starts_at": "asc"},
@@ -131,7 +135,7 @@ async def list_scheduled_sessions() -> List[Dict[str, Any]]:
     for record in records:
         current_record = await ensure_scheduled_session_current(record)
         results.append(build_scheduled_session_response(current_record))
-    return results
+    return {"sessions": results, "server_now": datetime.now(timezone.utc)}
 
 
 async def update_scheduled_session(
@@ -192,14 +196,19 @@ async def cancel_scheduled_session(session_id: UUID) -> Dict[str, Any]:
     return build_scheduled_session_response(updated)
 
 
-async def list_student_scheduled_sessions(current_user: Any) -> List[Dict[str, Any]]:
-    """List the current student's future and current assigned sessions."""
+async def list_student_scheduled_sessions(current_user: Any) -> Dict[str, Any]:
+    """List the current student's future and current assigned sessions.
+
+    Wrapped in an envelope with ``server_now`` for the same skew-correction
+    contract as :func:`list_scheduled_sessions`.
+    """
+    server_now = datetime.now(timezone.utc)
     enrollments = await prisma.course_enrollments.find_many(
         where={"student_id": str(current_user.id), "is_active": True}
     )
     course_ids = [enrollment.course_id for enrollment in enrollments]
     if not course_ids:
-        return []
+        return {"sessions": [], "server_now": server_now}
 
     records = await prisma.scheduled_exam_sessions.find_many(
         where={
@@ -210,7 +219,7 @@ async def list_student_scheduled_sessions(current_user: Any) -> List[Dict[str, A
         order={"starts_at": "asc"},
     )
     if not records:
-        return []
+        return {"sessions": [], "server_now": server_now}
 
     current_records: List[Any] = []
     for record in records:
@@ -220,7 +229,7 @@ async def list_student_scheduled_sessions(current_user: Any) -> List[Dict[str, A
         current_records.append(current_record)
 
     if not current_records:
-        return []
+        return {"sessions": [], "server_now": server_now}
 
     attempts = await prisma.exam_sessions.find_many(
         where={
@@ -263,4 +272,4 @@ async def list_student_scheduled_sessions(current_user: Any) -> List[Dict[str, A
                 "existing_attempt_status": existing_attempt_status,
             }
         )
-    return results
+    return {"sessions": results, "server_now": server_now}

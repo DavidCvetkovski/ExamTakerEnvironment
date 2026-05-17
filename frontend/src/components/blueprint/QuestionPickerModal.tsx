@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useBlueprintStore, AvailableItem } from '@/stores/useBlueprintStore';
-import { Button, Badge, CheckIcon } from '@/components/ui';
+import { Button, Badge } from '@/components/ui';
 import { api } from '@/lib/api';
 import { subjectTone } from '@/lib/subjectColor';
-import ReadOnlyTipTap from '@/components/editor/ReadOnlyTipTap';
+import QuestionInspector from '@/components/editor/QuestionInspector';
 
 interface QuestionPickerModalProps {
     isOpen: boolean;
@@ -50,9 +50,16 @@ type VersionResponse = {
     version_number: number;
     question_type: string;
     content: Record<string, unknown> | null;
-    options: { question_type: string; choices?: Array<{ id: string; text: string; is_correct: boolean }> } | null;
+    options: { question_type: string; choices?: Array<{ id: string; text: string; is_correct: boolean }>; min_words?: number; max_words?: number } | null;
     metadata_tags: Record<string, unknown> | null;
 };
+
+function normaliseOptions(v: VersionResponse): Array<{ id: string; text: string; is_correct: boolean }> | { min_words?: number; max_words?: number } | null {
+    if (!v.options) return null;
+    if (v.options.choices) return v.options.choices;
+    if (v.question_type === 'ESSAY') return { min_words: v.options.min_words, max_words: v.options.max_words };
+    return null;
+}
 
 function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestionPickerModalProps) {
     const { availableItems, fetchAvailableItems, isLoading } = useBlueprintStore();
@@ -196,63 +203,25 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                                         onSelect(item);
                                     }}
                                 >
-                                    {excludeIds.includes(inspectedItem.id) ? 'Already Added' : 'Select This Question'}
+                                    {excludeIds.includes(inspectedItem.id) ? 'Added' : 'Add'}
                                 </Button>
                             </div>
 
-                            <div className="rounded-2xl border border-shell-border bg-shell-bg p-8 space-y-6">
-                                <div>
-                                    <p className="mb-2 text-eyebrow font-semibold uppercase tracking-widest text-shell-muted-dim">Content</p>
-                                    {versionLoading ? (
-                                        <p className="text-meta text-shell-muted-dim">Loading…</p>
-                                    ) : versionError ? (
-                                        <p className="text-meta text-[var(--color-danger-fg)]">{versionError}</p>
-                                    ) : (
-                                        <ReadOnlyTipTap content={inspectedVersion?.content ?? null} />
-                                    )}
+                            {versionLoading ? (
+                                <div className="px-6 py-10 text-center text-shell-muted-dim text-sm">Loading…</div>
+                            ) : versionError ? (
+                                <div className="rounded-xl border border-shell-border bg-shell-bg px-6 py-8 text-center">
+                                    <p className="text-meta text-[var(--color-danger-fg)]">{versionError}</p>
                                 </div>
-
-                                {inspectedVersion?.options && 'choices' in inspectedVersion.options && Array.isArray(inspectedVersion.options.choices) && (
-                                    <div>
-                                        <p className="mb-2 text-eyebrow font-semibold uppercase tracking-widest text-shell-muted-dim">Options</p>
-                                        <ul className="space-y-2">
-                                            {inspectedVersion.options.choices.map((choice) => (
-                                                <li
-                                                    key={choice.id}
-                                                    className={[
-                                                        'flex items-start gap-2 rounded-lg border px-3 py-2 text-meta',
-                                                        choice.is_correct
-                                                            ? 'border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-fg)]'
-                                                            : 'border-shell-border bg-shell-input text-foreground',
-                                                    ].join(' ')}
-                                                >
-                                                    <span className="inline-flex items-center justify-center w-4 font-mono text-shell-muted-dim">{choice.is_correct ? <CheckIcon size={12} /> : '·'}</span>
-                                                    <span className="flex-1">{choice.text}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
-
-                                <div className="grid grid-cols-2 gap-6 sm:grid-cols-3">
-                                    <div>
-                                        <p className="mb-1.5 text-eyebrow font-semibold uppercase tracking-widest text-shell-muted-dim">Type</p>
-                                        <Badge tone={typeTone(inspectedItem.latest_question_type)} size="sm">
-                                            {inspectedItem.latest_question_type.replace('_', ' ')}
-                                        </Badge>
-                                    </div>
-                                    <div>
-                                        <p className="mb-1.5 text-eyebrow font-semibold uppercase tracking-widest text-shell-muted-dim">Points</p>
-                                        <span className="text-foreground font-semibold">{inspectedItem.metadata_tags?.points ?? 1}</span>
-                                    </div>
-                                    {inspectedItem.metadata_tags?.topic ? (
-                                        <div>
-                                            <p className="mb-1.5 text-eyebrow font-semibold uppercase tracking-widest text-shell-muted-dim">Subject</p>
-                                            <SubjectDot subject={inspectedItem.metadata_tags.topic as string} />
-                                        </div>
-                                    ) : null}
-                                </div>
-                            </div>
+                            ) : inspectedVersion ? (
+                                <QuestionInspector
+                                    questionType={inspectedVersion.question_type}
+                                    content={inspectedVersion.content}
+                                    options={normaliseOptions(inspectedVersion)}
+                                    metadataTags={inspectedItem.metadata_tags}
+                                    showCorrectness
+                                />
+                            ) : null}
                         </div>
                     ) : filteredItems.length === 0 ? (
                         <div className="px-6 py-16 text-center text-shell-muted-dim">
@@ -284,31 +253,25 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                                                 <span>{item.metadata_tags?.points ?? 1} pt(s)</span>
                                             </div>
                                         </div>
-                                        <div className="shrink-0 flex flex-col items-end gap-1">
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
+                                        <div className="shrink-0 flex items-center gap-2">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={(e: React.MouseEvent) => { e.stopPropagation(); setInspectedItem(item); }}
+                                            >
+                                                Preview
+                                            </Button>
+                                            <Button
+                                                variant="primary"
+                                                size="sm"
+                                                disabled={excluded}
+                                                onClick={(e: React.MouseEvent) => {
                                                     e.stopPropagation();
                                                     if (!excluded) onSelect(item);
                                                 }}
-                                                disabled={excluded}
-                                                className={[
-                                                    'rounded-xl px-4 py-2 text-xs font-bold transition-colors',
-                                                    excluded
-                                                        ? 'border border-shell-border text-shell-muted-dim cursor-not-allowed'
-                                                        : 'border border-brand/30 bg-brand/10 text-brand hover:bg-brand hover:text-white',
-                                                ].join(' ')}
                                             >
                                                 {excluded ? 'Added' : 'Add'}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={(e) => { e.stopPropagation(); setInspectedItem(item); }}
-                                                className="text-xs text-shell-muted hover:text-foreground focus-ring rounded"
-                                                title="Preview question details"
-                                            >
-                                                Preview
-                                            </button>
+                                            </Button>
                                         </div>
                                     </div>
                                 );

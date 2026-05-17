@@ -48,8 +48,8 @@ export default function QuestionRenderer({ item, questionIndex, totalQuestions }
                 <button
                     onClick={handleToggleFlag}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${isFlagged
-                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
-                            : 'bg-gray-600/50 text-shell-muted border border-shell-border-deep hover:bg-gray-600 hover:text-shell-muted'
+                            ? 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)] border border-[var(--color-warning-border)]'
+                            : 'bg-shell-input-alt/50 text-shell-muted border border-shell-border-deep hover:bg-shell-input hover:text-foreground'
                         }`}
                     title={isFlagged ? 'Unflag this question' : 'Flag for review'}
                 >

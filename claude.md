@@ -88,7 +88,7 @@
 - **Charts and data-viz** must add their own token families (`--color-chart-series-1`, `-2`, …) — never inline colors.
 - **Audit command before merge:**
   ```bash
-  grep -rE "(border|bg|text)-(blue|cyan|red|green|yellow|orange|purple|pink|indigo)-[0-9]" frontend/src/app frontend/src/components
+  grep -rE "(border|bg|text)-(blue|cyan|red|green|yellow|orange|purple|pink|indigo|amber|lime|emerald|teal|sky|violet|fuchsia|rose|slate|gray|zinc|neutral|stone)-[0-9]" frontend/src/app frontend/src/components
   ```
   Result must be empty (or match a documented exception in this file).
 

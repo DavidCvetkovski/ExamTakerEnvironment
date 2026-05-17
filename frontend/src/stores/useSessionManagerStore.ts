@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 
 import { api } from '@/lib/api';
+import { recordServerNow } from '@/lib/serverTime';
+
+interface ScheduledSessionListEnvelope {
+    sessions: ScheduledSession[];
+    server_now: string;
+}
 
 export interface ScheduledSession {
     id: string;
@@ -41,8 +47,9 @@ export const useSessionManagerStore = create<SessionManagerState>((set, get) => 
     fetchScheduledSessions: async () => {
         set({ isLoading: true, error: null });
         try {
-            const response = await api.get<ScheduledSession[]>('/scheduled-sessions/');
-            set({ scheduledSessions: response.data, isLoading: false });
+            const response = await api.get<ScheduledSessionListEnvelope>('/scheduled-sessions/');
+            recordServerNow(response.data.server_now);
+            set({ scheduledSessions: response.data.sessions, isLoading: false });
         } catch (err: unknown) {
             const message = (err as { response?: { data?: { detail?: string } } })
                 ?.response?.data?.detail || 'Failed to fetch scheduled sessions';

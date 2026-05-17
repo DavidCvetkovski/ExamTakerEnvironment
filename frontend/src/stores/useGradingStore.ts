@@ -16,6 +16,8 @@ export interface SessionGradingSummary {
     student_email: string | null;
     student_vunet_id: string | null;
     submitted_at: string | null;
+    scheduled_session_id: string | null;
+    session_mode: string | null;
     grading_status: GradingStatus;
     questions_graded: number;
     questions_total: number;
@@ -23,6 +25,25 @@ export interface SessionGradingSummary {
     max_points: number;
     percentage: number;
     is_published: boolean;
+}
+
+/**
+ * One row in the per-blueprint runs picker. ``run_id`` is a
+ * scheduled-session UUID. Practice-mode submissions are excluded
+ * server-side and never appear in this list.
+ */
+export interface GradingRun {
+    run_id: string;
+    kind: 'ASSIGNED';
+    course_id: string | null;
+    course_code: string | null;
+    course_title: string | null;
+    starts_at: string | null;
+    ends_at: string | null;
+    lifecycle_status: 'SCHEDULED' | 'ACTIVE' | 'CLOSED' | 'CANCELED';
+    submissions_total: number;
+    ungraded_response_count: number;
+    is_gradable: boolean;
 }
 
 export interface QuestionGrade {
@@ -78,8 +99,13 @@ export type PublishStatus = 'idle' | 'publishing' | 'published' | 'error';
 interface GradingState {
     // Overview
     selectedTestId: string | null;
+    selectedRunId: string | null;
     gradingOverview: SessionGradingSummary[];
     overviewLoading: boolean;
+
+    // Runs picker
+    runsByTestId: Record<string, GradingRun[]>;
+    runsLoading: boolean;
 
     // Per-session grading
     currentSessionId: string | null;
@@ -101,7 +127,9 @@ interface GradingState {
 
     // Actions
     setSelectedTestId: (testId: string) => void;
-    fetchGradingOverview: (testId: string) => Promise<void>;
+    setSelectedRunId: (runId: string | null) => void;
+    fetchGradingRuns: (testId: string) => Promise<void>;
+    fetchGradingOverview: (testId: string, runId?: string | null) => Promise<void>;
     fetchSessionGrades: (sessionId: string) => Promise<void>;
     fetchSessionResult: (sessionId: string) => Promise<void>;
     submitManualGrade: (gradeId: string, payload: ManualGradePayload) => Promise<void>;
@@ -119,8 +147,11 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
 export const useGradingStore = create<GradingState>((set, get) => ({
     // ── Initial state ──────────────────────────────────────────────────────
     selectedTestId: null,
+    selectedRunId: null,
     gradingOverview: [],
     overviewLoading: false,
+    runsByTestId: {},
+    runsLoading: false,
     currentSessionId: null,
     questionGrades: [],
     sessionResult: null,
@@ -134,12 +165,37 @@ export const useGradingStore = create<GradingState>((set, get) => ({
         set({ selectedTestId: testId });
     },
 
-    // ── Grading overview ───────────────────────────────────────────────────
-    fetchGradingOverview: async (testId: string) => {
-        set({ overviewLoading: true, error: null, selectedTestId: testId });
+    setSelectedRunId: (runId) => {
+        set({ selectedRunId: runId });
+    },
+
+    // ── Runs picker ────────────────────────────────────────────────────────
+    fetchGradingRuns: async (testId: string) => {
+        set({ runsLoading: true, error: null });
         try {
+            const res = await api.get<GradingRun[]>(`grading/tests/${testId}/runs`);
+            set((s) => ({
+                runsByTestId: { ...s.runsByTestId, [testId]: res.data },
+                runsLoading: false,
+            }));
+        } catch (err) {
+            set({ error: getApiErrorMessage(err, 'Failed to load runs'), runsLoading: false });
+        }
+    },
+
+    // ── Grading overview ───────────────────────────────────────────────────
+    fetchGradingOverview: async (testId: string, runId: string | null = null) => {
+        set({
+            overviewLoading: true,
+            error: null,
+            selectedTestId: testId,
+            selectedRunId: runId,
+        });
+        try {
+            const params = runId ? { run_id: runId } : undefined;
             const res = await api.get<SessionGradingSummary[]>(
-                `grading/tests/${testId}/grading-overview`
+                `grading/tests/${testId}/grading-overview`,
+                { params },
             );
             set({ gradingOverview: res.data, overviewLoading: false });
         } catch (err) {
@@ -184,11 +240,16 @@ export const useGradingStore = create<GradingState>((set, get) => ({
                 ]);
                 set({ questionGrades: gradesRes.data, sessionResult: resultRes.data });
             }
-            // Also refresh overview to reflect updated grading_status
+            // Also refresh overview to reflect updated grading_status.
+            // Preserve the active run filter so the dashboard doesn't silently
+            // widen back to all-runs after a grade is saved.
             const testId = get().selectedTestId;
+            const runId = get().selectedRunId;
             if (testId) {
+                const params = runId ? { run_id: runId } : undefined;
                 const overviewRes = await api.get<SessionGradingSummary[]>(
-                    `grading/tests/${testId}/grading-overview`
+                    `grading/tests/${testId}/grading-overview`,
+                    { params },
                 );
                 set({ gradingOverview: overviewRes.data });
             }

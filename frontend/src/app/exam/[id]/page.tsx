@@ -7,7 +7,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useExamStore } from '@/stores/useExamStore';
 import { useHeartbeat } from '@/hooks/useHeartbeat';
 import QuestionRenderer from '@/components/exam/QuestionRenderer';
-import TimelineNavigator from '@/components/exam/TimelineNavigator';
+import ExamFooter from '@/components/exam/ExamFooter';
 import SaveIndicator from '@/components/exam/SaveIndicator';
 import ReviewSummary from '@/components/exam/ReviewSummary';
 import SubmissionConfirmation from '@/components/exam/SubmissionConfirmation';
@@ -148,7 +148,7 @@ export default function ExamPage() {
 
     return (
         <ProtectedRoute allowedRoles={['STUDENT', 'CONSTRUCTOR', 'ADMIN']}>
-            <div className="min-h-screen bg-shell-surface text-foreground flex flex-col pb-16">
+            <div className="min-h-screen bg-shell-surface text-foreground flex flex-col pb-28">
                 {/* Header / Timer Bar */}
                 <header className="sticky top-0 z-10 bg-shell-surface border-b border-shell-border px-6 py-4 flex justify-between items-center shadow-[var(--shadow-card)]">
                     <div className="flex items-center gap-4">
@@ -201,47 +201,16 @@ export default function ExamPage() {
                             </Link>
                         </div>
                     ) : currentItem ? (
-                        <div className="space-y-6">
-                            <QuestionRenderer
-                                item={currentItem}
-                                questionIndex={currentQuestionIndex}
-                                totalQuestions={totalQuestions}
-                            />
-
-                            {/* Navigation Buttons */}
-                            <div className="flex justify-between items-center pt-4">
-                                <button
-                                    onClick={() => navigateTo(currentQuestionIndex - 1)}
-                                    disabled={currentQuestionIndex === 0}
-                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-shell-border bg-shell-surface text-foreground hover:bg-shell-input-alt hover:border-shell-border-deep transition-colors font-medium text-meta disabled:opacity-40 disabled:cursor-not-allowed"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                                        <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
-                                    </svg>
-                                    Previous
-                                </button>
-
-                                <span className="text-sm text-shell-muted-dim">
-                                    {currentQuestionIndex + 1} / {totalQuestions}
-                                </span>
-
-                                <button
-                                    onClick={() => navigateTo(currentQuestionIndex + 1)}
-                                    disabled={currentQuestionIndex === totalQuestions - 1}
-                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-brand text-white font-medium text-meta transition-[filter] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed"
-                                >
-                                    Next
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                                        <path fillRule="evenodd" d="M3 10a.75.75 0 0 1 .75-.75h10.638L10.23 5.29a.75.75 0 1 1 1.04-1.08l5.5 5.25a.75.75 0 0 1 0 1.08l-5.5 5.25a.75.75 0 1 1-1.04-1.08l4.158-3.96H3.75A.75.75 0 0 1 3 10Z" clipRule="evenodd" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
+                        <QuestionRenderer
+                            item={currentItem}
+                            questionIndex={currentQuestionIndex}
+                            totalQuestions={totalQuestions}
+                        />
                     ) : null}
                 </main>
 
-                {/* Timeline Navigator */}
-                <TimelineNavigator />
+                {/* Composite sticky footer: Prev/Next + timeline */}
+                <ExamFooter />
 
                 {/* Review Modal */}
                 {showReview && (

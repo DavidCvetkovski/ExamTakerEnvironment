@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import type { StudentScheduledSession } from '@/stores/useStudentSessionsStore';
 import { Badge, Button, Card } from '@/components/ui';
+import { useServerNow } from '@/hooks/useServerNow';
 import { formatAbsolute, formatScheduled, formatRelativeTime } from '@/lib/relativeTime';
 
 interface StudentExamCardProps {
@@ -12,6 +13,9 @@ interface StudentExamCardProps {
 
 export default function StudentExamCard({ session, onJoin }: StudentExamCardProps) {
     const router = useRouter();
+    // Minute-resolution ticking is plenty for "is this start in the past or
+    // future" copy decisions — we don't need 1s precision here.
+    const now = useServerNow(60_000);
     const startsAt = new Date(session.starts_at);
     const endsAt = new Date(session.ends_at);
 
@@ -54,7 +58,7 @@ export default function StudentExamCard({ session, onJoin }: StudentExamCardProp
                         className="mt-1 text-foreground font-medium tabular-nums"
                         title={formatAbsolute(startsAt)}
                     >
-                        {startsAt > new Date() ? formatScheduled(startsAt) : formatRelativeTime(startsAt)}
+                        {startsAt > now ? formatScheduled(startsAt) : formatRelativeTime(startsAt)}
                     </p>
                 </div>
                 <div>
@@ -63,7 +67,7 @@ export default function StudentExamCard({ session, onJoin }: StudentExamCardProp
                         className="mt-1 text-foreground font-medium tabular-nums"
                         title={formatAbsolute(endsAt)}
                     >
-                        {endsAt > new Date() ? formatScheduled(endsAt) : formatRelativeTime(endsAt)}
+                        {endsAt > now ? formatScheduled(endsAt) : formatRelativeTime(endsAt)}
                     </p>
                 </div>
             </div>

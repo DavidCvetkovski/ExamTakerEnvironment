@@ -6,7 +6,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import DistractorBars from '@/components/analytics/DistractorBars';
 import PDValueTrendChart from '@/components/analytics/PDValueTrendChart';
-import { useAnalyticsStore } from '@/stores/useAnalyticsStore';
+import { bundleKey, useAnalyticsStore } from '@/stores/useAnalyticsStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { BackButton, InfoTooltip, Spinner } from '@/components/ui';
 
@@ -42,7 +42,9 @@ export default function ItemAnalyticsDetailPage() {
         }
     }, [loadTestAnalytics, sourceTestId]);
 
-    const bundle = sourceTestId ? bundles[sourceTestId] : undefined;
+    // Item history doesn't carry a per-run scope, so we always look at the
+    // combined bundle when joining back to item-level stats.
+    const bundle = sourceTestId ? bundles[bundleKey(sourceTestId, null)] : undefined;
     const latestItemStats = bundle?.items
         .filter((item) => item.learning_object_id === loId)
         .sort((left, right) => (right.version_number ?? 0) - (left.version_number ?? 0))[0];

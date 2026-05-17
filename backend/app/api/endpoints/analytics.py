@@ -22,6 +22,7 @@ from app.schemas.analytics import (
     TestStatsResponse,
 )
 from app.services import psychometrics_service
+from app.services.run_filter import assert_run_belongs_to_test
 
 router = APIRouter()
 
@@ -82,6 +83,23 @@ def _parse_cut_scores(raw: Optional[str]) -> Optional[List[float]]:
 
 
 @router.get(
+    "/tests/{test_definition_id}/runs",
+    summary="Per-run analytics aggregates",
+)
+async def list_analytics_runs(
+    test_definition_id: UUID,
+    current_user=Depends(_require_analytics_user),
+) -> List[Dict[str, Any]]:
+    """
+    Per-scheduled-session analytics aggregates plus a pinned "Combined"
+    sentinel row representing the all-runs cohort (the recommended default
+    for psychometric power — splitting halves the sample per run).
+    """
+    await _require_test_access(str(test_definition_id), current_user)
+    return await psychometrics_service.list_analytics_runs(str(test_definition_id))
+
+
+@router.get(
     "/tests/{test_definition_id}",
     response_model=TestAnalyticsBundleResponse,
     summary="Latest analytics bundle for a test",
@@ -89,12 +107,15 @@ def _parse_cut_scores(raw: Optional[str]) -> Optional[List[float]]:
 async def get_test_analytics_bundle(
     test_definition_id: UUID,
     cut_scores: Optional[str] = Query(default=None),
+    run_id: Optional[str] = Query(default=None, description="Scoped to one scheduled run, 'practice', or 'combined' / omit for all."),
     current_user=Depends(_require_analytics_user),
 ) -> Dict[str, Any]:
     await _require_test_access(str(test_definition_id), current_user)
+    await assert_run_belongs_to_test(run_id, str(test_definition_id))
     bundle = await psychometrics_service.get_latest_test_analytics_bundle(
         str(test_definition_id),
         cut_scores=_parse_cut_scores(cut_scores),
+        run_id=run_id,
     )
     if bundle is None:
         raise HTTPException(
@@ -112,13 +133,16 @@ async def get_test_analytics_bundle(
 async def recompute_test_analytics_bundle(
     test_definition_id: UUID,
     cut_scores: Optional[str] = Query(default=None),
+    run_id: Optional[str] = Query(default=None),
     current_user=Depends(_require_analytics_user),
 ) -> Dict[str, Any]:
     await _require_test_access(str(test_definition_id), current_user)
+    await assert_run_belongs_to_test(run_id, str(test_definition_id))
     try:
         return await psychometrics_service.recompute_test_analytics_bundle(
             str(test_definition_id),
             cut_scores=_parse_cut_scores(cut_scores),
+            run_id=run_id,
         )
     except ValueError as exc:
         raise HTTPException(
@@ -148,9 +172,11 @@ async def get_item_history(
 async def get_cut_score_scenarios(
     test_definition_id: UUID,
     cuts: str = Query(..., description="Comma-separated cut score percentages."),
+    run_id: Optional[str] = Query(default=None),
     current_user=Depends(_require_analytics_user),
 ) -> List[Dict[str, Any]]:
     await _require_test_access(str(test_definition_id), current_user)
+    await assert_run_belongs_to_test(run_id, str(test_definition_id))
     parsed_cuts = _parse_cut_scores(cuts)
     if not parsed_cuts:
         raise HTTPException(
@@ -160,6 +186,7 @@ async def get_cut_score_scenarios(
     return await psychometrics_service.get_cut_score_scenarios(
         str(test_definition_id),
         parsed_cuts,
+        run_id=run_id,
     )
 
 
@@ -169,6 +196,7 @@ async def get_cut_score_scenarios(
 )
 async def get_test_item_stats(
     test_definition_id: UUID,
+    run_id: Optional[str] = Query(default=None),
     current_user=Depends(_require_analytics_user),
 ) -> Dict[str, Any]:
     """
@@ -179,7 +207,10 @@ async def get_test_item_stats(
     Essay items show P/D as null since is_correct is not set automatically.
     """
     await _require_test_access(str(test_definition_id), current_user)
-    return await psychometrics_service.compute_test_item_stats(str(test_definition_id))
+    await assert_run_belongs_to_test(run_id, str(test_definition_id))
+    return await psychometrics_service.compute_test_item_stats(
+        str(test_definition_id), run_id=run_id,
+    )
 
 
 @router.get(
@@ -213,6 +244,7 @@ async def get_test_stats(
         default=None,
         description="Comma-separated cut-score percentages for pass-rate simulation (e.g. '45,50,55,60').",
     ),
+    run_id: Optional[str] = Query(default=None),
     current_user=Depends(_require_analytics_user),
 ) -> Dict[str, Any]:
     """
@@ -225,10 +257,11 @@ async def get_test_stats(
     - Cut-score analysis: simulated pass rates at alternative thresholds
     """
     await _require_test_access(str(test_definition_id), current_user)
+    await assert_run_belongs_to_test(run_id, str(test_definition_id))
     parsed_cuts = _parse_cut_scores(cut_scores)
 
     return await psychometrics_service.compute_test_stats(
-        str(test_definition_id), cut_scores=parsed_cuts
+        str(test_definition_id), cut_scores=parsed_cuts, run_id=run_id,
     )
 
 
@@ -242,6 +275,7 @@ async def get_test_stats(
 async def get_test_dashboard(
     test_definition_id: UUID,
     cut_scores: Optional[str] = Query(default=None),
+    run_id: Optional[str] = Query(default=None),
     current_user=Depends(_require_analytics_user),
 ) -> Dict[str, Any]:
     """
@@ -251,8 +285,11 @@ async def get_test_dashboard(
     - Flagged items list: items exceeding any psychometric threshold
     """
     await _require_test_access(str(test_definition_id), current_user)
+    await assert_run_belongs_to_test(run_id, str(test_definition_id))
     return await psychometrics_service.compute_dashboard(
-        str(test_definition_id), cut_scores=_parse_cut_scores(cut_scores)
+        str(test_definition_id),
+        cut_scores=_parse_cut_scores(cut_scores),
+        run_id=run_id,
     )
 
 
@@ -263,6 +300,7 @@ async def get_test_dashboard(
 )
 async def get_flagged_items_for_test(
     test_definition_id: UUID,
+    run_id: Optional[str] = Query(default=None),
     current_user=Depends(_require_analytics_user),
 ) -> List[Dict[str, Any]]:
     """
@@ -271,7 +309,10 @@ async def get_flagged_items_for_test(
     Used to surface items that need revision.
     """
     await _require_test_access(str(test_definition_id), current_user)
-    return await psychometrics_service.list_flagged_items_for_test(str(test_definition_id))
+    await assert_run_belongs_to_test(run_id, str(test_definition_id))
+    return await psychometrics_service.list_flagged_items_for_test(
+        str(test_definition_id), run_id=run_id,
+    )
 
 
 @router.get(
@@ -295,6 +336,7 @@ async def get_flagged_items_for_bank(
 )
 async def export_test_analytics_report(
     test_definition_id: UUID,
+    run_id: Optional[str] = Query(default=None),
     current_user=Depends(_require_analytics_user),
 ) -> StreamingResponse:
     """
@@ -303,8 +345,9 @@ async def export_test_analytics_report(
     Suitable for exam board reviews.
     """
     await _require_test_access(str(test_definition_id), current_user)
+    await assert_run_belongs_to_test(run_id, str(test_definition_id))
     csv_content = await psychometrics_service.export_test_analytics_report(
-        str(test_definition_id)
+        str(test_definition_id), run_id=run_id,
     )
     return StreamingResponse(
         iter([csv_content]),
@@ -321,6 +364,7 @@ async def export_test_analytics_report(
 )
 async def get_test_section_analytics(
     test_definition_id: UUID,
+    run_id: Optional[str] = Query(default=None),
     current_user=Depends(_require_analytics_user),
 ) -> Dict[str, Any]:
     """
@@ -330,7 +374,10 @@ async def get_test_section_analytics(
     to the section's `question_count` only.
     """
     await _require_test_access(str(test_definition_id), current_user)
-    return await psychometrics_service.compute_section_analytics(str(test_definition_id))
+    await assert_run_belongs_to_test(run_id, str(test_definition_id))
+    return await psychometrics_service.compute_section_analytics(
+        str(test_definition_id), run_id=run_id,
+    )
 
 
 @router.get(
@@ -339,6 +386,7 @@ async def get_test_section_analytics(
 )
 async def export_pdf_report(
     test_definition_id: UUID,
+    run_id: Optional[str] = Query(default=None),
     current_user=Depends(_require_analytics_user),
 ) -> Response:
     """
@@ -348,9 +396,10 @@ async def export_pdf_report(
     Suitable for exam-board submission. Requires CONSTRUCTOR or ADMIN role.
     """
     await _require_test_access(str(test_definition_id), current_user)
+    await assert_run_belongs_to_test(run_id, str(test_definition_id))
     from app.services.analytics_pdf_service import render_pdf
 
-    pdf_bytes = await render_pdf(str(test_definition_id))
+    pdf_bytes = await render_pdf(str(test_definition_id), run_id=run_id)
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",

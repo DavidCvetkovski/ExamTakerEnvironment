@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -52,3 +52,19 @@ class StudentScheduledSessionResponse(BaseModel):
     existing_attempt_status: Optional[Literal["STARTED", "SUBMITTED", "EXPIRED"]] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ScheduledSessionListResponse(BaseModel):
+    """Envelope for list endpoints. Includes server_now so the client can
+    detect and correct for clock skew when deriving session lifecycle states.
+    """
+
+    sessions: List[ScheduledSessionResponse]
+    server_now: datetime
+
+
+class StudentScheduledSessionListResponse(BaseModel):
+    """Student counterpart — same skew-correction contract."""
+
+    sessions: List[StudentScheduledSessionResponse]
+    server_now: datetime

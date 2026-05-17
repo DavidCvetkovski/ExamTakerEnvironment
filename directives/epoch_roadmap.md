@@ -632,21 +632,53 @@
 
 ---
 
-## Epoch 8.5 — Verification Debt: Token Audit, Auth Persistence & Test Hygiene
+## Epoch 8.5 — Verification Debt + Targeted UX Corrections
 
-**Goal:** Close the loop on items surfaced during the Epoch 8.4 Stage 17/18 in-browser verification pass that fell outside 8.4's documented scope. Debt paydown, not a polish pass. See `directives/epoch_8_5_blueprint.md`.
+**Goal:** Close the loop on items surfaced during the Epoch 8.4 Stage 17/18 in-browser verification pass (Stages 1–4) **and** apply a batch of targeted UX corrections reported during continued live use 2026-05-15 (Stages 5–10). Mixed debt-paydown + UX-correction epoch. See `directives/epoch_8_5_blueprint.md`.
 
 ### Stages
 1. **Complete the Color-Token Audit** — 8.4's audit regex missed `amber|emerald|gray` etc.; the exam components (`QuestionRenderer`, `TimelineNavigator`) use them directly for current/answered/flagged states. Define an exam-navigation token family across all three themes, remap the five sites, and widen the §7.1 audit regex to the full Tailwind palette. Needs a live exam session to verify visually.
 2. **Auth Session Persistence** — the access token is in-memory only; a hard refresh or deep-link logs the user out (`ProtectedRoute` bounces to `/login`). Implement rehydrate-on-load via the refresh-token cookie. Strictly an Epoch 3 concern; captured here because verification surfaced it.
 3. **Pre-Existing Backend Test Failures** — 4 `pytest` failures predating 8.4 (2× accommodations, 2× versioning immutability — `assert 2 == 1` on draft-overwrite). Triage code-vs-test and fix; they block the "pytest clean" gate.
 4. **Minor Polish Punch List** — `1 SECTIONS` plural bug on `/analytics` index cards (8.4 Stage 18g fixed it for blueprint cards only); extract a shared `pluralize` util.
+5. **Blueprint Inspect: Full Question + Options + Correct-Answer Hint** — when inspecting a question from a blueprint, render the full stem, all options, and a *muted* marker on the correct option(s). Uses the read-only TipTap contract; no new loud "correct" badge.
+6. **Blueprint Inspect: Truly Read-Only Question Inspection** — today inspect surfaces still expose editable inputs whose saves silently no-op. Render a structurally distinct `<QuestionInspector>` (per `CLAUDE.md` §7.7 "Inspect ≠ Edit"), not the editor with `disabled` props.
+7. **Question Picker: Preview Reliability + Button Consistency** — fix the empty-preview bug (`QuestionPickerModal` content-rendering path); promote "Preview" to a real button paired with "Add"; replace "Select This Question" with "Add" so the action label is consistent between list rows and the preview panel.
+8. **Analytics IA: Session-First + Hideable Blueprint View** — split `/analytics` into a default `Sessions` tab (per completed session, with session details) and a secondary `Blueprints` tab (the existing per-blueprint view, unchanged). Single feature flag hides the Blueprints tab + its routes site-wide.
+9. **Grading IA: Session-First Restructure (Blueprint View Removed)** — `/grading` lands on a list of completed sessions; per-blueprint grading routes, components, and aggregation queries are deleted (not flagged off). Per-session grading workbench is unchanged.
+10. **Exam Take: Next Button Reachable on Small Viewports** — the Next / Submit footer falls below the fold on short viewports; make it sticky-to-bottom inside the focus-mode layout. One acute reachability fix; does not discharge TODO-003 (Mobile/Responsive Pass).
 
 **Exit Criteria:**
 - Widened color audit returns zero hits; exam-taking screen verified across dark/warm/light-blue with a live session.
 - Hard refresh / deep-link on a protected route no longer logs the user out.
 - `pytest` exits 0 — all 4 pre-existing failures resolved.
+- Blueprint inspector renders the full question + muted correct marker; no editable inputs reachable from inspect.
+- `QuestionPickerModal`: preview content renders reliably; Preview and Add are paired buttons; "Select This Question" string is gone.
+- `/analytics` lands on Sessions; Blueprints tab demoted and hideable behind one flag.
+- `/grading` lands on a session list only; per-blueprint grading routes deleted.
+- Exam Next button reachable at a 600 px viewport height in all three themes.
 - `tsc --noEmit` + `next build` pass.
+- Aikido: zero new Critical/High findings.
+
+---
+
+## Epoch 8.6 — Reactive Lifecycle & Per-Run Drill-Ins
+
+**Goal:** Fix two distinct UX bugs that surfaced during continued use of the Epoch 8.5 build (2026-05-16): (1) scheduled-session countdowns count *up* past `ends_at` instead of moving the row to Completed, and the Scheduled → Ongoing transition has the same lag; (2) grading and analytics treat one blueprint as one bucket of submissions, with no way to drill into "which scheduled run of this blueprint do I want to grade / analyze?". See `directives/epoch_8_6_blueprint.md`.
+
+### Stages
+1. **Reactive Lifecycle Transitions on the Sessions Dashboard** — extract a singleton `useNow` primitive + a pure `sessionLifecycle.ts` deriver mirroring the backend rules; fix the `useCountdown` `Math.abs` bug that's the visible "counting up" symptom; replace the blunt 30s poll with a transition-aware precise refetch (`setTimeout` at the next `starts_at`/`ends_at` + 500ms). Add `server_now` to the scheduled-sessions response so the frontend can correct for client-clock skew.
+2. **Per-Run Grading & Analytics Drill-Ins** — surface `exam_sessions.scheduled_session_id` (existing FK, unused today) through grading + psychometrics services; insert a runs-picker page between blueprint cards and the per-blueprint dashboard for both `/grading` and `/analytics`; gate the grading runs picker to *closed* runs (with disabled-but-visible cards for ongoing/scheduled). Refit `seed_e2e.py` to give one demo blueprint two scheduled runs with submissions split across them, plus one Practice attempt.
+
+**Exit Criteria:**
+- A row in **Ongoing** moves to **Completed** within 1 second of `ends_at`; the countdown never shows a positive value past zero. Same for Scheduled → Ongoing.
+- Hard-refresh of `/sessions` shows the same bucket placement the backend reports — no flicker.
+- Client clock set 5 minutes ahead does not misclassify rows (server-now skew correction works).
+- `/grading` → blueprint cards → runs picker (per scheduled session, gated to closed) → per-run grading dashboard. Cross-tenant `run_id` is rejected with 403/404, not silently filtered.
+- `/analytics` mirrors the same structure, with a pinned "Combined" card preserving today's all-runs behavior as the default.
+- Seed shows at least one blueprint with two closed runs whose submissions can be graded independently.
+- `tsc --noEmit` + `next build` pass.
+- Widened color audit returns zero hits across the new surfaces.
 - Aikido: zero new Critical/High findings.
 
 ---

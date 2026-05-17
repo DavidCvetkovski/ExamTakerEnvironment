@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import TipTapEditor from '@/components/editor/TipTapEditor';
 import MCQOptionsPanel from '@/components/editor/MCQOptionsPanel';
 import EssayOptionsPanel from '@/components/editor/EssayOptionsPanel';
+import QuestionInspector from '@/components/editor/QuestionInspector';
 import { useAuthoringStore } from '@/stores/useAuthoringStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { deriveLockedQuestionIds, useBlueprintStore } from '@/stores/useBlueprintStore';
@@ -34,6 +35,7 @@ function AuthorPageInner() {
         saveStatus, questionType, setQuestionType,
         fetchLatestVersion, learningObjectId, saveDraft, revertChanges,
         metadataTags, updateMetadataField, isDirty,
+        tiptapJson, options,
     } = useAuthoringStore();
 
     const setLastEditingLoId = useLibraryStore((s) => s.setLastEditingLoId);
@@ -138,7 +140,7 @@ function AuthorPageInner() {
 
                     {isLocked && (
                         <div className="mb-5 rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-4 py-3 text-sm text-[var(--color-warning-fg)]">
-                            This question is in active use. Edits would invalidate existing student attempts.
+                            This question is in active use, so it&apos;s shown read-only. To change it, duplicate the question and edit the copy.
                         </div>
                     )}
 
@@ -150,6 +152,22 @@ function AuthorPageInner() {
                                 If this persists, return to the library and try again.
                             </p>
                         </Card>
+                    ) : isLocked ? (
+                        // Locked items render through QuestionInspector, not the editor
+                        // with disabled inputs — see CLAUDE.md §7.7 and Stage 6 of
+                        // Epoch 8.5. No form elements, no metadata inputs, no save
+                        // chrome. Same URL — branched render.
+                        <div className="space-y-5">
+                            <div className="flex items-center justify-end">
+                                <Badge tone="info" size="sm">View only</Badge>
+                            </div>
+                            <QuestionInspector
+                                questionType={questionType}
+                                content={tiptapJson}
+                                options={options}
+                                metadataTags={metadataTags}
+                            />
+                        </div>
                     ) : (
                         <div className="space-y-5">
                             <Card variant="surface" padding="md">
@@ -161,7 +179,6 @@ function AuthorPageInner() {
                                             placeholder="e.g. Math"
                                             value={(metadataTags.topic as string) || ''}
                                             onChange={(e) => updateMetadataField('topic', e.target.value)}
-                                            disabled={isLocked}
                                         />
                                     </Field>
 
@@ -173,7 +190,6 @@ function AuthorPageInner() {
                                             step="1"
                                             value={metadataTags.points !== undefined ? metadataTags.points as number : ''}
                                             onChange={(e) => updateMetadataField('points', e.target.value === '' ? '' : parseInt(e.target.value))}
-                                            disabled={isLocked}
                                         />
                                     </Field>
 
@@ -182,7 +198,6 @@ function AuthorPageInner() {
                                             inputSize="sm"
                                             value={questionType}
                                             onChange={(e) => setQuestionType(e.target.value as 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY')}
-                                            disabled={isLocked}
                                         >
                                             <option value="MULTIPLE_CHOICE">Single choice</option>
                                             <option value="MULTIPLE_RESPONSE">Multiple choice</option>
@@ -192,43 +207,37 @@ function AuthorPageInner() {
 
                                     <div className="flex-1" />
 
-                                    {isLocked ? (
-                                        <Badge tone="info" size="sm">View only</Badge>
-                                    ) : (
-                                        <>
-                                            {isDirty && (
-                                                <span className="inline-flex items-center gap-1.5 text-meta text-[var(--color-warning-fg)]">
-                                                    <StatusDot tone="warning" pulse />
-                                                    Unsaved
-                                                </span>
-                                            )}
-                                            {statusBadge}
-
-                                            <Button
-                                                variant="secondary"
-                                                size="md"
-                                                disabled={!isDirty || saveStatus === 'SAVING'}
-                                                onClick={revertChanges}
-                                            >
-                                                Revert
-                                            </Button>
-
-                                            <Button
-                                                variant="primary"
-                                                size="md"
-                                                disabled={!isDirty || saveStatus === 'SAVING'}
-                                                loading={saveStatus === 'SAVING'}
-                                                onClick={handleSave}
-                                            >
-                                                Save
-                                            </Button>
-                                        </>
+                                    {isDirty && (
+                                        <span className="inline-flex items-center gap-1.5 text-meta text-[var(--color-warning-fg)]">
+                                            <StatusDot tone="warning" pulse />
+                                            Unsaved
+                                        </span>
                                     )}
+                                    {statusBadge}
+
+                                    <Button
+                                        variant="secondary"
+                                        size="md"
+                                        disabled={!isDirty || saveStatus === 'SAVING'}
+                                        onClick={revertChanges}
+                                    >
+                                        Revert
+                                    </Button>
+
+                                    <Button
+                                        variant="primary"
+                                        size="md"
+                                        disabled={!isDirty || saveStatus === 'SAVING'}
+                                        loading={saveStatus === 'SAVING'}
+                                        onClick={handleSave}
+                                    >
+                                        Save
+                                    </Button>
                                 </div>
                             </Card>
 
                             <Card variant="bordered" padding="none" className="overflow-hidden">
-                                <TipTapEditor editable={!isLocked} />
+                                <TipTapEditor editable={true} />
                             </Card>
 
                             <Card variant="bordered" padding="none" className="overflow-hidden">

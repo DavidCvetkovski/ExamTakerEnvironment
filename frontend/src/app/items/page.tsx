@@ -26,6 +26,7 @@ import {
 import PageShell from '@/components/layout/PageShell';
 import { formatRelativeTime } from '@/lib/relativeTime';
 import { subjectTone } from '@/lib/subjectColor';
+import { pluralizeCount } from '@/lib/pluralize';
 import { cn } from '@/components/ui/cn';
 
 function getMetadataString(value: unknown): string | null {
@@ -39,8 +40,8 @@ function LockGlyph({ count }: { count: number }) {
     return (
         <span
             className="inline-flex items-center text-shell-muted-dim"
-            title={`In use by ${count} blueprint${count === 1 ? '' : 's'}`}
-            aria-label={`Locked — in use by ${count} blueprint${count === 1 ? '' : 's'}`}
+            title={`In use by ${pluralizeCount(count, 'blueprint')}`}
+            aria-label={`Locked — in use by ${pluralizeCount(count, 'blueprint')}`}
         >
             <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                 <path d="M5 7V5a3 3 0 1 1 6 0v2h.5A1.5 1.5 0 0 1 13 8.5v4A1.5 1.5 0 0 1 11.5 14h-7A1.5 1.5 0 0 1 3 12.5v-4A1.5 1.5 0 0 1 4.5 7H5Zm1 0h4V5a2 2 0 1 0-4 0v2Z" />

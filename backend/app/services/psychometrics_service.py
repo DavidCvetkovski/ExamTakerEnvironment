@@ -30,10 +30,7 @@ from app.services.reliability import (
     score_distribution as _score_distribution,
     std_dev as _std_dev,
 )
-from app.services.run_filter import (
-    PRACTICE_SENTINEL,
-    build_session_results_run_filter,
-)
+from app.services.run_filter import build_session_results_run_filter
 from app.services.scheduled_sessions_service import ensure_utc
 
 
@@ -52,10 +49,11 @@ async def compute_test_item_stats(
     Only sessions with a grading_status other than UNGRADED are included so that
     partially graded tests (e.g. essays still pending) still return MCQ stats.
 
-    ``run_id`` narrows the cohort to one scheduled-session run, the practice
-    bucket, or (default) all sessions for the test. The combined cohort is the
-    statistically right default — splitting halves the data per run and tanks
-    reliability — but per-run drill-in is useful for cohort comparisons.
+    ``run_id`` narrows the cohort to one scheduled-session run or (default)
+    all ASSIGNED-mode sessions for the test. Practice attempts are excluded
+    by the combined filter (see :mod:`app.services.run_filter`) — they're
+    author previews, not cohort data. The combined cohort is the
+    statistically right default; per-run drill-in is for cohort comparisons.
     Caller is responsible for ``assert_run_belongs_to_test`` first.
     """
     all_results = await prisma.session_results.find_many(
@@ -552,8 +550,14 @@ async def list_analytics_runs(test_definition_id: str) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
 
     # Combined sentinel — always the recommended default for analytics.
+    # Excludes PRACTICE-mode submissions to match the downstream psychometric
+    # queries (which filter the same way via run_filter.is_combined).
     combined_total = await prisma.exam_sessions.count(
-        where={"test_definition_id": test_definition_id, "status": "SUBMITTED"},
+        where={
+            "test_definition_id": test_definition_id,
+            "status": "SUBMITTED",
+            "session_mode": "ASSIGNED",
+        },
     )
     rows.append({
         "run_id": "combined",
@@ -593,28 +597,6 @@ async def list_analytics_runs(test_definition_id: str) -> List[Dict[str, Any]]:
             "ends_at": run.ends_at,
             "lifecycle_status": lifecycle,
             "submissions_total": submissions_total,
-            "is_recommended_default": False,
-        })
-
-    practice_total = await prisma.exam_sessions.count(
-        where={
-            "test_definition_id": test_definition_id,
-            "scheduled_session_id": None,
-            "session_mode": "PRACTICE",
-            "status": "SUBMITTED",
-        }
-    )
-    if practice_total > 0:
-        rows.append({
-            "run_id": PRACTICE_SENTINEL,
-            "kind": "PRACTICE",
-            "course_id": None,
-            "course_code": None,
-            "course_title": None,
-            "starts_at": None,
-            "ends_at": None,
-            "lifecycle_status": "CLOSED",
-            "submissions_total": practice_total,
             "is_recommended_default": False,
         })
 

@@ -5,10 +5,10 @@
  *
  * Inserts the missing middle layer between the blueprint cards on
  * /grading and the per-blueprint dashboard. Lists every scheduled-session
- * run of this blueprint plus a Practice bucket (when present), gates the
- * "Grade →" action to runs whose window has closed, and renders disabled-
- * but-visible cards for ongoing / upcoming runs so the constructor still
- * sees situational awareness.
+ * run of this blueprint, gates the "Grade →" action to runs whose window
+ * has closed, and renders disabled-but-visible cards for ongoing /
+ * upcoming runs so the constructor still sees situational awareness.
+ * Practice-mode submissions are excluded server-side and do not appear here.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -127,40 +127,29 @@ function RunCard({
     run: GradingRun;
     router: ReturnType<typeof useRouter>;
 }) {
-    const isPractice = run.kind === 'PRACTICE';
     const lifecycleLabel = LIFECYCLE_LABEL[run.lifecycle_status];
     const lifecycleTone = LIFECYCLE_TONE[run.lifecycle_status];
 
     const hasPending = run.ungraded_response_count > 0;
-    const windowLabel = isPractice
-        ? 'Practice attempts'
-        : run.ends_at
-            ? new Date(run.ends_at) > new Date()
-                ? `Closes ${formatScheduled(run.ends_at)}`
-                : `Closed ${formatScheduled(run.ends_at)}`
-            : 'No window';
+    const windowLabel = run.ends_at
+        ? new Date(run.ends_at) > new Date()
+            ? `Closes ${formatScheduled(run.ends_at)}`
+            : `Closed ${formatScheduled(run.ends_at)}`
+        : 'No window';
 
     return (
         <Card variant="surface" padding="md" interactive={run.is_gradable}>
             <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                    {isPractice ? (
-                        <p className="text-h3 font-semibold text-foreground">
-                            Practice attempts
-                        </p>
-                    ) : (
-                        <>
-                            <p
-                                className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim"
-                                title={run.course_title ?? undefined}
-                            >
-                                {run.course_code ?? '—'}
-                            </p>
-                            <p className="mt-1 text-h3 font-semibold text-foreground">
-                                {run.course_title ?? 'Scheduled run'}
-                            </p>
-                        </>
-                    )}
+                    <p
+                        className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim"
+                        title={run.course_title ?? undefined}
+                    >
+                        {run.course_code ?? '—'}
+                    </p>
+                    <p className="mt-1 text-h3 font-semibold text-foreground">
+                        {run.course_title ?? 'Scheduled run'}
+                    </p>
                     <p
                         className="mt-1 text-meta text-shell-muted-dim"
                         title={run.ends_at ? formatAbsolute(run.ends_at) : undefined}

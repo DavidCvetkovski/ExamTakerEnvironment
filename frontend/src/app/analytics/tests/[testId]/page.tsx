@@ -3,12 +3,13 @@
 /**
  * Analytics runs picker — Epoch 8.6 Stage 2.
  *
- * Mirrors the grading picker (one card per scheduled-session run plus a
- * Practice bucket when present), but pins a "Combined" card on top as the
- * recommended default. Splitting psychometrics by run halves the sample
- * per cohort and tanks reliability metrics — the combined card preserves
- * today's all-runs aggregate as the right default, with per-run drill-in
- * available for explicit cohort comparisons.
+ * Mirrors the grading picker (one card per scheduled-session run) and pins
+ * a "Combined" card on top as the recommended default. Splitting
+ * psychometrics by run halves the sample per cohort and tanks reliability
+ * metrics — the combined card preserves the all-runs aggregate as the
+ * right default, with per-run drill-in available for explicit cohort
+ * comparisons. Practice-mode submissions are excluded server-side and do
+ * not appear here.
  */
 
 import { useEffect, useMemo } from 'react';
@@ -65,7 +66,7 @@ export default function AnalyticsRunsPickerPage() {
     );
     const runs: AnalyticsRun[] = (testId && runsByTestId[testId]) || [];
     const combined = runs.find((r) => r.kind === 'COMBINED') ?? null;
-    const otherRuns = runs.filter((r) => r.kind !== 'COMBINED');
+    const otherRuns = runs.filter((r) => r.kind === 'ASSIGNED');
     const isLoading = !runsByTestId[testId!] && status === 'loading';
 
     return (
@@ -183,40 +184,29 @@ function RunCard({
     run: AnalyticsRun;
     router: ReturnType<typeof useRouter>;
 }) {
-    const isPractice = run.kind === 'PRACTICE';
     const hasData = run.submissions_total > 0;
     const lifecycleLabel = LIFECYCLE_LABEL[run.lifecycle_status];
     const lifecycleTone = LIFECYCLE_TONE[run.lifecycle_status];
 
-    const windowLabel = isPractice
-        ? 'Practice attempts'
-        : run.ends_at
-            ? new Date(run.ends_at) > new Date()
-                ? `Closes ${formatScheduled(run.ends_at)}`
-                : `Closed ${formatScheduled(run.ends_at)}`
-            : 'No window';
+    const windowLabel = run.ends_at
+        ? new Date(run.ends_at) > new Date()
+            ? `Closes ${formatScheduled(run.ends_at)}`
+            : `Closed ${formatScheduled(run.ends_at)}`
+        : 'No window';
 
     return (
         <Card variant="surface" padding="md" interactive={hasData}>
             <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                    {isPractice ? (
-                        <p className="text-h3 font-semibold text-foreground">
-                            Practice attempts
-                        </p>
-                    ) : (
-                        <>
-                            <p
-                                className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim"
-                                title={run.course_title ?? undefined}
-                            >
-                                {run.course_code ?? '—'}
-                            </p>
-                            <p className="mt-1 text-h3 font-semibold text-foreground">
-                                {run.course_title ?? 'Scheduled run'}
-                            </p>
-                        </>
-                    )}
+                    <p
+                        className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim"
+                        title={run.course_title ?? undefined}
+                    >
+                        {run.course_code ?? '—'}
+                    </p>
+                    <p className="mt-1 text-h3 font-semibold text-foreground">
+                        {run.course_title ?? 'Scheduled run'}
+                    </p>
                     <p
                         className="mt-1 text-meta text-shell-muted-dim"
                         title={run.ends_at ? formatAbsolute(run.ends_at) : undefined}

@@ -147,11 +147,9 @@ export default function TestAnalyticsDashboardPage() {
                                 <p className="text-eyebrow font-semibold uppercase tracking-medium text-shell-muted-dim">
                                     {activeRun?.kind === 'COMBINED'
                                         ? 'Combined — all runs'
-                                        : activeRun?.kind === 'PRACTICE'
-                                            ? 'Practice attempts'
-                                            : activeRun?.course_code
-                                                ? `Run on ${activeRun.course_code}`
-                                                : 'Test Dashboard'}
+                                        : activeRun?.course_code
+                                            ? `Run on ${activeRun.course_code}`
+                                            : 'Test Dashboard'}
                                 </p>
                                 <h1 className="mt-2 text-3xl font-bold text-foreground">{testTitle}</h1>
                                 <p className="mt-2 text-sm text-shell-muted">

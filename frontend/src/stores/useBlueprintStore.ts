@@ -65,6 +65,9 @@ export type BlueprintSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 export interface AvailableItem {
     id: string;
+    course_id?: string | null;
+    course_title?: string | null;
+    course_code?: string | null;
     latest_question_type: string;
     latest_content_preview: string;
     latest_status: string;

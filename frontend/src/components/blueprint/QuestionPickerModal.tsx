@@ -65,7 +65,8 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
     const { availableItems, fetchAvailableItems, isLoading } = useBlueprintStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [typeFilter, setTypeFilter] = useState<string>('all');
-    const [subjectFilter, setSubjectFilter] = useState<string>('all');
+    const [courseFilter, setCourseFilter] = useState<string>('all');
+    const [topicFilter, setTopicFilter] = useState<string>('all');
     const [inspectedItem, setInspectedItem] = useState<AvailableItem | null>(null);
     const [inspectedVersion, setInspectedVersion] = useState<VersionResponse | null>(null);
     const [versionLoading, setVersionLoading] = useState(false);
@@ -75,43 +76,52 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
         fetchAvailableItems();
     }, [fetchAvailableItems]);
 
-    // Fetch full latest version when an item is inspected (Stage 6).
-    useEffect(() => {
-        if (!inspectedItem) {
-            setInspectedVersion(null);
-            setVersionError(null);
-            return;
-        }
-        let cancelled = false;
-        setVersionLoading(true);
-        setVersionError(null);
-        api.get<VersionResponse[]>(`learning-objects/${inspectedItem.id}/versions`)
-            .then((res) => {
-                if (cancelled) return;
-                const versions = res.data ?? [];
-                const latest = versions.reduce<VersionResponse | null>(
-                    (acc, v) => (acc === null || v.version_number > acc.version_number ? v : acc),
-                    null,
-                );
-                setInspectedVersion(latest);
-            })
-            .catch(() => {
-                if (!cancelled) setVersionError('Failed to load question preview.');
-            })
-            .finally(() => {
-                if (!cancelled) setVersionLoading(false);
-            });
-        return () => { cancelled = true; };
-    }, [inspectedItem]);
-
     const handleClose = () => {
         setInspectedItem(null);
+        setInspectedVersion(null);
+        setVersionError(null);
+        setVersionLoading(false);
         onClose();
     };
 
-    const uniqueSubjects = Array.from(
+    const handleBackToList = () => {
+        setInspectedItem(null);
+        setInspectedVersion(null);
+        setVersionError(null);
+        setVersionLoading(false);
+    };
+
+    const handleInspectItem = async (item: AvailableItem) => {
+        setInspectedItem(item);
+        setInspectedVersion(null);
+        setVersionError(null);
+        setVersionLoading(true);
+        try {
+            const res = await api.get<VersionResponse[]>(`learning-objects/${item.id}/versions`);
+            const versions = res.data ?? [];
+            const latest = versions.reduce<VersionResponse | null>(
+                (acc, v) => (acc === null || v.version_number > acc.version_number ? v : acc),
+                null,
+            );
+            setInspectedVersion(latest);
+        } catch {
+            setVersionError('Failed to load question preview.');
+        } finally {
+            setVersionLoading(false);
+        }
+    };
+
+    const uniqueCourses = Array.from(
+        new Map(
+            availableItems
+                .filter((i) => i.course_id && i.course_title)
+                .map((i) => [i.course_id as string, i.course_title as string])
+        ).entries()
+    ).sort((left, right) => left[1].localeCompare(right[1]));
+
+    const uniqueTopics = Array.from(
         new Set(availableItems.map((i) => i.metadata_tags?.topic).filter(Boolean))
-    ) as string[];
+    ).sort((left, right) => String(left).localeCompare(String(right))) as string[];
 
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     const isIdSearch = UUID_RE.test(searchQuery.trim());
@@ -122,9 +132,10 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
             : item.latest_content_preview.toLowerCase().includes(searchQuery.toLowerCase()) ||
               item.id.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesType = typeFilter === 'all' || item.latest_question_type === typeFilter;
-        const matchesSubject = subjectFilter === 'all' || item.metadata_tags?.topic === subjectFilter;
+        const matchesCourse = courseFilter === 'all' || item.course_id === courseFilter;
+        const matchesTopic = topicFilter === 'all' || item.metadata_tags?.topic === topicFilter;
         const isExcluded = excludeIds.includes(item.id);
-        return matchesSearch && matchesType && matchesSubject && !isExcluded;
+        return matchesSearch && matchesType && matchesCourse && matchesTopic && !isExcluded;
     });
 
     return (
@@ -168,13 +179,23 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                         <option value="ESSAY">Essay</option>
                     </select>
                     <select
-                        value={subjectFilter}
-                        onChange={(e) => setSubjectFilter(e.target.value)}
+                        value={courseFilter}
+                        onChange={(e) => setCourseFilter(e.target.value)}
                         className="rounded-xl border border-shell-border bg-shell-input px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-brand"
                     >
-                        <option value="all">All Subjects</option>
-                        {uniqueSubjects.map((subject) => (
-                            <option key={subject} value={subject}>{subject}</option>
+                        <option value="all">All Courses</option>
+                        {uniqueCourses.map(([id, title]) => (
+                            <option key={id} value={id}>{title}</option>
+                        ))}
+                    </select>
+                    <select
+                        value={topicFilter}
+                        onChange={(e) => setTopicFilter(e.target.value)}
+                        className="rounded-xl border border-shell-border bg-shell-input px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-brand"
+                    >
+                        <option value="all">All Topics</option>
+                        {uniqueTopics.map((topic) => (
+                            <option key={topic} value={topic}>{topic}</option>
                         ))}
                     </select>
                 </div>
@@ -188,7 +209,7 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                             <div className="mb-6 flex items-start justify-between">
                                 <button
                                     type="button"
-                                    onClick={() => setInspectedItem(null)}
+                                    onClick={handleBackToList}
                                     className="text-sm text-shell-muted hover:text-foreground transition-colors focus-ring rounded"
                                 >
                                     ← Back to list
@@ -236,7 +257,7 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                                 return (
                                     <div
                                         key={item.id}
-                                        onClick={() => setInspectedItem(item)}
+                                        onClick={() => { void handleInspectItem(item); }}
                                         className="group flex cursor-pointer items-start gap-3 rounded-2xl border border-shell-border bg-shell-input/30 px-4 py-3 transition-all hover:border-brand/30 hover:bg-shell-input"
                                     >
                                         <div className="shrink-0 pt-0.5">
@@ -249,7 +270,8 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                                                 {item.latest_content_preview}
                                             </p>
                                             <div className="flex items-center gap-3 text-xs text-shell-muted-dim">
-                                                {topic && <SubjectDot subject={topic} />}
+                                                {topic && <TopicDot topic={topic} />}
+                                                {item.course_title && <span title={item.course_code ?? undefined}>{item.course_title}</span>}
                                                 <span>{item.metadata_tags?.points ?? 1} pt(s)</span>
                                             </div>
                                         </div>
@@ -257,7 +279,7 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={(e: React.MouseEvent) => { e.stopPropagation(); setInspectedItem(item); }}
+                                                onClick={(e: React.MouseEvent) => { e.stopPropagation(); void handleInspectItem(item); }}
                                             >
                                                 Preview
                                             </Button>
@@ -289,12 +311,12 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
     );
 }
 
-function SubjectDot({ subject }: { subject: string }) {
-    const tone = subjectTone(subject);
+function TopicDot({ topic }: { topic: string }) {
+    const tone = subjectTone(topic);
     return (
         <span className="inline-flex items-center gap-1.5">
             <span className={`inline-block h-2 w-2 rounded-full ${tone.dot}`} aria-hidden="true" />
-            <span>{subject}</span>
+            <span>{topic}</span>
         </span>
     );
 }

@@ -31,17 +31,27 @@ const FALLBACK: SubjectTone = {
     slot: 0,
 };
 
+// Tailwind's JIT scanner only emits arbitrary-value classes for *literal*
+// strings found in the source. Building these via a template (`bg-[var(--
+// color-subject-${slot}-bg)]`) means Tailwind never sees the 8 expansions
+// and purges them from the bundle — which is exactly the "all topics look
+// black or purple" bug we were hitting. Enumerating the table fixes it.
+const PALETTE: ReadonlyArray<Omit<SubjectTone, 'slot'>> = [
+    { bg: 'bg-[var(--color-subject-1-bg)]', fg: 'text-[var(--color-subject-1-fg)]', border: 'border-[var(--color-subject-1-border)]', dot: 'bg-[var(--color-subject-1-fg)]' },
+    { bg: 'bg-[var(--color-subject-2-bg)]', fg: 'text-[var(--color-subject-2-fg)]', border: 'border-[var(--color-subject-2-border)]', dot: 'bg-[var(--color-subject-2-fg)]' },
+    { bg: 'bg-[var(--color-subject-3-bg)]', fg: 'text-[var(--color-subject-3-fg)]', border: 'border-[var(--color-subject-3-border)]', dot: 'bg-[var(--color-subject-3-fg)]' },
+    { bg: 'bg-[var(--color-subject-4-bg)]', fg: 'text-[var(--color-subject-4-fg)]', border: 'border-[var(--color-subject-4-border)]', dot: 'bg-[var(--color-subject-4-fg)]' },
+    { bg: 'bg-[var(--color-subject-5-bg)]', fg: 'text-[var(--color-subject-5-fg)]', border: 'border-[var(--color-subject-5-border)]', dot: 'bg-[var(--color-subject-5-fg)]' },
+    { bg: 'bg-[var(--color-subject-6-bg)]', fg: 'text-[var(--color-subject-6-fg)]', border: 'border-[var(--color-subject-6-border)]', dot: 'bg-[var(--color-subject-6-fg)]' },
+    { bg: 'bg-[var(--color-subject-7-bg)]', fg: 'text-[var(--color-subject-7-fg)]', border: 'border-[var(--color-subject-7-border)]', dot: 'bg-[var(--color-subject-7-fg)]' },
+    { bg: 'bg-[var(--color-subject-8-bg)]', fg: 'text-[var(--color-subject-8-fg)]', border: 'border-[var(--color-subject-8-border)]', dot: 'bg-[var(--color-subject-8-fg)]' },
+];
+
 export function subjectTone(subject: string | null | undefined): SubjectTone {
     if (!subject) return FALLBACK;
     const trimmed = subject.trim();
     if (!trimmed) return FALLBACK;
 
     const slot = (hash(trimmed.toLowerCase()) % PALETTE_SIZE) + 1;
-    return {
-        bg: `bg-[var(--color-subject-${slot}-bg)]`,
-        fg: `text-[var(--color-subject-${slot}-fg)]`,
-        border: `border-[var(--color-subject-${slot}-border)]`,
-        dot: `bg-[var(--color-subject-${slot}-fg)]`,
-        slot,
-    };
+    return { ...PALETTE[slot - 1], slot };
 }

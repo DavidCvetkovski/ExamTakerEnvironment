@@ -5,13 +5,13 @@
  *
  * Inserts the missing middle layer between the blueprint cards on
  * /grading and the per-blueprint dashboard. Lists every scheduled-session
- * run of this blueprint plus a Practice bucket (when present), gates the
- * "Grade →" action to runs whose window has closed, and renders disabled-
- * but-visible cards for ongoing / upcoming runs so the constructor still
- * sees situational awareness.
+ * run of this blueprint, gates the "Grade →" action to runs whose window
+ * has closed, and renders disabled-but-visible cards for ongoing /
+ * upcoming runs so the constructor still sees situational awareness.
+ * Practice-mode submissions are excluded server-side and do not appear here.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
 import {
@@ -29,6 +29,72 @@ import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import { useGradingStore, type GradingRun } from '@/stores/useGradingStore';
 import { formatAbsolute, formatScheduled } from '@/lib/relativeTime';
 import { pluralizeCount } from '@/lib/pluralize';
+
+// Sort controls for the per-blueprint runs picker. Same option set as the
+// analytics picker (so muscle memory transfers between tabs) plus
+// "Most pending grading" which is the default — graders care first about
+// the largest queue, not the most recent cohort.
+type SortKey =
+    | 'most_pending'
+    | 'most_recent'
+    | 'oldest'
+    | 'most_submissions'
+    | 'course'
+    | 'status';
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+    { key: 'most_pending',     label: 'Most pending grading' },
+    { key: 'most_recent',      label: 'Most recently completed' },
+    { key: 'oldest',           label: 'Oldest first' },
+    { key: 'most_submissions', label: 'Most submissions' },
+    { key: 'course',           label: 'Alphabetical (A–Z)' },
+    { key: 'status',           label: 'Lifecycle status' },
+];
+
+// Status order matches the picker's usefulness: Completed first (gradable),
+// then Canceled (residual data), then Ongoing, then Scheduled (no data yet).
+const STATUS_ORDER: Record<GradingRun['lifecycle_status'], number> = {
+    CLOSED:    0,
+    CANCELED:  1,
+    ACTIVE:    2,
+    SCHEDULED: 3,
+};
+
+function endsAtTs(r: GradingRun): number {
+    return r.ends_at ? Date.parse(r.ends_at) : 0;
+}
+
+function sortRuns(runs: GradingRun[], sort: SortKey): GradingRun[] {
+    const copy = [...runs];
+    switch (sort) {
+        case 'most_recent':
+            return copy.sort((a, b) => endsAtTs(b) - endsAtTs(a));
+        case 'oldest':
+            return copy.sort((a, b) => {
+                const at = endsAtTs(a) || Number.POSITIVE_INFINITY;
+                const bt = endsAtTs(b) || Number.POSITIVE_INFINITY;
+                return at - bt;
+            });
+        case 'most_submissions':
+            return copy.sort((a, b) => b.submissions_total - a.submissions_total
+                || endsAtTs(b) - endsAtTs(a));
+        case 'course':
+            return copy.sort((a, b) => {
+                const at = a.course_title ?? '';
+                const bt = b.course_title ?? '';
+                return at.localeCompare(bt) || endsAtTs(b) - endsAtTs(a);
+            });
+        case 'status':
+            return copy.sort((a, b) =>
+                STATUS_ORDER[a.lifecycle_status] - STATUS_ORDER[b.lifecycle_status]
+                || endsAtTs(b) - endsAtTs(a),
+            );
+        case 'most_pending':
+        default:
+            return copy.sort((a, b) => b.ungraded_response_count - a.ungraded_response_count
+                || endsAtTs(b) - endsAtTs(a));
+    }
+}
 
 /** UI label per lifecycle status — matches CLAUDE.md §7.9 canon vocabulary. */
 const LIFECYCLE_LABEL: Record<GradingRun['lifecycle_status'], string> = {
@@ -74,7 +140,13 @@ export default function GradingRunsPickerPage() {
         () => blueprints.find((b) => b.id === testId) ?? null,
         [blueprints, testId],
     );
-    const runs: GradingRun[] = (testId && runsByTestId[testId]) || [];
+    const rawRuns: GradingRun[] = (testId && runsByTestId[testId]) || [];
+    const [sortKey, setSortKey] = useState<SortKey>('most_pending');
+    const scheduledRuns = useMemo(
+        () => sortRuns(rawRuns, sortKey),
+        [rawRuns, sortKey],
+    );
+    const hasAnyRun = scheduledRuns.length > 0;
 
     return (
         <PageShell width="wide">
@@ -98,20 +170,51 @@ export default function GradingRunsPickerPage() {
                 </div>
             )}
 
-            {runsLoading && runs.length === 0 ? (
+            {runsLoading && !hasAnyRun ? (
                 <div className="flex items-center justify-center py-24 gap-3 text-shell-muted-dim text-meta">
                     <Spinner size="sm" /> Loading runs…
                 </div>
-            ) : runs.length === 0 ? (
+            ) : !hasAnyRun ? (
                 <EmptyState
                     title="No runs to grade yet"
                     description="Schedule this blueprint and let a session close before students' work appears here."
                 />
             ) : (
-                <div className="grid gap-4 lg:grid-cols-2">
-                    {runs.map((run) => (
-                        <RunCard key={run.run_id} testId={testId!} run={run} router={router} />
-                    ))}
+                <div className="space-y-6">
+                    {scheduledRuns.length > 0 && (
+                        <div>
+                            <div className="mb-4 flex items-center justify-between gap-3">
+                                <h2 className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim">
+                                    Individual sessions
+                                </h2>
+                                <div className="flex items-center gap-2">
+                                    <label
+                                        htmlFor="grading-runs-sort"
+                                        className="text-meta text-shell-muted-dim"
+                                    >
+                                        Sort by
+                                    </label>
+                                    <select
+                                        id="grading-runs-sort"
+                                        value={sortKey}
+                                        onChange={(e) => setSortKey(e.target.value as SortKey)}
+                                        className="rounded-xl border border-shell-border bg-shell-input px-3 py-1.5 text-meta text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                                    >
+                                        {SORT_OPTIONS.map((opt) => (
+                                            <option key={opt.key} value={opt.key}>
+                                                {opt.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                                {scheduledRuns.map((run) => (
+                                    <RunCard key={run.run_id} testId={testId!} run={run} router={router} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </PageShell>
@@ -127,40 +230,23 @@ function RunCard({
     run: GradingRun;
     router: ReturnType<typeof useRouter>;
 }) {
-    const isPractice = run.kind === 'PRACTICE';
     const lifecycleLabel = LIFECYCLE_LABEL[run.lifecycle_status];
     const lifecycleTone = LIFECYCLE_TONE[run.lifecycle_status];
 
     const hasPending = run.ungraded_response_count > 0;
-    const windowLabel = isPractice
-        ? 'Practice attempts'
-        : run.ends_at
-            ? new Date(run.ends_at) > new Date()
-                ? `Closes ${formatScheduled(run.ends_at)}`
-                : `Closed ${formatScheduled(run.ends_at)}`
-            : 'No window';
+    const windowLabel = run.ends_at
+        ? new Date(run.ends_at) > new Date()
+            ? `Closes ${formatScheduled(run.ends_at)}`
+            : `Closed ${formatScheduled(run.ends_at)}`
+        : 'No window';
 
     return (
         <Card variant="surface" padding="md" interactive={run.is_gradable}>
             <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                    {isPractice ? (
-                        <p className="text-h3 font-semibold text-foreground">
-                            Practice attempts
-                        </p>
-                    ) : (
-                        <>
-                            <p
-                                className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim"
-                                title={run.course_title ?? undefined}
-                            >
-                                {run.course_code ?? '—'}
-                            </p>
-                            <p className="mt-1 text-h3 font-semibold text-foreground">
-                                {run.course_title ?? 'Scheduled run'}
-                            </p>
-                        </>
-                    )}
+                    <p className="text-h3 font-semibold text-foreground" title={run.course_code ?? undefined}>
+                        {run.course_title ?? 'Scheduled run'}
+                    </p>
                     <p
                         className="mt-1 text-meta text-shell-muted-dim"
                         title={run.ends_at ? formatAbsolute(run.ends_at) : undefined}

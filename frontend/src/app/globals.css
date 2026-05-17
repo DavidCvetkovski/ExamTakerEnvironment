@@ -141,7 +141,7 @@
   --color-background: var(--color-shell-bg);
   --color-foreground: #ffffff;
 
-  /* ── 8.4 — Subject palette (8 hashed tones; dark theme: deeper saturation) ── */
+  /* ── 8.4 — Topic palette (8 hashed tones; dark theme: deeper saturation) ── */
   --color-subject-1-bg: rgba(96, 165, 250, 0.16);   --color-subject-1-fg: #93c5fd; --color-subject-1-border: rgba(96, 165, 250, 0.32);
   --color-subject-2-bg: rgba(167, 139, 250, 0.16);  --color-subject-2-fg: #c4b5fd; --color-subject-2-border: rgba(167, 139, 250, 0.32);
   --color-subject-3-bg: rgba(52, 211, 153, 0.16);   --color-subject-3-fg: #6ee7b7; --color-subject-3-border: rgba(52, 211, 153, 0.32);
@@ -223,7 +223,7 @@
   --color-background: var(--color-shell-bg);
   --color-foreground: #1f2937;
 
-  /* ── 8.4 — Subject palette (warm theme: muted earth tones, deeper fg for contrast) ── */
+  /* ── 8.4 — Topic palette (warm theme: muted earth tones, deeper fg for contrast) ── */
   --color-subject-1-bg: rgba(16, 85, 204, 0.10);    --color-subject-1-fg: #0d47ae; --color-subject-1-border: rgba(16, 85, 204, 0.28);
   --color-subject-2-bg: rgba(122, 76, 173, 0.10);   --color-subject-2-fg: #5b3a8c; --color-subject-2-border: rgba(122, 76, 173, 0.28);
   --color-subject-3-bg: rgba(47, 143, 93, 0.10);    --color-subject-3-fg: #156341; --color-subject-3-border: rgba(47, 143, 93, 0.28);
@@ -304,7 +304,7 @@
   --color-background: var(--color-shell-bg);
   --color-foreground: #10233f;
 
-  /* ── 8.4 — Subject palette (light-blue theme: cool pastels, deeper fg for contrast) ── */
+  /* ── 8.4 — Topic palette (light-blue theme: cool pastels, deeper fg for contrast) ── */
   --color-subject-1-bg: rgba(23, 105, 210, 0.10);   --color-subject-1-fg: #0f56ad; --color-subject-1-border: rgba(23, 105, 210, 0.28);
   --color-subject-2-bg: rgba(114, 88, 168, 0.10);   --color-subject-2-fg: #534084; --color-subject-2-border: rgba(114, 88, 168, 0.28);
   --color-subject-3-bg: rgba(22, 163, 106, 0.10);   --color-subject-3-fg: #136247; --color-subject-3-border: rgba(22, 163, 106, 0.28);

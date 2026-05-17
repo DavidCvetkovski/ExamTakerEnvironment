@@ -30,6 +30,10 @@ frontend/.vercel/
 .DS_Store
 *.swp
 
+# Claude Code per-machine state (transcripts, isolation worktrees)
+.claude/projects/
+.claude/worktrees/
+
 /generated/prisma
 *.log
 backend/backend.log

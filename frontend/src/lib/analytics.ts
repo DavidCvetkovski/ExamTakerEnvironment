@@ -150,7 +150,7 @@ export async function fetchCutScoreScenarios(
  */
 export interface AnalyticsRun {
     run_id: string;
-    kind: 'COMBINED' | 'ASSIGNED' | 'PRACTICE';
+    kind: 'COMBINED' | 'ASSIGNED';
     course_id: string | null;
     course_code: string | null;
     course_title: string | null;

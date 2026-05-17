@@ -44,8 +44,9 @@ function SessionRow({
     return (
         <tr className="border-t border-shell-border">
             <td className="py-4 pr-4">
-                <p className="font-semibold text-foreground">{session.course_code}</p>
-                <p className="text-shell-muted-dim text-xs">{session.course_title}</p>
+                <p className="font-semibold text-foreground" title={session.course_code}>
+                    {session.course_title}
+                </p>
             </td>
             <td className="py-4 pr-4 text-foreground">{session.test_title}</td>
             <td className="py-4 pr-4 text-shell-muted text-sm" title={formatAbsolute(session.starts_at)}>
@@ -105,6 +106,7 @@ function SessionTable({
     countdownField,
     countdownLabel,
     countdownTone,
+    startsHeader,
 }: {
     sessions: ScheduledSession[];
     isBusy: boolean;
@@ -115,6 +117,10 @@ function SessionTable({
     countdownField?: 'starts_at' | 'ends_at';
     countdownLabel?: string;
     countdownTone?: string;
+    /** Column-header tense for the start timestamp. Ongoing/completed
+     * sessions have already started, so the header reads "Started"; for
+     * future-scheduled rows it stays "Starts". */
+    startsHeader?: 'Starts' | 'Started';
 }) {
     if (sessions.length === 0) return null;
     return (
@@ -124,7 +130,7 @@ function SessionTable({
                     <tr>
                         <th className="pb-3 pr-4">Course</th>
                         <th className="pb-3 pr-4">Blueprint</th>
-                        <th className="pb-3 pr-4">Starts</th>
+                        <th className="pb-3 pr-4">{startsHeader ?? 'Starts'}</th>
                         <th className="pb-3 pr-4">Ends</th>
                         {showCountdown && <th className="pb-3 pr-4">Time</th>}
                         <th className="pb-3">Actions</th>
@@ -204,6 +210,7 @@ export default function ScheduledSessionsTable({
                         countdownField="ends_at"
                         countdownLabel="Ends in"
                         countdownTone="var(--color-warning-fg)"
+                        startsHeader="Started"
                     />
                 </div>
             )}
@@ -250,6 +257,7 @@ export default function ScheduledSessionsTable({
                                 onRequestCancel={onRequestCancel}
                                 onPractice={onPractice}
                                 onManageEnrollments={onManageEnrollments}
+                                startsHeader="Started"
                             />
                         </div>
                     )}

@@ -683,6 +683,27 @@
 
 ---
 
+## Epoch 8.7 — Course-Aware Authoring, Quiet Sessions & Curriculum Seed Overhaul
+
+**Goal:** Before the seed overhaul, remove course-code clutter from ordinary session/student/grading/analytics surfaces, make questions belong to a real course, rename user-facing `Subject` wording to `Topic`, upgrade the question library with Course and separate Lock columns plus course/lock filters and type sorting, then expand the e2e seed into a full curriculum with practice exams, analytics/grading fixtures, and short 1-minute functionality tests. See `directives/epoch_8_7_blueprint.md`.
+
+### Stages
+1. **Quiet Course Labels** — course titles become the primary visible label in `/sessions`, `/my-exams`, grading, and analytics; codes remain only in course creation/selection or muted disambiguation.
+2. **Course-Aware Questions** — add `learning_objects.course_id` with FK/index, expose course fields through the learning-object API, and let authoring assign a question to a course.
+3. **Topic Vocabulary** — rename `Subject` UI copy to `Topic` while keeping `metadata_tags.topic` canonical and mapping legacy `SUBJECT:` imports to topic.
+4. **Library Course/Lock Controls** — add Course and Lock columns, course and locked/unlocked filters, and Type sorting; separate lock status from the Type chip.
+5. **Curriculum Seed Architecture** — split seed catalogs/factories into maintainable modules so the curriculum can grow without turning `seed_e2e.py` into a wall of inline data.
+6. **Expanded Seed Fixtures** — seed 12+ courses, 180+ questions, 30+ blueprints, practice exams, closed-run analytics/grading data, practice attempts, and 1-minute live functionality tests.
+
+**Exit Criteria:**
+- Course codes are no longer bold/default labels on ordinary read surfaces.
+- Authoring can assign a question to a course and a topic.
+- `/items` can filter by course and lock status, sort by type, and scan Course / Topic / Lock separately.
+- Seeded data feels like a curriculum, not a tiny CS-only demo, and immediately exposes active/scheduled/closed test windows.
+- `tsc --noEmit`, targeted backend tests, and Playwright smoke checks pass.
+
+---
+
 ## Epoch 9 — Media Management & Resource Library
 
 **Goal:** Enable rich media uploads, build a reusable resource library, and support CDN-backed delivery for scalable media serving.

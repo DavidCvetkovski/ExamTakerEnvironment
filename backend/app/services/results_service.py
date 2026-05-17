@@ -15,10 +15,7 @@ from app.models.question_grade import GradingStatus
 from app.models.scheduled_exam_session import CourseSessionStatus
 from app.models.user import UserRole
 from app.services.grading_service import compute_session_aggregate
-from app.services.run_filter import (
-    PRACTICE_SENTINEL,
-    build_exam_session_run_filter,
-)
+from app.services.run_filter import build_exam_session_run_filter
 from app.services.scheduled_sessions_service import ensure_utc
 
 
@@ -54,9 +51,10 @@ async def get_grading_overview(
     List all submitted exam sessions for a test definition,
     with grading progress information from session_results.
 
-    ``run_id`` narrows the result to one scheduled-session run, the
-    practice bucket, or (default ``None`` / ``"combined"``) all submissions
-    for the test. Caller must verify run ownership via
+    ``run_id`` narrows the result to one scheduled-session run, or (default
+    ``None`` / ``"combined"``) all ASSIGNED-mode submissions for the test.
+    Practice-mode submissions are excluded by the combined filter — see
+    :mod:`app.services.run_filter`. Caller must verify run ownership via
     :func:`app.services.run_filter.assert_run_belongs_to_test` first.
     """
     where: Dict[str, Any] = {
@@ -97,8 +95,9 @@ async def get_grading_overview(
 async def get_grading_runs(test_definition_id: str) -> List[Dict[str, Any]]:
     """Per-run grading aggregates for a single test definition.
 
-    Each row is one scheduled exam session (course-bound run) or — if any
-    practice submissions exist — a single synthetic "practice" bucket.
+    Each row is one scheduled exam session (course-bound run). Practice
+    submissions are excluded — they're author previews, not gradable
+    student work.
 
     The lifecycle status is derived server-side from `now` vs the window so
     the frontend doesn't need to second-guess it (the Epoch 8.6 Stage 1
@@ -106,8 +105,7 @@ async def get_grading_runs(test_definition_id: str) -> List[Dict[str, Any]]:
     landing and benefits from the authoritative answer here).
 
     Sort order: gradable runs (CLOSED / CANCELED) first by ``ends_at`` desc,
-    then ONGOING by ``ends_at`` asc, then SCHEDULED by ``starts_at`` asc,
-    then practice last. Matches the visual prominence we want in the picker.
+    then ONGOING by ``ends_at`` asc, then SCHEDULED by ``starts_at`` asc.
 
     Caller is responsible for ``assert_test_access(test_definition_id, user)``
     before invoking — this function does no authorization itself.
@@ -165,50 +163,11 @@ async def get_grading_runs(test_definition_id: str) -> List[Dict[str, Any]]:
             "is_gradable": is_gradable,
         })
 
-    # Practice bucket — only surface it when at least one practice submission
-    # exists for this test. Otherwise it just clutters the picker.
-    practice_total = await prisma.exam_sessions.count(
-        where={
-            "test_definition_id": test_definition_id,
-            "scheduled_session_id": None,
-            "session_mode": "PRACTICE",
-            "status": "SUBMITTED",
-        }
-    )
-    if practice_total > 0:
-        practice_ungraded = await prisma.question_grades.count(
-            where={
-                "is_auto_graded": False,
-                "feedback": None,
-                "exam_sessions": {
-                    "test_definition_id": test_definition_id,
-                    "scheduled_session_id": None,
-                    "session_mode": "PRACTICE",
-                    "status": "SUBMITTED",
-                },
-            }
-        )
-        rows.append({
-            "run_id": PRACTICE_SENTINEL,
-            "kind": "PRACTICE",
-            "course_id": None,
-            "course_code": None,
-            "course_title": None,
-            "starts_at": None,
-            "ends_at": None,
-            "lifecycle_status": "CLOSED",  # practice is always reviewable
-            "submissions_total": practice_total,
-            "ungraded_response_count": practice_ungraded,
-            "is_gradable": True,
-        })
-
     def _sort_key(row: Dict[str, Any]) -> tuple:
         # Lower tuple sorts earlier.
         order = {"CLOSED": 0, "CANCELED": 0, "ACTIVE": 1, "SCHEDULED": 2}.get(
             row["lifecycle_status"], 3,
         )
-        if row["kind"] == "PRACTICE":
-            order = 4  # always last
         # Within CLOSED/CANCELED bucket → most-recent ends_at first.
         ends_ts = -(row["ends_at"].timestamp()) if row["ends_at"] else 0
         starts_ts = row["starts_at"].timestamp() if row["starts_at"] else 0
@@ -294,8 +253,8 @@ async def get_grading_queue(
     If question_lo_id is specified, returns all responses for that specific question
     (useful for "grade by question" batch workflow).
 
-    ``run_id`` narrows the queue to one scheduled-session run (or the practice
-    bucket). Caller must verify ownership via ``assert_run_belongs_to_test``.
+    ``run_id`` narrows the queue to one scheduled-session run. Caller must
+    verify ownership via ``assert_run_belongs_to_test``.
     """
     exam_sessions_filter: Dict[str, Any] = {"test_definition_id": test_definition_id}
     exam_sessions_filter.update(build_exam_session_run_filter(run_id))

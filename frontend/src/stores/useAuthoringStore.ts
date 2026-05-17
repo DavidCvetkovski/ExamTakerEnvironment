@@ -30,8 +30,14 @@ interface StoredItemVersion {
     metadata_tags?: Record<string, unknown>;
 }
 
+interface LearningObjectSummary {
+    id: string;
+    course_id?: string | null;
+}
+
 interface DraftSnapshot {
     questionType: 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY';
+    courseId: string | null;
     tiptapJson: Record<string, unknown>;
     options: MCQOption[] | EssayOptions;
     metadataTags: Record<string, unknown>;
@@ -43,6 +49,7 @@ interface AuthoringState {
     versionNumber: number;
     saveStatus: 'IDLE' | 'SAVING' | 'SAVED' | 'ERROR';
     questionType: 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY';
+    courseId: string | null;
     tiptapJson: Record<string, unknown>;
     options: MCQOption[] | EssayOptions;
     metadataTags: Record<string, unknown>;
@@ -52,6 +59,7 @@ interface AuthoringState {
 
     setLearningObjectId: (id: string) => void;
     setQuestionType: (type: 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY') => void;
+    setCourseId: (id: string | null) => void;
     updateTipTap: (json: Record<string, unknown>) => void;
     updateOptions: (options: MCQOption[] | EssayOptions) => void;
     updateMetadata: (tags: Record<string, unknown>) => void;
@@ -69,6 +77,7 @@ function computeIsDirty(state: AuthoringState): boolean {
         JSON.stringify(state.tiptapJson) !== JSON.stringify(snap.tiptapJson) ||
         JSON.stringify(state.options) !== JSON.stringify(snap.options) ||
         JSON.stringify(state.metadataTags) !== JSON.stringify(snap.metadataTags) ||
+        state.courseId !== snap.courseId ||
         state.questionType !== snap.questionType
     );
 }
@@ -79,6 +88,7 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
     versionNumber: 0,
     saveStatus: 'IDLE',
     questionType: 'MULTIPLE_CHOICE',
+    courseId: null,
     tiptapJson: {},
     options: [],
     metadataTags: {},
@@ -87,6 +97,13 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
     partialPoints: true,
 
     setLearningObjectId: (id) => set({ learningObjectId: id }),
+
+    setCourseId: (id) => {
+        set((s) => {
+            const next = { ...s, courseId: id };
+            return { courseId: id, isDirty: computeIsDirty(next) };
+        });
+    },
 
     setQuestionType: (type) => {
         const currentOptions = get().options;
@@ -151,40 +168,69 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
         set({ saveStatus: 'SAVING' });
 
         try {
-            let optionsPayload: Record<string, unknown>;
-            if (state.questionType === 'MULTIPLE_CHOICE' || state.questionType === 'MULTIPLE_RESPONSE') {
-                optionsPayload = {
+            const snap = state.serverSnapshot;
+            const versionDirty = !snap || (
+                JSON.stringify(state.tiptapJson) !== JSON.stringify(snap.tiptapJson) ||
+                JSON.stringify(state.options) !== JSON.stringify(snap.options) ||
+                JSON.stringify(state.metadataTags) !== JSON.stringify(snap.metadataTags) ||
+                state.questionType !== snap.questionType
+            );
+            const courseDirty = !snap || state.courseId !== snap.courseId;
+
+            let data: { id?: string; version_number?: number } = {
+                id: state.itemId ?? undefined,
+                version_number: state.versionNumber,
+            };
+
+            if (versionDirty) {
+                let optionsPayload: Record<string, unknown>;
+                if (state.questionType === 'MULTIPLE_CHOICE' || state.questionType === 'MULTIPLE_RESPONSE') {
+                    optionsPayload = {
+                        question_type: state.questionType,
+                        choices: Array.isArray(state.options) ? state.options : [],
+                        ...(state.questionType === 'MULTIPLE_RESPONSE' ? { partial_credit: state.partialPoints } : {}),
+                    };
+                } else {
+                    const essayOpts = Array.isArray(state.options)
+                        ? { min_words: 50, max_words: 500 }
+                        : state.options;
+                    optionsPayload = {
+                        question_type: 'ESSAY',
+                        ...essayOpts
+                    };
+                }
+
+                const res = await api.post(`learning-objects/${state.learningObjectId}/versions`, {
+                    learning_object_id: state.learningObjectId,
+                    status: 'DRAFT',
                     question_type: state.questionType,
-                    choices: Array.isArray(state.options) ? state.options : [],
-                    ...(state.questionType === 'MULTIPLE_RESPONSE' ? { partial_credit: state.partialPoints } : {}),
-                };
-            } else {
-                const essayOpts = Array.isArray(state.options)
-                    ? { min_words: 50, max_words: 500 }
-                    : state.options;
-                optionsPayload = {
-                    question_type: 'ESSAY',
-                    ...essayOpts
-                };
+                    content: state.tiptapJson,
+                    options: optionsPayload,
+                    metadata_tags: state.metadataTags,
+                });
+                data = res.data;
             }
 
-            const res = await api.post(`learning-objects/${state.learningObjectId}/versions`, {
-                learning_object_id: state.learningObjectId,
-                status: 'DRAFT',
-                question_type: state.questionType,
-                content: state.tiptapJson,
-                options: optionsPayload,
-                metadata_tags: state.metadataTags,
-            });
+            if (courseDirty) {
+                await api.patch(`learning-objects/${state.learningObjectId}`, {
+                    course_id: state.courseId,
+                });
+            }
 
-            const data = res.data;
             const snapshot: DraftSnapshot = {
                 questionType: state.questionType,
+                courseId: state.courseId,
                 tiptapJson: structuredClone(state.tiptapJson),
                 options: structuredClone(state.options),
                 metadataTags: structuredClone(state.metadataTags),
             };
-            set({ itemId: data.id, versionNumber: data.version_number, saveStatus: 'SAVED', serverSnapshot: snapshot, isDirty: false });
+            set({
+                itemId: data.id ?? state.itemId,
+                versionNumber: data.version_number ?? state.versionNumber,
+                saveStatus: 'SAVED',
+                serverSnapshot: snapshot,
+                isDirty: false,
+            });
         } catch (error) {
             console.error("Save failed:", error);
             set({ saveStatus: 'ERROR' });
@@ -197,6 +243,7 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
         if (!snap) return;
         set({
             questionType: snap.questionType,
+            courseId: snap.courseId,
             tiptapJson: structuredClone(snap.tiptapJson),
             options: structuredClone(snap.options),
             metadataTags: structuredClone(snap.metadataTags),
@@ -208,7 +255,11 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
     fetchLatestVersion: async (loId: string) => {
         set({ saveStatus: 'SAVING', learningObjectId: loId });
         try {
-            const res = await api.get<StoredItemVersion[]>(`learning-objects/${loId}/versions`);
+            const [summaryRes, res] = await Promise.all([
+                api.get<LearningObjectSummary>(`learning-objects/${loId}`),
+                api.get<StoredItemVersion[]>(`learning-objects/${loId}/versions`),
+            ]);
+            const courseId = summaryRes.data.course_id ?? null;
             const versions = res.data;
             if (versions && versions.length > 0) {
                 const latest = versions[0];
@@ -248,6 +299,7 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
 
                 const snapshot: DraftSnapshot = {
                     questionType: latest.question_type,
+                    courseId,
                     tiptapJson: structuredClone(content),
                     options: structuredClone(optionsData),
                     metadataTags: structuredClone(latest.metadata_tags || {}),
@@ -257,6 +309,7 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
                     itemId: latest.id,
                     versionNumber: latest.version_number,
                     questionType: latest.question_type,
+                    courseId,
                     tiptapJson: content,
                     options: optionsData,
                     metadataTags: latest.metadata_tags || {},

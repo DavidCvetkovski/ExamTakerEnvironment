@@ -11,7 +11,7 @@
 // LEVEL:         Remember | Understand | Apply | Analyze | Evaluate | Create
 // DIFFICULTY:    Easy | Medium | Hard
 // POINTS:        integer >= 1 (default: 1)
-// SUBJECT:       The topic/subject area (e.g. Statistics, Thermodynamics)
+// TOPIC:         The topic area (e.g. Statistics, Thermodynamics)
 // A) text        Answer option for MCQ/MCQ_MULTI
 //    Add " *" at the end of the correct option: e.g.  B) Paris *
 // MODEL_ANSWER:  Start model answer block for ESSAY
@@ -35,7 +35,7 @@ TYPE: MCQ
 LEVEL: Understand
 DIFFICULTY: Medium
 POINTS: 2
-SUBJECT: Statistics
+TOPIC: Statistics
 
 A) The average value of a dataset
 B) The middle value when data is sorted
@@ -48,7 +48,7 @@ TYPE: MCQ_MULTI
 LEVEL: Remember
 DIFFICULTY: Easy
 POINTS: 1
-SUBJECT: Statistics
+TOPIC: Statistics
 
 A) Mean *
 B) Median *
@@ -63,7 +63,7 @@ TYPE: MCQ
 LEVEL: Apply
 DIFFICULTY: Hard
 POINTS: 3
-SUBJECT: Hypothesis Testing
+TOPIC: Hypothesis Testing
 
 A) Fail to reject the null hypothesis — p > alpha
 B) Reject the null hypothesis — p < alpha *
@@ -80,7 +80,7 @@ TYPE: ESSAY
 LEVEL: Analyze
 DIFFICULTY: Hard
 POINTS: 5
-SUBJECT: Hypothesis Testing
+TOPIC: Hypothesis Testing
 
 MODEL_ANSWER:
 A Type I error (false positive) occurs when the null hypothesis is true but is incorrectly rejected. Example: concluding a drug is effective when it is not.

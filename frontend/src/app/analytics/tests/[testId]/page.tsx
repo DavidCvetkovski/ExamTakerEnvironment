@@ -3,15 +3,16 @@
 /**
  * Analytics runs picker — Epoch 8.6 Stage 2.
  *
- * Mirrors the grading picker (one card per scheduled-session run plus a
- * Practice bucket when present), but pins a "Combined" card on top as the
- * recommended default. Splitting psychometrics by run halves the sample
- * per cohort and tanks reliability metrics — the combined card preserves
- * today's all-runs aggregate as the right default, with per-run drill-in
- * available for explicit cohort comparisons.
+ * Mirrors the grading picker (one card per scheduled-session run) and pins
+ * a "Combined" card on top as the recommended default. Splitting
+ * psychometrics by run halves the sample per cohort and tanks reliability
+ * metrics — the combined card preserves the all-runs aggregate as the
+ * right default, with per-run drill-in available for explicit cohort
+ * comparisons. Practice-mode submissions are excluded server-side and do
+ * not appear here.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -30,6 +31,62 @@ import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import { formatAbsolute, formatScheduled } from '@/lib/relativeTime';
 import { pluralizeCount } from '@/lib/pluralize';
 import type { AnalyticsRun } from '@/lib/analytics';
+
+// Sort controls for the "Individual sessions" picker. "Most recent" is the
+// default because the typical drill-in is "what did the last cohort look like
+// for this exam?".
+type SortKey = 'most_recent' | 'oldest' | 'most_submissions' | 'course' | 'status';
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+    { key: 'most_recent',      label: 'Most recently completed' },
+    { key: 'oldest',           label: 'Oldest first' },
+    { key: 'most_submissions', label: 'Most submissions' },
+    { key: 'course',           label: 'Alphabetical (A–Z)' },
+    { key: 'status',           label: 'Lifecycle status' },
+];
+
+// Status order matches the picker's usefulness: Completed first (you can
+// actually drill in), then Canceled (residual data), then Ongoing, then
+// Scheduled (no data yet).
+const STATUS_ORDER: Record<AnalyticsRun['lifecycle_status'], number> = {
+    CLOSED:    0,
+    CANCELED:  1,
+    ACTIVE:    2,
+    SCHEDULED: 3,
+};
+
+function endsAtTs(r: AnalyticsRun): number {
+    return r.ends_at ? Date.parse(r.ends_at) : 0;
+}
+
+function sortRuns(runs: AnalyticsRun[], sort: SortKey): AnalyticsRun[] {
+    const copy = [...runs];
+    switch (sort) {
+        case 'oldest':
+            return copy.sort((a, b) => {
+                const at = endsAtTs(a) || Number.POSITIVE_INFINITY;
+                const bt = endsAtTs(b) || Number.POSITIVE_INFINITY;
+                return at - bt;
+            });
+        case 'most_submissions':
+            return copy.sort((a, b) => b.submissions_total - a.submissions_total
+                || endsAtTs(b) - endsAtTs(a));
+        case 'course':
+            return copy.sort((a, b) => {
+                const at = a.course_title ?? '';
+                const bt = b.course_title ?? '';
+                return at.localeCompare(bt) || endsAtTs(b) - endsAtTs(a);
+            });
+        case 'status':
+            return copy.sort((a, b) =>
+                STATUS_ORDER[a.lifecycle_status] - STATUS_ORDER[b.lifecycle_status]
+                || endsAtTs(b) - endsAtTs(a),
+            );
+        case 'most_recent':
+        default:
+            return copy.sort((a, b) => endsAtTs(b) - endsAtTs(a));
+    }
+}
 
 const LIFECYCLE_LABEL: Record<AnalyticsRun['lifecycle_status'], string> = {
     SCHEDULED: 'Scheduled',
@@ -65,7 +122,12 @@ export default function AnalyticsRunsPickerPage() {
     );
     const runs: AnalyticsRun[] = (testId && runsByTestId[testId]) || [];
     const combined = runs.find((r) => r.kind === 'COMBINED') ?? null;
-    const otherRuns = runs.filter((r) => r.kind !== 'COMBINED');
+    const [sortKey, setSortKey] = useState<SortKey>('most_recent');
+    // "Individual sessions" = scheduled runs only.
+    const otherRuns = useMemo(
+        () => sortRuns(runs.filter((r) => r.kind === 'ASSIGNED'), sortKey),
+        [runs, sortKey],
+    );
     const isLoading = !runsByTestId[testId!] && status === 'loading';
 
     return (
@@ -75,7 +137,7 @@ export default function AnalyticsRunsPickerPage() {
 
                 <PageHeader
                     title={blueprint?.title ?? 'Choose a cohort'}
-                    subtitle="The combined view pools every published submission across all runs (recommended for reliability). Open an individual run to inspect a single cohort."
+                    subtitle="The combined view pools every published submission across all completed sessions (recommended for reliability). Open an individual session to inspect that cohort on its own."
                 />
 
                 {error && (
@@ -111,10 +173,32 @@ export default function AnalyticsRunsPickerPage() {
                         )}
                         {otherRuns.length > 0 && (
                             <div>
-                                <h2 className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim mb-3">
-                                    Individual runs
-                                </h2>
-                                <div className="grid gap-4 lg:grid-cols-2">
+                                <div className="flex items-center justify-between gap-3 mb-3">
+                                    <h2 className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim">
+                                        Individual sessions
+                                    </h2>
+                                    <div className="flex items-center gap-2">
+                                        <label
+                                            htmlFor="analytics-runs-sort"
+                                            className="text-meta text-shell-muted-dim"
+                                        >
+                                            Sort by
+                                        </label>
+                                        <select
+                                            id="analytics-runs-sort"
+                                            value={sortKey}
+                                            onChange={(e) => setSortKey(e.target.value as SortKey)}
+                                            className="rounded-xl border border-shell-border bg-shell-input px-3 py-1.5 text-meta text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                                        >
+                                            {SORT_OPTIONS.map((opt) => (
+                                                <option key={opt.key} value={opt.key}>
+                                                    {opt.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-3">
                                     {otherRuns.map((run) => (
                                         <RunCard
                                             key={run.run_id}
@@ -151,8 +235,9 @@ function CombinedCard({
                         <Badge tone="accent" size="sm">Recommended</Badge>
                     </div>
                     <p className="mt-1 text-meta text-shell-muted-dim">
-                        Pools all published sessions across every run of this blueprint.
-                        Best statistical power for reliability metrics.
+                        Pools all published submissions across every completed
+                        session of this blueprint. Best statistical power for
+                        reliability metrics.
                     </p>
                 </div>
                 <Button
@@ -183,40 +268,23 @@ function RunCard({
     run: AnalyticsRun;
     router: ReturnType<typeof useRouter>;
 }) {
-    const isPractice = run.kind === 'PRACTICE';
     const hasData = run.submissions_total > 0;
     const lifecycleLabel = LIFECYCLE_LABEL[run.lifecycle_status];
     const lifecycleTone = LIFECYCLE_TONE[run.lifecycle_status];
 
-    const windowLabel = isPractice
-        ? 'Practice attempts'
-        : run.ends_at
-            ? new Date(run.ends_at) > new Date()
-                ? `Closes ${formatScheduled(run.ends_at)}`
-                : `Closed ${formatScheduled(run.ends_at)}`
-            : 'No window';
+    const windowLabel = run.ends_at
+        ? new Date(run.ends_at) > new Date()
+            ? `Closes ${formatScheduled(run.ends_at)}`
+            : `Closed ${formatScheduled(run.ends_at)}`
+        : 'No window';
 
     return (
         <Card variant="surface" padding="md" interactive={hasData}>
             <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                    {isPractice ? (
-                        <p className="text-h3 font-semibold text-foreground">
-                            Practice attempts
-                        </p>
-                    ) : (
-                        <>
-                            <p
-                                className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim"
-                                title={run.course_title ?? undefined}
-                            >
-                                {run.course_code ?? '—'}
-                            </p>
-                            <p className="mt-1 text-h3 font-semibold text-foreground">
-                                {run.course_title ?? 'Scheduled run'}
-                            </p>
-                        </>
-                    )}
+                    <p className="text-h3 font-semibold text-foreground" title={run.course_code ?? undefined}>
+                        {run.course_title ?? 'Scheduled run'}
+                    </p>
                     <p
                         className="mt-1 text-meta text-shell-muted-dim"
                         title={run.ends_at ? formatAbsolute(run.ends_at) : undefined}

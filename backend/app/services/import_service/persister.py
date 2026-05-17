@@ -71,6 +71,12 @@ async def persist_import(
 ) -> PersistResult:
     """Persist all questions into the given bank and optionally create a blueprint."""
     lo_ids: list[str] = []
+    header = parsed.header
+    course_id: Optional[str] = None
+    if header and header.course:
+        course = await prisma.courses.find_unique(where={"code": header.course.strip()})
+        if course and course.is_active:
+            course_id = course.id
 
     # Build a map of block_name → list[lo_id] for blueprint assembly
     block_lo_map: dict[str, list[str]] = {}
@@ -84,6 +90,7 @@ async def persist_import(
                 data={
                     "id": lo_id,
                     "bank_id": bank_id,
+                    "course_id": course_id,
                     "created_by": author_user_id,
                 }
             )
@@ -109,7 +116,6 @@ async def persist_import(
 
     blueprint_id: Optional[str] = None
     if create_blueprint and parsed.blocks:
-        header = parsed.header
         title = (header.title if header and header.title else "Imported Blueprint")
         description = (header.description if header and header.description else None)
         duration = (header.duration_minutes if header and header.duration_minutes and header.duration_minutes > 0 else 60)

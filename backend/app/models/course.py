@@ -20,3 +20,4 @@ class Course(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     creator = relationship("User")
+    learning_objects = relationship("LearningObject", back_populates="course")

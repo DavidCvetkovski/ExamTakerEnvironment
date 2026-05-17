@@ -83,6 +83,25 @@ def _parse_cut_scores(raw: Optional[str]) -> Optional[List[float]]:
 
 
 @router.get(
+    "/index",
+    summary="Per-blueprint analytics index (submission counts + course grouping)",
+)
+async def list_analytics_index(
+    current_user=Depends(_require_analytics_user),
+) -> List[Dict[str, Any]]:
+    """Per-blueprint summary feeding the analytics landing page.
+
+    Lets the frontend group by ``primary_course_code`` and visually
+    deprioritize blueprints with zero submissions, without N+1ing the
+    other dashboard endpoints.
+    """
+    is_admin = current_user.role == UserRole.ADMIN.value
+    return await psychometrics_service.list_analytics_index(
+        user_id=str(current_user.id), is_admin=is_admin,
+    )
+
+
+@router.get(
     "/tests/{test_definition_id}/runs",
     summary="Per-run analytics aggregates",
 )

@@ -3,13 +3,18 @@ Run-scoping helpers for per-scheduled-session drill-ins on grading + analytics.
 
 A "run" is one scheduled occurrence of a test definition (one row in
 ``scheduled_exam_sessions``). The grading and analytics dashboards both
-support optionally narrowing their query to a single run, or to the
-synthetic "practice" bucket (sessions with ``scheduled_session_id IS NULL``
-and ``session_mode='PRACTICE'``).
+support optionally narrowing their query to a single run.
 
 Sentinels accepted in ``run_id``:
-  * ``None`` / ``"combined"`` — no filter, all sessions for the test.
-  * ``"practice"`` — synthetic bucket for practice attempts only.
+  * ``None`` / ``"combined"`` — all ASSIGNED-mode sessions for the test.
+    Combined intentionally excludes PRACTICE-mode submissions: practice
+    attempts are ad-hoc author previews, not student cohort data, and
+    pooling them into grading queues or psychometric reliability metrics
+    is misleading.
+  * ``"practice"`` — defensive: returns the empty practice cohort. The UI
+    no longer surfaces this sentinel as a picker option (see Epoch 8.6
+    practice-cleanup), but the branch is preserved so stale links 404
+    cleanly rather than crashing.
   * Any other string — treated as a ``scheduled_exam_sessions.id`` UUID and
     must belong to the same ``test_definition_id`` (see ``assert_run_belongs_to_test``).
 
@@ -39,7 +44,8 @@ def build_exam_session_run_filter(run_id: Optional[str]) -> Dict[str, Any]:
     spreads the result into the outer ``where``.
     """
     if is_combined(run_id):
-        return {}
+        # Combined excludes practice — see module docstring.
+        return {"session_mode": "ASSIGNED"}
     if run_id == PRACTICE_SENTINEL:
         return {"scheduled_session_id": None, "session_mode": "PRACTICE"}
     return {"scheduled_session_id": run_id}
@@ -51,7 +57,8 @@ def build_session_results_run_filter(run_id: Optional[str]) -> Dict[str, Any]:
     Filters via the nested ``exam_sessions`` relation. Empty dict when combined.
     """
     if is_combined(run_id):
-        return {}
+        # Combined excludes practice — see module docstring.
+        return {"exam_sessions": {"session_mode": "ASSIGNED"}}
     if run_id == PRACTICE_SENTINEL:
         return {
             "exam_sessions": {

@@ -28,12 +28,13 @@ export interface SessionGradingSummary {
 }
 
 /**
- * One row in the per-blueprint runs picker. ``run_id`` is either a
- * scheduled-session UUID or the literal ``"practice"`` sentinel.
+ * One row in the per-blueprint runs picker. ``run_id`` is a
+ * scheduled-session UUID. Practice-mode submissions are excluded
+ * server-side and never appear in this list.
  */
 export interface GradingRun {
     run_id: string;
-    kind: 'ASSIGNED' | 'PRACTICE';
+    kind: 'ASSIGNED';
     course_id: string | null;
     course_code: string | null;
     course_title: string | null;

@@ -3,13 +3,14 @@ from uuid import UUID
 from fastapi import HTTPException, status
 import json
 import re
+from datetime import datetime
 
 from app.core.prisma_db import prisma
 from prisma import Json
 from app.models.user import UserRole
 from app.models.item_version import ItemStatus, QuestionType
 from app.schemas.item_version import ItemVersionCreate
-from app.schemas.learning_object import LearningObjectListResponse
+from app.schemas.learning_object import LearningObjectListResponse, LearningObjectUpdate
 
 # Maps (current_status, new_status) → set of roles allowed to make that move
 STATUS_TRANSITIONS = {
@@ -65,11 +66,49 @@ def get_metadata_string(metadata: Optional[dict], key: str) -> str:
     value = metadata.get(key)
     return value if isinstance(value, str) else ""
 
+def serialize_learning_object_summary(lo) -> Optional[LearningObjectListResponse]:
+    """Flatten a learning object with its latest version into list/detail DTO shape."""
+    latest = lo.item_versions[0] if lo.item_versions else None
+    if not latest:
+        return None
+
+    preview = "New Question"
+    content_data = latest.content
+    if isinstance(content_data, str):
+        try:
+            content_data = json.loads(content_data)
+        except Exception:
+            pass
+
+    if isinstance(content_data, dict):
+        full_text = extract_text_from_tiptap_json(content_data)
+        if full_text:
+            preview = full_text[:100] + ("..." if len(full_text) > 100 else "")
+
+    course = getattr(lo, "courses", None)
+    updated_at = latest.created_at or lo.created_at or datetime.utcnow()
+    return LearningObjectListResponse(
+        id=UUID(lo.id),
+        bank_id=UUID(lo.bank_id),
+        course_id=UUID(lo.course_id) if lo.course_id else None,
+        course_title=course.title if course else None,
+        course_code=course.code if course else None,
+        created_at=lo.created_at or updated_at,
+        updated_at=updated_at,
+        latest_version_number=latest.version_number,
+        latest_status=ItemStatus(latest.status),
+        latest_question_type=QuestionType(latest.question_type),
+        latest_content_preview=preview,
+        metadata_tags=latest.metadata_tags,
+    )
+
+
 async def list_learning_objects() -> List[LearningObjectListResponse]:
     """Return a list of all Learning Objects with their latest version metadata."""
-    # Fetch all LOs with their versions, sorted by version_number desc
+    # Fetch all LOs with their versions, sorted by version_number desc.
     objects = await prisma.learning_objects.find_many(
         include={
+            "courses": True,
             "item_versions": {
                 "order_by": {"version_number": "desc"},
                 "take": 1
@@ -79,43 +118,40 @@ async def list_learning_objects() -> List[LearningObjectListResponse]:
     
     results = []
     for lo in objects:
-        latest = lo.item_versions[0] if lo.item_versions else None
-        if latest:
-            # Better text extraction for preview
-            preview = "New Question"
-            
-            content_data = latest.content
-            # Prisma returns Json as dict/list, no need to json.loads unless it's a string double-encoded
-            if isinstance(content_data, str):
-                try:
-                    content_data = json.loads(content_data)
-                except:
-                    pass
-
-            if isinstance(content_data, dict):
-                full_text = extract_text_from_tiptap_json(content_data)
-                if full_text:
-                    preview = full_text[:100] + ("..." if len(full_text) > 100 else "")
-                
-            results.append(LearningObjectListResponse(
-                id=UUID(lo.id),
-                bank_id=UUID(lo.bank_id),
-                created_at=lo.created_at,
-                latest_version_number=latest.version_number,
-                latest_status=ItemStatus(latest.status),
-                latest_question_type=QuestionType(latest.question_type),
-                latest_content_preview=preview,
-                metadata_tags=latest.metadata_tags
-            ))
+        summary = serialize_learning_object_summary(lo)
+        if summary:
+            results.append(summary)
 
     results.sort(
         key=lambda item: (
+            (item.course_title or "").lower(),
             SUBJECT_SORT_ORDER.get(get_metadata_string(item.metadata_tags, "topic"), 99),
             get_metadata_string(item.metadata_tags, "focus").lower(),
             item.latest_content_preview.lower(),
         )
     )
     return results
+
+
+async def get_learning_object(lo_id: UUID) -> LearningObjectListResponse:
+    """Return a single Learning Object with its latest version and course metadata."""
+    lo = await prisma.learning_objects.find_unique(
+        where={"id": str(lo_id)},
+        include={
+            "courses": True,
+            "item_versions": {
+                "order_by": {"version_number": "desc"},
+                "take": 1,
+            },
+        },
+    )
+    if not lo:
+        raise HTTPException(status_code=404, detail="Learning Object not found.")
+
+    summary = serialize_learning_object_summary(lo)
+    if not summary:
+        raise HTTPException(status_code=404, detail="No version found for this Learning Object.")
+    return summary
 
 async def create_learning_object(current_user_id: str) -> dict:
     """Creates a new Learning Object and its initial DRAFT version."""
@@ -148,6 +184,25 @@ async def create_learning_object(current_user_id: str) -> dict:
     )
     
     return {"status": "created", "learning_object_id": str(new_lo.id)}
+
+
+async def update_learning_object(lo_id: UUID, payload: LearningObjectUpdate) -> LearningObjectListResponse:
+    """Update learning-object-level metadata, such as course assignment."""
+    lo = await prisma.learning_objects.find_unique(where={"id": str(lo_id)})
+    if not lo:
+        raise HTTPException(status_code=404, detail="Learning Object not found.")
+
+    course_id = str(payload.course_id) if payload.course_id else None
+    if course_id:
+        course = await prisma.courses.find_unique(where={"id": course_id})
+        if not course or not course.is_active:
+            raise HTTPException(status_code=400, detail="Course not found or inactive.")
+
+    await prisma.learning_objects.update(
+        where={"id": str(lo_id)},
+        data={"course_id": course_id},
+    )
+    return await get_learning_object(lo_id)
 
 async def get_item_versions(lo_id: UUID) -> List[dict]:
     """Return the complete version history of a Learning Object."""
@@ -267,7 +322,11 @@ async def duplicate_learning_object(lo_id: UUID, current_user_id: str) -> dict:
         raise HTTPException(status_code=404, detail="No version found for this Learning Object.")
 
     new_lo = await prisma.learning_objects.create(
-        data={"bank_id": original.bank_id, "created_by": current_user_id}
+        data={
+            "bank_id": original.bank_id,
+            "course_id": original.course_id,
+            "created_by": current_user_id,
+        }
     )
 
     # Copy the content; strip metadata like review_feedback from tags

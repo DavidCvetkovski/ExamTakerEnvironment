@@ -2,168 +2,346 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/stores/useAuthStore';
-import { useBlueprintStore } from '@/stores/useBlueprintStore';
-import {
-    Badge,
-    Button,
-    Card,
-    EmptyState,
-    PageHeader,
-    Spinner,
-} from '@/components/ui';
-import PageShell from '@/components/layout/PageShell';
-import { api } from '@/lib/api';
-import { pluralizeCount } from '@/lib/pluralize';
 
-interface GradingSession {
-    session_id: string;
+import { useAuthStore } from '@/stores/useAuthStore';
+import { api } from '@/lib/api';
+import { Badge, Button, Card, EmptyState, PageHeader, Spinner } from '@/components/ui';
+import PageShell from '@/components/layout/PageShell';
+import { pluralizeCount } from '@/lib/pluralize';
+import { formatRelativeTime } from '@/lib/relativeTime';
+
+// Mirrors the /analytics/index payload. Same backend endpoint feeds both
+// pages — the data they need (per-blueprint counts grouped by course) is
+// identical, only the card target and default sort differ.
+interface GradingIndexRow {
     test_definition_id: string;
-    test_title: string;
-    grading_status: 'UNGRADED' | 'PARTIALLY_GRADED' | 'FULLY_GRADED' | 'AUTO_GRADED';
-    ungraded_response_count: number;
+    title: string;
+    description: string | null;
+    blocks_count: number;
+    duration_minutes: number;
+    pass_percentage: number;
+    completed_sessions: number;
+    scheduled_upcoming: number;
+    submissions_total: number;
+    published_results: number;
+    pending_grading: number;
+    latest_completed_run_at: string | null;
+    latest_submission_at: string | null;
+    primary_course_code: string | null;
+    primary_course_title: string | null;
 }
 
-interface BlueprintBucket {
-    test_definition_id: string;
-    test_title: string;
-    total_submissions: number;
-    ungraded_submissions: number;
-    pending_responses: number;
+interface CourseGroup {
+    code: string | null;
+    title: string;
+    rows: GradingIndexRow[];
+}
+
+// Default sort differs from analytics: graders care first about the largest
+// backlog. Same option set otherwise so muscle memory transfers between tabs.
+type SortKey = 'most_pending' | 'last_completed' | 'most_submissions' | 'most_completed' | 'title';
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+    { key: 'most_pending',     label: 'Most pending grading' },
+    { key: 'last_completed',   label: 'Last completed session' },
+    { key: 'most_submissions', label: 'Most submissions' },
+    { key: 'most_completed',   label: 'Most completed sessions' },
+    { key: 'title',            label: 'Blueprint title (A–Z)' },
+];
+
+function tsOf(iso: string | null): number {
+    return iso ? Date.parse(iso) : 0;
+}
+
+function rowComparator(sort: SortKey): (a: GradingIndexRow, b: GradingIndexRow) => number {
+    switch (sort) {
+        case 'last_completed':
+            return (a, b) => tsOf(b.latest_completed_run_at) - tsOf(a.latest_completed_run_at);
+        case 'most_completed':
+            return (a, b) => b.completed_sessions - a.completed_sessions
+                || tsOf(b.latest_completed_run_at) - tsOf(a.latest_completed_run_at);
+        case 'most_submissions':
+            return (a, b) => b.submissions_total - a.submissions_total
+                || tsOf(b.latest_submission_at) - tsOf(a.latest_submission_at);
+        case 'title':
+            return (a, b) => a.title.localeCompare(b.title);
+        case 'most_pending':
+        default:
+            return (a, b) => b.pending_grading - a.pending_grading
+                || b.submissions_total - a.submissions_total;
+    }
+}
+
+function groupRank(group: CourseGroup, sort: SortKey): number {
+    switch (sort) {
+        case 'last_completed':
+            return -group.rows.reduce(
+                (m, r) => Math.max(m, tsOf(r.latest_completed_run_at)),
+                0,
+            );
+        case 'most_completed':
+            return -group.rows.reduce((m, r) => Math.max(m, r.completed_sessions), 0);
+        case 'most_submissions':
+            return -group.rows.reduce((m, r) => Math.max(m, r.submissions_total), 0);
+        case 'title':
+            return 0;
+        case 'most_pending':
+        default:
+            return -group.rows.reduce((s, r) => s + r.pending_grading, 0);
+    }
+}
+
+function groupByCourse(rows: GradingIndexRow[], sort: SortKey): {
+    withData: CourseGroup[];
+    empty: GradingIndexRow[];
+} {
+    // For grading we care about anything that has any student attempt at
+    // all — even a single submission may be sitting in the queue.
+    const withData = rows.filter((r) => r.submissions_total > 0 || r.completed_sessions > 0);
+    const empty = rows.filter((r) => r.submissions_total === 0 && r.completed_sessions === 0);
+
+    const byCourse = new Map<string, CourseGroup>();
+    for (const row of withData) {
+        const code = row.primary_course_code ?? '__practice__';
+        const title = row.primary_course_title
+            ?? (row.primary_course_code ? row.primary_course_code : 'Practice & other');
+        if (!byCourse.has(code)) {
+            byCourse.set(code, { code: row.primary_course_code, title, rows: [] });
+        }
+        byCourse.get(code)!.rows.push(row);
+    }
+
+    const comparator = rowComparator(sort);
+    for (const group of byCourse.values()) {
+        group.rows.sort(comparator);
+    }
+
+    const groups = Array.from(byCourse.values()).sort((a, b) => {
+        if (sort === 'title') return a.title.localeCompare(b.title);
+        return groupRank(a, sort) - groupRank(b, sort);
+    });
+
+    empty.sort((a, b) => a.title.localeCompare(b.title));
+
+    return { withData: groups, empty };
 }
 
 export default function GradingLandingPage() {
     const router = useRouter();
     const { user } = useAuthStore();
-    const { blueprints, fetchBlueprints } = useBlueprintStore();
-    const [sessions, setSessions] = useState<GradingSession[]>([]);
+    const [rows, setRows] = useState<GradingIndexRow[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [showEmpty, setShowEmpty] = useState(false);
+    const [sortKey, setSortKey] = useState<SortKey>('most_pending');
 
     useEffect(() => {
         if (user?.role === 'STUDENT') {
             router.replace('/my-exams');
             return;
         }
-        fetchBlueprints();
-        api.get<GradingSession[]>('grading/sessions')
-            .then((res) => setSessions(res.data ?? []))
-            .catch(() => setError('Failed to load grading sessions.'))
-            .finally(() => setIsLoading(false));
-    }, [user, router, fetchBlueprints]);
-
-    // Bucket sessions by blueprint to show per-test counts on each card.
-    const buckets: BlueprintBucket[] = useMemo(() => {
-        const map = new Map<string, BlueprintBucket>();
-        for (const s of sessions) {
-            const existing = map.get(s.test_definition_id);
-            const isUngraded =
-                s.grading_status === 'UNGRADED' || s.grading_status === 'PARTIALLY_GRADED';
-            if (existing) {
-                existing.total_submissions += 1;
-                if (isUngraded) existing.ungraded_submissions += 1;
-                existing.pending_responses += s.ungraded_response_count;
-            } else {
-                map.set(s.test_definition_id, {
-                    test_definition_id: s.test_definition_id,
-                    test_title: s.test_title,
-                    total_submissions: 1,
-                    ungraded_submissions: isUngraded ? 1 : 0,
-                    pending_responses: s.ungraded_response_count,
-                });
+        let cancelled = false;
+        (async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const response = await api.get<GradingIndexRow[]>('/analytics/index');
+                if (!cancelled) setRows(response.data);
+            } catch (err) {
+                if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load grading index.');
+            } finally {
+                if (!cancelled) setIsLoading(false);
             }
-        }
-        // Sort: blueprints with pending work first, then by submission count desc.
-        return Array.from(map.values()).sort((a, b) => {
-            if (a.pending_responses !== b.pending_responses) {
-                return b.pending_responses - a.pending_responses;
-            }
-            return b.total_submissions - a.total_submissions;
-        });
-    }, [sessions]);
+        })();
+        return () => { cancelled = true; };
+    }, [user, router]);
 
-    const blueprintMeta = useMemo(() => {
-        const m = new Map<string, (typeof blueprints)[number]>();
-        for (const b of blueprints) m.set(b.id, b);
-        return m;
-    }, [blueprints]);
+    const { withData, empty } = useMemo(() => groupByCourse(rows, sortKey), [rows, sortKey]);
 
     return (
         <PageShell width="wide">
             <PageHeader
                 title="Grading"
-                subtitle="Choose a blueprint to review and grade its submitted sessions."
+                subtitle="Blueprints grouped by course. Open one to review its completed sessions, score submissions, and clear the manual-grading queue."
             />
 
-            {error && (
-                <div className="mb-6 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] px-4 py-3 text-meta">
-                    {error}
+            {rows.length > 0 && (
+                <div className="mb-4 flex items-center gap-3">
+                    <label htmlFor="grading-sort" className="text-meta text-shell-muted-dim">
+                        Sort by
+                    </label>
+                    <select
+                        id="grading-sort"
+                        value={sortKey}
+                        onChange={(e) => setSortKey(e.target.value as SortKey)}
+                        className="rounded-xl border border-shell-border bg-shell-input px-3 py-1.5 text-meta text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                    >
+                        {SORT_OPTIONS.map((opt) => (
+                            <option key={opt.key} value={opt.key}>
+                                {opt.label}
+                            </option>
+                        ))}
+                    </select>
                 </div>
             )}
 
-            {isLoading ? (
+            {isLoading && rows.length === 0 ? (
                 <div className="flex items-center justify-center py-24 gap-3 text-shell-muted-dim text-meta">
-                    <Spinner size="sm" /> Loading blueprints…
+                    <Spinner size="sm" /> Loading grading index…
                 </div>
-            ) : buckets.length === 0 ? (
+            ) : error ? (
+                <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] px-4 py-3 text-meta">
+                    {error}
+                </div>
+            ) : rows.length === 0 ? (
                 <EmptyState
-                    title="No submissions to grade yet"
-                    description="Blueprints with completed sessions appear here once students submit."
+                    title="No test blueprints yet"
+                    description="Once a blueprint exists, completed sessions will queue here for grading."
                 />
             ) : (
-                <div className="grid gap-4 lg:grid-cols-2">
-                    {buckets.map((bucket) => {
-                        const bp = blueprintMeta.get(bucket.test_definition_id);
-                        const hasPending = bucket.pending_responses > 0;
-                        return (
-                            <Card
-                                key={bucket.test_definition_id}
-                                variant="surface"
-                                padding="md"
-                                interactive
-                            >
-                                <div className="flex items-start justify-between gap-4">
-                                    <div className="min-w-0">
-                                        <p className="text-h3 font-semibold text-foreground">
-                                            {bucket.test_title}
-                                        </p>
-                                        <p className="mt-1 text-meta text-shell-muted-dim line-clamp-2">
-                                            {bp?.description || 'No description provided.'}
-                                        </p>
-                                    </div>
-                                    <Button
-                                        variant="primary"
-                                        size="sm"
-                                        onClick={() =>
-                                            router.push(`/grading/test/${bucket.test_definition_id}`)
-                                        }
-                                    >
-                                        Open →
-                                    </Button>
+                <div className="space-y-8">
+                    {withData.length === 0 ? (
+                        <EmptyState
+                            title="No completed sessions yet"
+                            description="Once a scheduled run closes (or a practice attempt is submitted), the blueprint will appear here grouped by course."
+                        />
+                    ) : (
+                        withData.map((group) => (
+                            <section key={group.code ?? '__practice__'} className="space-y-3">
+                                <div className="flex items-baseline justify-between gap-3 border-b border-shell-border pb-2">
+                                    <h2 className="text-h3 font-semibold text-foreground">
+                                        {group.title}
+                                        {group.code && (
+                                            <span className="ml-2 text-meta text-shell-muted-dim font-normal">
+                                                {group.code}
+                                            </span>
+                                        )}
+                                    </h2>
+                                    <span className="text-meta text-shell-muted-dim">
+                                        {pluralizeCount(group.rows.length, 'blueprint')}
+                                    </span>
                                 </div>
-                                <div className="mt-4 flex flex-wrap gap-1.5">
-                                    <Badge tone="neutral" size="sm">
-                                        {pluralizeCount(bucket.total_submissions, 'submission')}
-                                    </Badge>
-                                    {hasPending ? (
-                                        <Badge tone="warning" size="sm">
-                                            {pluralizeCount(bucket.pending_responses, 'ungraded response')}
-                                        </Badge>
-                                    ) : (
-                                        <Badge tone="success" size="sm">All graded</Badge>
-                                    )}
-                                    {bucket.ungraded_submissions > 0 && (
-                                        <Badge tone="neutral" size="sm">
-                                            {bucket.ungraded_submissions} pending session
-                                            {bucket.ungraded_submissions === 1 ? '' : 's'}
-                                        </Badge>
-                                    )}
+                                <div className="grid gap-4 lg:grid-cols-2">
+                                    {group.rows.map((row) => (
+                                        <BlueprintCard
+                                            key={row.test_definition_id}
+                                            row={row}
+                                            onOpen={() =>
+                                                router.push(`/grading/test/${row.test_definition_id}`)
+                                            }
+                                        />
+                                    ))}
                                 </div>
-                            </Card>
-                        );
-                    })}
+                            </section>
+                        ))
+                    )}
+
+                    {empty.length > 0 && (
+                        <section className="space-y-3">
+                            <div className="flex items-baseline justify-between gap-3 border-b border-shell-border pb-2">
+                                <h2 className="text-h3 font-semibold text-shell-muted">
+                                    No completed sessions yet
+                                    <span className="ml-2 text-meta text-shell-muted-dim font-normal">
+                                        {pluralizeCount(empty.length, 'blueprint')}
+                                    </span>
+                                </h2>
+                                <button
+                                    type="button"
+                                    className="text-meta text-brand hover:underline"
+                                    onClick={() => setShowEmpty((v) => !v)}
+                                >
+                                    {showEmpty ? 'Hide' : 'Show'}
+                                </button>
+                            </div>
+                            {showEmpty && (
+                                <div className="grid gap-4 lg:grid-cols-2">
+                                    {empty.map((row) => (
+                                        <BlueprintCard
+                                            key={row.test_definition_id}
+                                            row={row}
+                                            onOpen={() =>
+                                                router.push(`/grading/test/${row.test_definition_id}`)
+                                            }
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </section>
+                    )}
                 </div>
             )}
         </PageShell>
+    );
+}
+
+function BlueprintCard({
+    row,
+    onOpen,
+}: {
+    row: GradingIndexRow;
+    onOpen: () => void;
+}) {
+    const hasActivity = row.submissions_total > 0 || row.completed_sessions > 0;
+    const allGraded = hasActivity && row.pending_grading === 0 && row.submissions_total > 0;
+    return (
+        <Card variant="surface" padding="md" interactive>
+            <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                    <p className="text-h3 font-semibold text-foreground">{row.title}</p>
+                    <p className="mt-1 text-meta text-shell-muted-dim line-clamp-2">
+                        {row.description || 'No description provided.'}
+                    </p>
+                </div>
+                <Button variant="primary" size="sm" onClick={onOpen}>
+                    Open →
+                </Button>
+            </div>
+
+            <div className="mt-4 space-y-2">
+                {hasActivity ? (
+                    <>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            {row.pending_grading > 0 && (
+                                <Badge tone="warning" size="sm">
+                                    {pluralizeCount(row.pending_grading, 'pending grade')}
+                                </Badge>
+                            )}
+                            {allGraded && (
+                                <Badge tone="success" size="sm">All graded</Badge>
+                            )}
+                            {row.completed_sessions > 0 && (
+                                <Badge tone="neutral" size="sm">
+                                    {pluralizeCount(row.completed_sessions, 'completed session')}
+                                </Badge>
+                            )}
+                            {row.submissions_total > 0 && (
+                                <Badge tone="neutral" size="sm">
+                                    {pluralizeCount(row.submissions_total, 'submission')}
+                                </Badge>
+                            )}
+                            {row.scheduled_upcoming > 0 && (
+                                <Badge tone="info" size="sm">
+                                    {pluralizeCount(row.scheduled_upcoming, 'scheduled session')}
+                                </Badge>
+                            )}
+                        </div>
+                        {row.latest_completed_run_at && (
+                            <p className="text-meta text-shell-muted-dim">
+                                Last completed {formatRelativeTime(row.latest_completed_run_at)}
+                            </p>
+                        )}
+                    </>
+                ) : (
+                    <Badge tone="neutral" size="sm">No completed sessions yet</Badge>
+                )}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-meta text-shell-muted-dim pt-1 border-t border-shell-border/60">
+                    <span>{pluralizeCount(row.blocks_count, 'section')}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{row.duration_minutes} min</span>
+                    <span aria-hidden="true">·</span>
+                    <span>Pass {row.pass_percentage}%</span>
+                </div>
+            </div>
+        </Card>
     );
 }

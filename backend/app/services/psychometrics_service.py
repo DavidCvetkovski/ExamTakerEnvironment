@@ -38,6 +38,150 @@ from app.services.scheduled_sessions_service import ensure_utc
 # DB-backed service functions
 # ─────────────────────────────────────────────
 
+async def list_analytics_index(
+    user_id: str,
+    is_admin: bool,
+) -> List[Dict[str, Any]]:
+    """Per-blueprint summary for the analytics index page.
+
+    For each blueprint the caller can access, returns:
+      * basic metadata (title, description, blocks_count, duration, pass %)
+      * ``completed_sessions`` — count of CLOSED scheduled runs (the
+        user-facing meaning of "session" — one scheduled exam window)
+      * ``scheduled_upcoming`` — count of SCHEDULED runs still in the future
+      * ``submissions_total`` — count of SUBMITTED exam_sessions (student
+        attempts, across all runs and practice)
+      * ``published_results`` — count of session_results with is_published=True
+      * ``pending_grading`` — count of question_grades awaiting manual grading
+      * ``latest_completed_run_at`` — most recent CLOSED run's ends_at
+      * ``latest_submission_at`` — most recent submitted_at (any attempt)
+      * ``primary_course_code`` / ``primary_course_title`` — most-used course
+        among the test's scheduled runs (None for practice-only blueprints)
+
+    Frontend uses this to group blueprints by course and surface the ones
+    with real submissions ahead of the long curriculum-extension tail.
+    """
+    if is_admin:
+        tests = await prisma.test_definitions.find_many(order={"created_at": "asc"})
+    else:
+        tests = await prisma.test_definitions.find_many(
+            where={"created_by": user_id}, order={"created_at": "asc"}
+        )
+    if not tests:
+        return []
+
+    test_ids = [t.id for t in tests]
+
+    # Submission counts and latest_submitted_at per test in one batched query.
+    # Excludes PRACTICE-mode (author previews) so the index headline numbers
+    # match the per-blueprint Combined view, which also excludes practice.
+    all_sessions = await prisma.exam_sessions.find_many(
+        where={
+            "test_definition_id": {"in": test_ids},
+            "status": "SUBMITTED",
+            "session_mode": "ASSIGNED",
+        },
+    )
+    sessions_by_test: Dict[str, list] = defaultdict(list)
+    for s in all_sessions:
+        sessions_by_test[s.test_definition_id].append(s)
+
+    all_results = await prisma.session_results.find_many(
+        where={"test_definition_id": {"in": test_ids}, "is_published": True},
+    )
+    published_by_test: Dict[str, int] = defaultdict(int)
+    for r in all_results:
+        published_by_test[r.test_definition_id] += 1
+
+    # Pending grading — manual essays not yet graded — across all submitted
+    # sessions for the test. Single query per request.
+    pending_grades = await prisma.question_grades.find_many(
+        where={
+            "is_auto_graded": False,
+            "feedback": None,
+            "exam_sessions": {
+                "test_definition_id": {"in": test_ids},
+                "status": "SUBMITTED",
+                "session_mode": "ASSIGNED",
+            },
+        },
+        include={"exam_sessions": True},
+    )
+    pending_by_test: Dict[str, int] = defaultdict(int)
+    for g in pending_grades:
+        if g.exam_sessions:
+            pending_by_test[g.exam_sessions.test_definition_id] += 1
+
+    # Primary course = the course code that appears most often among the
+    # blueprint's scheduled runs. Practice-only blueprints get None.
+    # Also pre-aggregate per-test run lifecycle counts + last completion.
+    runs = await prisma.scheduled_exam_sessions.find_many(
+        where={"test_definition_id": {"in": test_ids}},
+        include={"courses": True},
+    )
+    course_votes: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    course_titles: Dict[str, str] = {}
+    completed_runs_by_test: Dict[str, int] = defaultdict(int)
+    scheduled_runs_by_test: Dict[str, int] = defaultdict(int)
+    latest_completed_run_by_test: Dict[str, Optional[datetime]] = defaultdict(lambda: None)
+    now = datetime.now(timezone.utc)
+    for run in runs:
+        if run.courses:
+            course_votes[run.test_definition_id][run.courses.code] += 1
+            course_titles[run.courses.code] = run.courses.title
+        # "Completed" = scheduled run that finished normally (CLOSED status,
+        # or window-ended-past-now and not CANCELED). Matches CLAUDE.md §7.9.
+        run_status = str(run.status) if run.status is not None else ""
+        ends_at = ensure_utc(run.ends_at) if run.ends_at else None
+        is_completed = (
+            run_status == CourseSessionStatus.CLOSED.value
+            or (ends_at is not None and ends_at <= now and run_status != CourseSessionStatus.CANCELED.value)
+        )
+        if is_completed:
+            completed_runs_by_test[run.test_definition_id] += 1
+            current = latest_completed_run_by_test[run.test_definition_id]
+            if ends_at is not None and (current is None or ends_at > current):
+                latest_completed_run_by_test[run.test_definition_id] = ends_at
+        elif run_status == CourseSessionStatus.SCHEDULED.value:
+            scheduled_runs_by_test[run.test_definition_id] += 1
+
+    rows: List[Dict[str, Any]] = []
+    for t in tests:
+        sessions = sessions_by_test.get(t.id, [])
+        latest = max(
+            (s.submitted_at for s in sessions if s.submitted_at is not None),
+            default=None,
+        )
+        votes = course_votes.get(t.id, {})
+        primary_code = (
+            max(votes.items(), key=lambda kv: kv[1])[0] if votes else None
+        )
+        scoring = _parse_json(t.scoring_config) if t.scoring_config else {}
+        if not isinstance(scoring, dict):
+            scoring = {}
+        blocks = _parse_json(t.blocks) if t.blocks else []
+        if not isinstance(blocks, list):
+            blocks = []
+        rows.append({
+            "test_definition_id": t.id,
+            "title": t.title,
+            "description": t.description,
+            "blocks_count": len(blocks),
+            "duration_minutes": t.duration_minutes,
+            "pass_percentage": scoring.get("pass_percentage", 55),
+            "completed_sessions": completed_runs_by_test.get(t.id, 0),
+            "scheduled_upcoming": scheduled_runs_by_test.get(t.id, 0),
+            "submissions_total": len(sessions),
+            "published_results": published_by_test.get(t.id, 0),
+            "pending_grading": pending_by_test.get(t.id, 0),
+            "latest_completed_run_at": latest_completed_run_by_test.get(t.id),
+            "latest_submission_at": latest,
+            "primary_course_code": primary_code,
+            "primary_course_title": course_titles.get(primary_code) if primary_code else None,
+        })
+    return rows
+
+
 async def compute_test_item_stats(
     test_definition_id: str,
     run_id: Optional[str] = None,

@@ -263,7 +263,10 @@ function BlueprintPageInner() {
             toast({
                 tone: 'danger',
                 title: 'Cannot save',
-                description: validation.titleError ?? 'Fix empty sections before saving.',
+                description:
+                    validation.titleError
+                    ?? validation.structureError
+                    ?? 'Fix empty sections before saving.',
             });
             return;
         }
@@ -520,7 +523,7 @@ function BlueprintPageInner() {
 
                                     {/* Actions */}
                                     <div className="flex items-center flex-wrap gap-2">
-                                        {canEdit ? (
+                                        {canEdit && (
                                             <Button
                                                 variant="secondary"
                                                 size="sm"
@@ -528,15 +531,18 @@ function BlueprintPageInner() {
                                             >
                                                 Edit →
                                             </Button>
-                                        ) : (
+                                        )}
+                                        {/* Inspect is always available — even on editable blueprints
+                                          * it gives a faster read-only view than entering the editor. */}
+                                        <Button
+                                            variant={canEdit ? 'ghost' : 'secondary'}
+                                            size="sm"
+                                            onClick={() => router.push(`/blueprint?id=${bp.id}&inspect=true`)}
+                                        >
+                                            Inspect
+                                        </Button>
+                                        {!canEdit && (
                                             <>
-                                                <Button
-                                                    variant="secondary"
-                                                    size="sm"
-                                                    onClick={() => router.push(`/blueprint?id=${bp.id}&inspect=true`)}
-                                                >
-                                                    Inspect
-                                                </Button>
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
@@ -890,6 +896,12 @@ function BlueprintPageInner() {
                                         );
                                     })}
                                 </div>
+
+                                {validationErrors?.structureError && (
+                                    <p className="mt-8 text-meta text-[var(--color-danger-fg)]">
+                                        {validationErrors.structureError}
+                                    </p>
+                                )}
 
                                 <button
                                     onClick={handleAddBlock}

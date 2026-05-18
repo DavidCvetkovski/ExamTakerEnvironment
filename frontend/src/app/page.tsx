@@ -7,9 +7,39 @@ import { useAuthStore } from '@/stores/useAuthStore';
 
 // ─── Unauthenticated landing ─────────────────────────────────────────────────
 
+/**
+ * Rotating words for the marketing headline. Each cycles in roughly the
+ * same visual width so the surrounding layout doesn't jump. Order chosen
+ * so the first impression ("Reimagined.") matches what someone clicking
+ * an external link to OpenVision would expect to see at t=0.
+ */
+const ROTATING_WORDS = ['Reimagined.', 'Validated.', 'Modernized.', 'Reinvented.'];
+
+function useWordRotator(words: string[], intervalMs = 2600) {
+    const [index, setIndex] = useState(0);
+    useEffect(() => {
+        const id = window.setInterval(
+            () => setIndex((i) => (i + 1) % words.length),
+            intervalMs,
+        );
+        return () => window.clearInterval(id);
+    }, [words.length, intervalMs]);
+    return words[index];
+}
+
 function MarketingPage({ mounted }: { mounted: boolean }) {
+    const word = useWordRotator(ROTATING_WORDS);
+    // Tracks whether the CTA has been hovered at least once so the shimmer
+    // re-plays cleanly each hover (we toggle a key on the span to restart
+    // the CSS animation; CSS animations don't replay on the same element
+    // unless we either remove + re-add the class or remount).
+    const [shimmerKey, setShimmerKey] = useState(0);
+
     return (
-        <div className="relative min-h-full bg-shell-bg overflow-hidden flex flex-col items-center justify-center px-6 text-center">
+        <div
+            data-theme-scope="brand-green"
+            className="relative min-h-full bg-shell-bg overflow-hidden flex flex-col items-center justify-center px-6 text-center text-foreground"
+        >
             <div className="pointer-events-none absolute inset-0" aria-hidden>
                 <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-brand/10 blur-[120px] animate-blob" />
                 <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-brand/8 blur-[100px] animate-blob animation-delay-2000" />
@@ -17,13 +47,28 @@ function MarketingPage({ mounted }: { mounted: boolean }) {
 
             <div className={`relative z-10 max-w-2xl transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
                 <div className="flex items-center justify-center gap-3 mb-8">
-                    <span className="w-3 h-3 rounded-full bg-brand animate-pulse" />
+                    <span className="relative inline-flex w-3 h-3" aria-hidden>
+                        <span className="absolute inset-0 rounded-full bg-brand animate-brand-ping" />
+                        <span className="relative inline-flex w-3 h-3 rounded-full bg-brand" />
+                    </span>
                     <span className="text-eyebrow tracking-eyebrow text-shell-muted uppercase text-sm font-semibold">OpenVision</span>
                 </div>
 
                 <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight text-foreground mb-4 leading-tight">
                     Academic Assessment,<br />
-                    <span className="text-brand">Reimagined.</span>
+                    {/*
+                      key={word} forces React to remount the span on every
+                      rotation, which restarts the gradient animation from
+                      its 0% position and makes each new word feel fresh
+                      rather than mid-cycle.
+                    */}
+                    <span
+                        key={word}
+                        className="text-brand-gradient inline-block animate-[fadeInUp_0.6s_ease-out]"
+                        aria-live="polite"
+                    >
+                        {word}
+                    </span>
                 </h1>
 
                 <p className="text-lg text-shell-muted mb-10 leading-relaxed">
@@ -32,9 +77,17 @@ function MarketingPage({ mounted }: { mounted: boolean }) {
 
                 <Link
                     href="/login"
-                    className="inline-flex items-center gap-2 bg-brand hover:bg-brand/90 text-white font-semibold px-8 py-4 rounded-xl text-base transition-all hover:scale-[1.02] hover:shadow-[0_0_32px_var(--color-brand)] focus-ring"
+                    onMouseEnter={() => setShimmerKey((k) => k + 1)}
+                    className="group relative inline-flex items-center gap-2 overflow-hidden bg-brand hover:bg-brand/90 text-white font-semibold px-8 py-4 rounded-xl text-base transition-all hover:scale-[1.02] hover:shadow-[0_0_32px_var(--color-brand)] focus-ring"
                 >
-                    Sign in to OpenVision →
+                    {/* Diagonal shimmer that sweeps left → right on hover */}
+                    <span
+                        key={shimmerKey}
+                        aria-hidden
+                        className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-brand-shimmer"
+                    />
+                    <span className="relative">Sign in to OpenVision</span>
+                    <span className="relative transition-transform group-hover:translate-x-0.5">→</span>
                 </Link>
 
                 <div className="mt-12 flex flex-wrap justify-center gap-4 text-sm text-shell-muted">
@@ -45,7 +98,7 @@ function MarketingPage({ mounted }: { mounted: boolean }) {
                     ].map((label) => (
                         <span
                             key={label}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-shell-border bg-shell-surface/50"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-shell-border bg-shell-surface/50 hover:border-brand/40 transition-colors"
                         >
                             {label}
                         </span>

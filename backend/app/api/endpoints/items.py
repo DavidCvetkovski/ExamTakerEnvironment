@@ -8,7 +8,7 @@ from app.core.dependencies import get_current_user, require_role
 from app.models.user import User, UserRole
 from app.models.item_version import ItemStatus
 from app.schemas.item_version import ItemVersionCreate, ItemVersionResponse
-from app.schemas.learning_object import LearningObjectListResponse
+from app.schemas.learning_object import LearningObjectListResponse, LearningObjectUpdate
 from app.services import items_service as svc
 
 router = APIRouter()
@@ -29,6 +29,23 @@ async def create_learning_object(
 ):
     """Creates a new Learning Object and its initial DRAFT version."""
     return await svc.create_learning_object(current_user_id=current_user.id)
+
+@router.get("/learning-objects/{lo_id}", response_model=LearningObjectListResponse)
+async def get_learning_object(
+    lo_id: UUID,
+    current_user: User = Depends(get_current_user),
+):
+    """Return a Learning Object summary with its latest version and course metadata."""
+    return await svc.get_learning_object(lo_id=lo_id)
+
+@router.patch("/learning-objects/{lo_id}", response_model=LearningObjectListResponse)
+async def update_learning_object(
+    lo_id: UUID,
+    payload: LearningObjectUpdate,
+    current_user: User = Depends(require_role(UserRole.CONSTRUCTOR, UserRole.ADMIN)),
+):
+    """Update learning-object-level metadata such as course assignment."""
+    return await svc.update_learning_object(lo_id=lo_id, payload=payload)
 
 @router.get("/learning-objects/{lo_id}/versions", response_model=List[ItemVersionResponse])
 async def get_item_versions(

@@ -9,6 +9,7 @@ import QuestionInspector from '@/components/editor/QuestionInspector';
 import { useAuthoringStore } from '@/stores/useAuthoringStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { deriveLockedQuestionIds, useBlueprintStore } from '@/stores/useBlueprintStore';
+import { useCourseStore } from '@/stores/useCourseStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { BackButton, Badge, Button, Card, Field, Input, PageHeader, Select, Spinner, StatusDot, useToast, useConfirm } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
@@ -35,10 +36,13 @@ function AuthorPageInner() {
         saveStatus, questionType, setQuestionType,
         fetchLatestVersion, learningObjectId, saveDraft, revertChanges,
         metadataTags, updateMetadataField, isDirty,
+        courseId, setCourseId,
         tiptapJson, options,
     } = useAuthoringStore();
 
     const setLastEditingLoId = useLibraryStore((s) => s.setLastEditingLoId);
+    const courses = useCourseStore((s) => s.courses);
+    const fetchCourses = useCourseStore((s) => s.fetchCourses);
     const blueprints = useBlueprintStore((s) => s.blueprints);
     const usageMap = useBlueprintStore((s) => s.usageMap);
     const fetchBlueprints = useBlueprintStore((s) => s.fetchBlueprints);
@@ -63,7 +67,8 @@ function AuthorPageInner() {
     useEffect(() => {
         // Need blueprint usage data to know whether this question is locked.
         fetchBlueprints();
-    }, [fetchBlueprints]);
+        fetchCourses();
+    }, [fetchBlueprints, fetchCourses]);
 
     // Warn on navigation with unsaved changes
     useEffect(() => {
@@ -172,11 +177,26 @@ function AuthorPageInner() {
                         <div className="space-y-5">
                             <Card variant="surface" padding="md">
                                 <div className="flex flex-wrap items-end gap-4 min-h-[2.5rem]">
-                                    <Field label="Subject" className="w-32">
+                                    <Field label="Course" className="min-w-[220px]">
+                                        <Select
+                                            inputSize="sm"
+                                            value={courseId ?? ''}
+                                            onChange={(e) => setCourseId(e.target.value || null)}
+                                        >
+                                            <option value="">Unassigned</option>
+                                            {courses.map((course) => (
+                                                <option key={course.id} value={course.id}>
+                                                    {course.title} ({course.code})
+                                                </option>
+                                            ))}
+                                        </Select>
+                                    </Field>
+
+                                    <Field label="Topic" className="w-40">
                                         <Input
                                             inputSize="sm"
                                             type="text"
-                                            placeholder="e.g. Math"
+                                            placeholder="e.g. Hashing"
                                             value={(metadataTags.topic as string) || ''}
                                             onChange={(e) => updateMetadataField('topic', e.target.value)}
                                         />

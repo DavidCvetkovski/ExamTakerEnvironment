@@ -140,7 +140,7 @@ export default function QuestionInspector({
                 </section>
             )}
 
-            {/* Metadata strip — type / points / subject */}
+            {/* Metadata strip — type / points / topic */}
             <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 pt-2 border-t border-shell-border">
                 <div>
                     <p className="mb-1.5 text-eyebrow font-semibold uppercase tracking-widest text-shell-muted-dim">
@@ -157,7 +157,7 @@ export default function QuestionInspector({
                 {topic && (
                     <div>
                         <p className="mb-1.5 text-eyebrow font-semibold uppercase tracking-widest text-shell-muted-dim">
-                            Subject
+                            Topic
                         </p>
                         <span className="text-foreground font-medium">{topic}</span>
                     </div>

@@ -28,9 +28,12 @@ async def cleanup_database():
     await prisma_client.scheduled_exam_sessions.delete_many()
     await prisma_client.course_enrollments.delete_many()
     await prisma_client.test_definitions.delete_many()
-    await prisma_client.courses.delete_many()
     await prisma_client.item_versions.delete_many()
     await prisma_client.learning_objects.delete_many()
+    # courses after learning_objects: the 8.7 WIP migration added
+    # learning_objects.course_id with an FK to courses.id, so courses must
+    # be deleted last among these three.
+    await prisma_client.courses.delete_many()
     await prisma_client.media_assets.delete_many()
     await prisma_client.item_banks.delete_many()
     await prisma_client.users.delete_many()

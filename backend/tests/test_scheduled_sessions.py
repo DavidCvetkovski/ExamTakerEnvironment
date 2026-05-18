@@ -161,10 +161,15 @@ async def test_student_lists_only_enrolled_future_and_active_sessions(ac: AsyncC
     token = await login(ac, STUDENT_EMAIL, STUDENT_PASS)
     response = await ac.get("/api/student/sessions/", headers=auth(token))
     assert response.status_code == 200
-    data = response.json()
-    assert len(data) == 2
-    assert any(item["status"] == "ACTIVE" for item in data)
-    assert any(item["status"] == "SCHEDULED" for item in data)
+    # Epoch 8.6 Stage 1 changed the response shape from a flat list to
+    # {sessions, server_now} envelope so the client can correct for
+    # clock skew. Read the list out of the envelope.
+    body = response.json()
+    assert "server_now" in body
+    sessions = body["sessions"]
+    assert len(sessions) == 2
+    assert any(item["status"] == "ACTIVE" for item in sessions)
+    assert any(item["status"] == "SCHEDULED" for item in sessions)
 
 
 @pytest.mark.anyio

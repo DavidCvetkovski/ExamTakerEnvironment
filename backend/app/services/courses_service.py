@@ -50,10 +50,10 @@ async def create_course(payload: Any, current_user_id: str) -> Any:
 
 
 async def list_courses() -> List[Any]:
-    """Return all active courses ordered by code."""
+    """Return all active courses ordered by title."""
     return await prisma.courses.find_many(
         where={"is_active": True},
-        order={"code": "asc"},
+        order={"title": "asc"},
     )
 
 

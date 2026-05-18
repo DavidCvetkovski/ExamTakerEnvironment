@@ -7,7 +7,7 @@ import Link from 'next/link';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import StudentExamCard from '@/components/student/StudentExamCard';
 import { useExamStore } from '@/stores/useExamStore';
-import { useStudentSessionsStore } from '@/stores/useStudentSessionsStore';
+import { useStudentSessionsStore, type StudentScheduledSession } from '@/stores/useStudentSessionsStore';
 import { useLifecycleSync } from '@/hooks/useLifecycleSync';
 import { EmptyState, PageHeader, SectionHeader } from '@/components/ui';
 
@@ -25,8 +25,15 @@ export default function MyExamsPage() {
     // `starts_at`, instead of waiting up to 30 seconds.
     useLifecycleSync(sessions, fetchSessions);
 
-    const currentSessions = sessions.filter((s) => s.can_join);
-    const upcomingSessions = sessions.filter((s) => !s.can_join);
+    // A session the student has already submitted (or that expired on them)
+    // belongs on /my-grades, not here. Without this guard a submitted session
+    // lingers in "Upcoming" until `ends_at` passes, which reads as a bug.
+    const isFinishedForStudent = (s: StudentScheduledSession) =>
+        s.existing_attempt_status === 'SUBMITTED' ||
+        s.existing_attempt_status === 'EXPIRED';
+
+    const currentSessions = sessions.filter((s) => s.can_join && !isFinishedForStudent(s));
+    const upcomingSessions = sessions.filter((s) => !s.can_join && !isFinishedForStudent(s));
 
     return (
         <ProtectedRoute allowedRoles={['STUDENT']}>

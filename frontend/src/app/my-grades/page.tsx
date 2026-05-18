@@ -60,8 +60,8 @@ export default function MyGradesPage() {
                                                             </p>
                                                         ) : null}
                                                     </div>
-                                                    <Badge tone={pendingTone(result.grading_status)} size="sm">
-                                                        {pendingLabel(result.grading_status)}
+                                                    <Badge tone="neutral" size="sm">
+                                                        Not yet published
                                                     </Badge>
                                                 </div>
                                             </Card>
@@ -122,14 +122,3 @@ export default function MyGradesPage() {
     );
 }
 
-function pendingLabel(status: string): string {
-    if (status === 'PARTIALLY_GRADED') return 'Partially graded';
-    if (status === 'FULLY_GRADED' || status === 'AUTO_GRADED') return 'Awaiting publication';
-    return 'Awaiting grading';
-}
-
-function pendingTone(status: string): 'neutral' | 'info' | 'warning' {
-    if (status === 'FULLY_GRADED' || status === 'AUTO_GRADED') return 'info';
-    if (status === 'PARTIALLY_GRADED') return 'warning';
-    return 'neutral';
-}

@@ -141,7 +141,7 @@
   --color-background: var(--color-shell-bg);
   --color-foreground: #ffffff;
 
-  /* ── 8.4 — Subject palette (8 hashed tones; dark theme: deeper saturation) ── */
+  /* ── 8.4 — Topic palette (8 hashed tones; dark theme: deeper saturation) ── */
   --color-subject-1-bg: rgba(96, 165, 250, 0.16);   --color-subject-1-fg: #93c5fd; --color-subject-1-border: rgba(96, 165, 250, 0.32);
   --color-subject-2-bg: rgba(167, 139, 250, 0.16);  --color-subject-2-fg: #c4b5fd; --color-subject-2-border: rgba(167, 139, 250, 0.32);
   --color-subject-3-bg: rgba(52, 211, 153, 0.16);   --color-subject-3-fg: #6ee7b7; --color-subject-3-border: rgba(52, 211, 153, 0.32);
@@ -223,7 +223,7 @@
   --color-background: var(--color-shell-bg);
   --color-foreground: #1f2937;
 
-  /* ── 8.4 — Subject palette (warm theme: muted earth tones, deeper fg for contrast) ── */
+  /* ── 8.4 — Topic palette (warm theme: muted earth tones, deeper fg for contrast) ── */
   --color-subject-1-bg: rgba(16, 85, 204, 0.10);    --color-subject-1-fg: #0d47ae; --color-subject-1-border: rgba(16, 85, 204, 0.28);
   --color-subject-2-bg: rgba(122, 76, 173, 0.10);   --color-subject-2-fg: #5b3a8c; --color-subject-2-border: rgba(122, 76, 173, 0.28);
   --color-subject-3-bg: rgba(47, 143, 93, 0.10);    --color-subject-3-fg: #156341; --color-subject-3-border: rgba(47, 143, 93, 0.28);
@@ -304,7 +304,7 @@
   --color-background: var(--color-shell-bg);
   --color-foreground: #10233f;
 
-  /* ── 8.4 — Subject palette (light-blue theme: cool pastels, deeper fg for contrast) ── */
+  /* ── 8.4 — Topic palette (light-blue theme: cool pastels, deeper fg for contrast) ── */
   --color-subject-1-bg: rgba(23, 105, 210, 0.10);   --color-subject-1-fg: #0f56ad; --color-subject-1-border: rgba(23, 105, 210, 0.28);
   --color-subject-2-bg: rgba(114, 88, 168, 0.10);   --color-subject-2-fg: #534084; --color-subject-2-border: rgba(114, 88, 168, 0.28);
   --color-subject-3-bg: rgba(22, 163, 106, 0.10);   --color-subject-3-fg: #136247; --color-subject-3-border: rgba(22, 163, 106, 0.28);
@@ -497,28 +497,39 @@ body {
   background-color: var(--color-shell-bg);
 }
 
-/* ── 8.4 Stage 13 — Login scope: overrides brand to a calm green so the
-   pre-auth surface is visually distinct without breaking theme tokens.
-   Active theme (shell + text) remains untouched — only --color-brand and
-   adjacent accents flip. ── */
+/* ── Pre-auth brand scope. Both `brand-green` (preferred name) and
+   the legacy `login` alias resolve to the same emerald identity so
+   the landing page and the login page share one visual brand without
+   either having to know about the other. Active theme's shell + text
+   stay intact; only --color-brand and adjacent accents flip.
+   --color-brand-secondary is exposed for gradient sweeps (used by the
+   .text-brand-gradient + .animate-shimmer utilities below). ── */
+[data-theme-scope="brand-green"],
 [data-theme-scope="login"] {
-  --color-brand: #2f8f5d;
-  --color-info: #2f8f5d;
-  --color-info-fg: #6bbf94;
-  --color-info-bg: rgba(47, 143, 93, 0.10);
-  --color-info-border: rgba(47, 143, 93, 0.28);
+  --color-brand: #10b981;
+  --color-brand-secondary: #34d399;
+  --color-info: #10b981;
+  --color-info-fg: #6ee7b7;
+  --color-info-bg: rgba(16, 185, 129, 0.10);
+  --color-info-border: rgba(16, 185, 129, 0.28);
 }
 
+[data-theme="warm"] [data-theme-scope="brand-green"],
 [data-theme="warm"] [data-theme-scope="login"],
+[data-theme-scope="brand-green"][data-theme="warm"],
 [data-theme-scope="login"][data-theme="warm"] {
-  --color-brand: #2f8f5d;
-  --color-info-fg: #156341;
+  --color-brand: #059669;
+  --color-brand-secondary: #10b981;
+  --color-info-fg: #065f46;
 }
 
+[data-theme="light-blue"] [data-theme-scope="brand-green"],
 [data-theme="light-blue"] [data-theme-scope="login"],
+[data-theme-scope="brand-green"][data-theme="light-blue"],
 [data-theme-scope="login"][data-theme="light-blue"] {
-  --color-brand: #16a36a;
-  --color-info-fg: #136247;
+  --color-brand: #059669;
+  --color-brand-secondary: #10b981;
+  --color-info-fg: #064e3b;
 }
 
 @keyframes ov-shake {
@@ -541,3 +552,59 @@ body {
 }
 .animate-blob { animation: blob 12s ease-in-out infinite; }
 .animation-delay-2000 { animation-delay: 2s; }
+
+/* ── Brand-gradient text + a flowing shimmer sweep — used on the marketing
+   landing + login hero. Relies on --color-brand and --color-brand-secondary
+   from the active scope, so both pages share the look without hex literals. */
+@keyframes brand-gradient-flow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.text-brand-gradient {
+  background-image: linear-gradient(
+    110deg,
+    var(--color-brand) 0%,
+    var(--color-brand-secondary, var(--color-brand)) 50%,
+    var(--color-brand) 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: brand-gradient-flow 6s ease-in-out infinite;
+}
+
+/* Diagonal shimmer that crosses a button on hover; the parent must be
+   relative + overflow-hidden, and the shimmer span sits on top. */
+@keyframes brand-shimmer {
+  0%   { transform: translateX(-150%) skewX(-20deg); }
+  100% { transform: translateX(250%) skewX(-20deg); }
+}
+.animate-brand-shimmer {
+  animation: brand-shimmer 1.2s ease-out;
+}
+
+/* Soft ping rings emanating from a brand dot — used as the live "OpenVision"
+   pulse beacon in the eyebrow. More expressive than a single animate-pulse. */
+@keyframes brand-ping {
+  0%   { transform: scale(1);   opacity: 0.55; }
+  80%  { transform: scale(2.6); opacity: 0;    }
+  100% { transform: scale(2.6); opacity: 0;    }
+}
+.animate-brand-ping {
+  animation: brand-ping 2.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .text-brand-gradient,
+  .animate-blob,
+  .animate-brand-shimmer,
+  .animate-brand-ping {
+    animation: none;
+  }
+  .text-brand-gradient {
+    background-position: 50% 50%;
+  }
+}

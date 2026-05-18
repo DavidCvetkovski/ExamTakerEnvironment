@@ -242,3 +242,85 @@ B) 2 *
     result = parse_text(text)
     assert len(result.blueprint.blocks) == 1
     assert result.blueprint.blocks[0].name == "General"
+
+
+# ---------------------------------------------------------------------------
+# Epoch 8.7 Stage 3 — TOPIC: writes tags; legacy SUBJECT: maps to tags + warns
+# ---------------------------------------------------------------------------
+
+TOPIC_MCQ = """
+#Q What is 2+2?
+TYPE: MCQ
+TOPIC: arithmetic, basic
+
+A) 3
+B) 4 *
+"""
+
+SUBJECT_MCQ = """
+#Q What is 2+2?
+TYPE: MCQ
+SUBJECT: arithmetic, basic
+
+A) 3
+B) 4 *
+"""
+
+TAGS_MCQ = """
+#Q What is 2+2?
+TYPE: MCQ
+TAGS: arithmetic, basic
+
+A) 3
+B) 4 *
+"""
+
+
+def test_topic_writes_tags():
+    """TOPIC: is the canonical metadata key — parsed values land on the
+    question's tags list, no warnings."""
+    result = parse_text(TOPIC_MCQ)
+    assert not result.has_blocking_errors
+    q = result.blueprint.all_questions[0]
+    assert q.tags == ["arithmetic", "basic"]
+    assert not any("deprecated" in e.message.lower() for e in result.warnings)
+
+
+def test_legacy_subject_still_parses_and_warns():
+    """Backward compatibility: SUBJECT: continues to write tags so old
+    import files still work, but a WARNING is emitted nudging the user
+    toward TOPIC:."""
+    result = parse_text(SUBJECT_MCQ)
+    assert not result.has_blocking_errors  # warning, not error
+    q = result.blueprint.all_questions[0]
+    assert q.tags == ["arithmetic", "basic"]
+    warnings = [e for e in result.warnings if "subject" in e.message.lower()]
+    assert len(warnings) == 1
+    assert "deprecated" in warnings[0].message.lower()
+    assert "topic" in warnings[0].fix_hint.lower()
+
+
+def test_legacy_tags_still_parses_and_warns():
+    """TAGS: also gets the deprecation nudge toward TOPIC:."""
+    result = parse_text(TAGS_MCQ)
+    assert not result.has_blocking_errors
+    q = result.blueprint.all_questions[0]
+    assert q.tags == ["arithmetic", "basic"]
+    warnings = [e for e in result.warnings if "tags" in e.message.lower() and "deprecated" in e.message.lower()]
+    assert len(warnings) == 1
+
+
+def test_topic_handles_whitespace_and_empties():
+    """`TOPIC: a, , b` should become ['a','b'] — empty splits filtered
+    out, surrounding whitespace stripped."""
+    text = """
+#Q Sample
+TYPE: MCQ
+TOPIC:   a , , b  , c
+
+A) wrong
+B) right *
+"""
+    result = parse_text(text)
+    q = result.blueprint.all_questions[0]
+    assert q.tags == ["a", "b", "c"]

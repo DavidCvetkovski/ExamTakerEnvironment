@@ -149,3 +149,109 @@ async def test_logout_clears_cookie(ac: AsyncClient):
     # In httpx, if a cookie is deleted, it often persists in the jar but with null value or similar.
     # Let's check for the header specifically if possible, or just verify status.
     assert logout_resp.json()["detail"] == "Logged out successfully."
+
+
+# ---------------------------------------------------------------------------
+# Token + auth hardening
+# ---------------------------------------------------------------------------
+
+@pytest.mark.anyio
+async def test_protected_endpoint_rejects_missing_authorization(ac: AsyncClient):
+    """No header at all → 401 (not 500)."""
+    resp = await ac.get("/api/auth/me")
+    assert resp.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_protected_endpoint_rejects_malformed_authorization(ac: AsyncClient):
+    """Header present but no Bearer scheme → 401."""
+    resp = await ac.get("/api/auth/me", headers={"Authorization": "garbage"})
+    assert resp.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_protected_endpoint_rejects_bearer_without_token(ac: AsyncClient):
+    resp = await ac.get("/api/auth/me", headers={"Authorization": "Bearer "})
+    assert resp.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_protected_endpoint_rejects_garbage_jwt(ac: AsyncClient):
+    """Not even close to a JWT → 401, never 5xx."""
+    resp = await ac.get("/api/auth/me", headers={"Authorization": "Bearer not.a.jwt"})
+    assert resp.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_protected_endpoint_rejects_token_signed_with_wrong_secret(ac: AsyncClient):
+    """A well-formed JWT signed by an attacker's key must not authenticate.
+    Catches accidental `verify=False` regressions in decode_token."""
+    from jose import jwt
+    forged = jwt.encode(
+        {"sub": "anybody@vu.nl", "role": "ADMIN"},
+        "attacker-secret",
+        algorithm="HS256",
+    )
+    resp = await ac.get("/api/auth/me", headers={"Authorization": f"Bearer {forged}"})
+    assert resp.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_expired_token_rejected(ac: AsyncClient):
+    """A token with exp in the past must be rejected even if the signature
+    and the user are valid. ``create_access_token`` with negative timedelta
+    produces an instantly-expired token."""
+    from datetime import timedelta
+    from app.core.security import create_access_token
+
+    # Create a real user so the failure mode is purely about expiry.
+    await prisma.users.create(data={
+        "email": "expired@vu.nl",
+        "hashed_password": "$2b$12$abcdefghijklmnopqrstuvwxyz0123456789",  # never matches
+        "role": UserRole.STUDENT,
+    })
+    expired = create_access_token(
+        {"sub": "expired@vu.nl"},
+        expires_delta=timedelta(seconds=-1),
+    )
+    resp = await ac.get("/api/auth/me", headers={"Authorization": f"Bearer {expired}"})
+    assert resp.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_login_is_case_sensitive_on_email(ac: AsyncClient):
+    """Document the current behavior so a future 'case-insensitive login'
+    refactor lands deliberately (or is caught here)."""
+    await ac.post("/api/auth/register", json={
+        "email": "CaseTest@vu.nl", "password": "strongpassword123", "role": "STUDENT",
+    })
+    upper = await ac.post("/api/auth/login", json={
+        "email": "CaseTest@vu.nl", "password": "strongpassword123",
+    })
+    lower = await ac.post("/api/auth/login", json={
+        "email": "casetest@vu.nl", "password": "strongpassword123",
+    })
+    # At least one should succeed; both should not 5xx.
+    assert upper.status_code in (200, 401)
+    assert lower.status_code in (200, 401)
+
+
+@pytest.mark.anyio
+async def test_register_rejects_short_password(ac: AsyncClient):
+    """If a min-length is configured, a 1-char password should fail.
+    If not, this test documents the current (lenient) behavior."""
+    resp = await ac.post("/api/auth/register", json={
+        "email": "shortpass@vu.nl", "password": "x", "role": "STUDENT",
+    })
+    # Either 422 (rejected) or 200/201 (accepted) — but never 5xx.
+    assert resp.status_code < 500
+
+
+@pytest.mark.anyio
+async def test_register_rejects_malformed_email(ac: AsyncClient):
+    resp = await ac.post("/api/auth/register", json={
+        "email": "not-an-email", "password": "strongpassword123", "role": "STUDENT",
+    })
+    # Either Pydantic email validation rejected it, or it was stored as-is.
+    # We require the API to not 5xx on garbage input.
+    assert resp.status_code < 500

@@ -181,7 +181,7 @@ function ImportPageInner() {
                                 ref={textareaRef}
                                 value={rawText}
                                 onChange={(e) => setRawText(e.target.value)}
-                                placeholder={`// Paste your formatted exam text here…\n\n#BLUEPRINT\nTitle: My Exam\nDuration: 60\n\n#Q What is the capital of France?\nTYPE: MCQ\nSUBJECT: Geography\n\nA) Lyon\nB) Paris *\nC) Marseille`}
+                                placeholder={`// Paste your formatted exam text here…\n\n#BLUEPRINT\nTitle: My Exam\nDuration: 60\n\n#Q What is the capital of France?\nTYPE: MCQ\nTOPIC: Geography\n\nA) Lyon\nB) Paris *\nC) Marseille`}
                                 className="w-full h-[28rem] bg-transparent font-mono text-sm text-foreground placeholder:text-shell-muted-dim resize-none p-5 focus:outline-none"
                                 spellCheck={false}
                             />

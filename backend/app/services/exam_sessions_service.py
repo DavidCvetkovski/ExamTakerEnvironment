@@ -311,6 +311,16 @@ async def join_scheduled_session_for_student(
     base_minutes = scheduled.duration_minutes_override or scheduled.test_definitions.duration_minutes
     duration_minutes = max(1, int(base_minutes * multiplier))
 
+    # The student's window is `duration_minutes * multiplier` from the
+    # moment they join, capped at `scheduled.ends_at` so they cannot run
+    # past the scheduled close. Before this fix, expires_at was hardcoded
+    # to scheduled.ends_at and the carefully-computed multiplier was dead
+    # code — every student got the same window regardless of their
+    # accommodation. See test_time_multiplier_application.
+    now = datetime.now(timezone.utc)
+    individual_expiry = now + timedelta(minutes=duration_minutes)
+    expires_at = min(individual_expiry, ensure_utc(scheduled.ends_at))
+
     return await create_exam_session_record(
         test_definition=scheduled.test_definitions,
         student_id=str(current_user.id),
@@ -318,7 +328,7 @@ async def join_scheduled_session_for_student(
         duration_minutes=duration_minutes,
         session_mode=ExamSessionMode.ASSIGNED,
         scheduled_session_id=str(scheduled.id),
-        expires_at=scheduled.ends_at,
+        expires_at=expires_at,
     )
 
 

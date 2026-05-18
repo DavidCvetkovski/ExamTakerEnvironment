@@ -42,11 +42,10 @@ export default function StudentExamCard({ session, onJoin }: StudentExamCardProp
         <Card variant="surface" padding="md" className="rounded-2xl">
             <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0">
-                    <p className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim">
-                        {session.course_code}
+                    <h3 className="text-h2 text-foreground">{session.test_title}</h3>
+                    <p className="mt-1 text-meta text-shell-muted" title={session.course_code}>
+                        {session.course_title}
                     </p>
-                    <h3 className="mt-2 text-h2 text-foreground">{session.test_title}</h3>
-                    <p className="mt-1 text-meta text-shell-muted">{session.course_title}</p>
                 </div>
                 <Badge tone={badgeTone} size="sm">{badgeLabel}</Badge>
             </div>

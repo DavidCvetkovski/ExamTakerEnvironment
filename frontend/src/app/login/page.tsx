@@ -68,7 +68,7 @@ function LoginPageInner() {
     const busy = isLoading || submitting;
 
     return (
-        <div data-theme-scope="login" className="min-h-full bg-shell-bg flex flex-col md:flex-row text-foreground">
+        <div data-theme-scope="brand-green" className="min-h-full bg-shell-bg flex flex-col md:flex-row text-foreground">
 
             {/* ── Left panel: brand ── */}
             <div className="hidden md:flex md:w-[55%] relative bg-shell-surface overflow-hidden flex-col items-center justify-center px-12 py-16">
@@ -79,14 +79,17 @@ function LoginPageInner() {
                 </div>
 
                 <div className={`relative z-10 max-w-md text-center transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-                    <div className="flex items-center justify-center gap-2 mb-10">
-                        <span className="w-2.5 h-2.5 rounded-full bg-brand animate-pulse" />
+                    <div className="flex items-center justify-center gap-2.5 mb-10">
+                        <span className="relative inline-flex w-2.5 h-2.5">
+                            <span className="absolute inset-0 rounded-full bg-brand animate-brand-ping" />
+                            <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-brand" />
+                        </span>
                         <span className="text-xs font-bold uppercase tracking-eyebrow text-shell-muted">OpenVision</span>
                     </div>
 
                     <h1 className="text-4xl font-black tracking-tight text-foreground leading-tight mb-4">
                         Academic Assessment,<br />
-                        <span className="text-brand">Reimagined.</span>
+                        <span className="text-brand-gradient">Reimagined.</span>
                     </h1>
 
                     <p className="text-shell-muted leading-relaxed mb-12">

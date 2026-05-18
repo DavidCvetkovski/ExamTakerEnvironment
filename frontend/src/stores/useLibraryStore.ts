@@ -4,6 +4,9 @@ import { api } from '../lib/api';
 export interface LearningObjectSummary {
     id: string;
     bank_id: string;
+    course_id?: string | null;
+    course_title?: string | null;
+    course_code?: string | null;
     created_at: string;
     updated_at: string;
     latest_version_number: number;

@@ -261,3 +261,101 @@ async def test_shuffle_options_randomizes_frozen_snapshot_order(ac: AsyncClient,
     assert resp.status_code == 201
     choices = resp.json()["items"][0]["options"]["choices"]
     assert [choice["text"] for choice in choices] == ["Third", "Second", "First"]
+
+
+# ---------------------------------------------------------------------------
+# Submission lifecycle + practice flow regression
+# ---------------------------------------------------------------------------
+
+@pytest.mark.anyio
+async def test_practice_flow_still_works_after_8_6_1(ac: AsyncClient, setup_sessions_data):
+    """Epoch 8.6.1 stripped the Practice bucket from grading/analytics
+    surfaces but explicitly preserved the ability to *take* a practice
+    attempt from /blueprint. If this test fails, the practice flow was
+    accidentally broken alongside the cleanup.
+    """
+    token = await login(ac, ADMIN_EMAIL, ADMIN_PASS)
+    resp = await ac.post(
+        "/api/sessions/practice",
+        json={"test_definition_id": setup_sessions_data["test_id"]},
+        headers=auth(token),
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["session_mode"] == "PRACTICE"
+    assert body["scheduled_session_id"] is None
+
+
+@pytest.mark.anyio
+async def test_submit_then_submit_again_rejected(ac: AsyncClient, setup_sessions_data):
+    """Double-submit must be idempotent at worst, ideally a 4xx — the
+    second submission must not overwrite ``submitted_at`` or re-trigger
+    auto-grade. ``submit_exam_session`` documents 400 for already-submitted."""
+    token = await login(ac, ADMIN_EMAIL, ADMIN_PASS)
+    create = await ac.post(
+        "/api/sessions/practice",
+        json={"test_definition_id": setup_sessions_data["test_id"]},
+        headers=auth(token),
+    )
+    sid = create.json()["id"]
+
+    first = await ac.post(f"/api/sessions/{sid}/submit", headers=auth(token))
+    assert first.status_code == 200, first.text
+
+    second = await ac.post(f"/api/sessions/{sid}/submit", headers=auth(token))
+    assert second.status_code in (400, 409), second.text
+
+
+@pytest.mark.anyio
+async def test_get_unknown_session_returns_4xx(ac: AsyncClient, setup_sessions_data):
+    from uuid import uuid4
+    token = await login(ac, ADMIN_EMAIL, ADMIN_PASS)
+    resp = await ac.get(f"/api/sessions/{uuid4()}", headers=auth(token))
+    assert resp.status_code in (403, 404)
+
+
+@pytest.mark.anyio
+async def test_submit_session_owned_by_another_user_forbidden(ac: AsyncClient, setup_sessions_data):
+    """Another user must not be able to submit a session they don't own —
+    even if they correctly guess the ID."""
+    admin_token = await login(ac, ADMIN_EMAIL, ADMIN_PASS)
+    create = await ac.post(
+        "/api/sessions/practice",
+        json={"test_definition_id": setup_sessions_data["test_id"]},
+        headers=auth(admin_token),
+    )
+    sid = create.json()["id"]
+
+    other = await prisma.users.create(data={
+        "email": "thief@vu.nl",
+        "hashed_password": hash_password("pass"),
+        "role": UserRole.STUDENT,
+    })
+    other_token = await login(ac, other.email, "pass")
+    resp = await ac.post(f"/api/sessions/{sid}/submit", headers=auth(other_token))
+    assert resp.status_code in (403, 404)
+
+
+@pytest.mark.anyio
+async def test_practice_session_unaffected_by_test_definition_id_garbage(ac: AsyncClient, setup_sessions_data):
+    """A non-UUID test_definition_id must 422, not 500 — catches accidental
+    string interpolation into queries."""
+    token = await login(ac, ADMIN_EMAIL, ADMIN_PASS)
+    resp = await ac.post(
+        "/api/sessions/practice",
+        json={"test_definition_id": "not-a-uuid"},
+        headers=auth(token),
+    )
+    assert resp.status_code in (400, 422)
+
+
+@pytest.mark.anyio
+async def test_practice_session_for_nonexistent_blueprint_returns_4xx(ac: AsyncClient, setup_sessions_data):
+    from uuid import uuid4
+    token = await login(ac, ADMIN_EMAIL, ADMIN_PASS)
+    resp = await ac.post(
+        "/api/sessions/practice",
+        json={"test_definition_id": str(uuid4())},
+        headers=auth(token),
+    )
+    assert resp.status_code in (400, 404)

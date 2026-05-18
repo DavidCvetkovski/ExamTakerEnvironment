@@ -10,8 +10,10 @@ class LearningObject(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     bank_id = Column(UUID(as_uuid=True), ForeignKey("item_banks.id"), nullable=False)
+    course_id = Column(UUID(as_uuid=True), ForeignKey("courses.id"), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
 
     # Relationships
     versions = relationship("ItemVersion", back_populates="learning_object", cascade="all, delete-orphan")
+    course = relationship("Course", back_populates="learning_objects")

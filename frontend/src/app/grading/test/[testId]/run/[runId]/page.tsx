@@ -173,7 +173,7 @@ export default function TestGradingDashboard() {
                 title={blueprint?.title ?? 'Grading Dashboard'}
                 subtitle={
                     currentRun
-                        ? `${currentRun.course_code ?? 'Unknown course'} — ${currentRun.course_title ?? 'Scheduled run'}.`
+                        ? `${currentRun.course_title ?? 'Scheduled run'}.`
                         : 'Review exam submissions, finalise marks, and publish results.'
                 }
             />

@@ -190,15 +190,23 @@ class Assembler:
                         severity=ParseErrorSeverity.ERROR,
                         fix_hint="POINTS must be a whole number ≥ 1.",
                     ))
+            elif key == "TOPIC":
+                self._current_q["tags"] = [t.strip() for t in val.split(",") if t.strip()]
             elif key == "SUBJECT":
                 self._current_q["tags"] = [t.strip() for t in val.split(",") if t.strip()]
+                self._errors.append(ParseError(
+                    line=token.line,
+                    message="SUBJECT: is deprecated; use TOPIC: instead.",
+                    severity=ParseErrorSeverity.WARNING,
+                    fix_hint="Replace `SUBJECT:` with `TOPIC:`.",
+                ))
             elif key == "TAGS":
                 self._current_q["tags"] = [t.strip() for t in val.split(",") if t.strip()]
                 self._errors.append(ParseError(
                     line=token.line,
-                    message="TAGS: is deprecated — use SUBJECT: instead.",
+                    message="TAGS: is deprecated; use TOPIC: instead.",
                     severity=ParseErrorSeverity.WARNING,
-                    fix_hint="Replace `TAGS:` with `SUBJECT:` for clarity.",
+                    fix_hint="Replace `TAGS:` with `TOPIC:` for clarity.",
                 ))
 
     def _handle_option(self, token: Token) -> None:

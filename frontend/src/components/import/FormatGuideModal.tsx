@@ -17,7 +17,7 @@ const QUICK_REFERENCE = [
     { token: 'LEVEL:', required: false, description: 'Bloom\'s level: Remember, Understand, Apply, Analyze, Evaluate, Create.' },
     { token: 'DIFFICULTY:', required: false, description: 'Easy, Medium, or Hard. Defaults to Medium.' },
     { token: 'POINTS:', required: false, description: 'Integer ≥ 1. Defaults to 1.' },
-    { token: 'SUBJECT:', required: false, description: 'Subject/topic area (e.g. Statistics, Calculus). Comma-separated for multiple.' },
+    { token: 'TOPIC:', required: false, description: 'Topic area (e.g. Indexing, Recursion). Comma-separated for multiple. Legacy SUBJECT: still imports as topic.' },
     { token: 'A) text *', required: false, description: 'Answer option. Append " *" to mark as correct.' },
     { token: 'MODEL_ANSWER:', required: false, description: 'Opens model answer block for ESSAY. Ends at END_MODEL_ANSWER.' },
 ];
@@ -39,7 +39,7 @@ TYPE: MCQ
 LEVEL: Remember
 DIFFICULTY: Easy
 POINTS: 1
-SUBJECT: Descriptive Statistics
+TOPIC: Descriptive Statistics
 
 A) 2
 B) 4 *
@@ -53,7 +53,7 @@ TYPE: MCQ_MULTI
 LEVEL: Remember
 DIFFICULTY: Easy
 POINTS: 2
-SUBJECT: Descriptive Statistics
+TOPIC: Descriptive Statistics
 
 A) Mean *
 B) Range
@@ -72,7 +72,7 @@ TYPE: ESSAY
 LEVEL: Understand
 DIFFICULTY: Medium
 POINTS: 10
-SUBJECT: Inferential Statistics
+TOPIC: Inferential Statistics
 
 MODEL_ANSWER:
 The central limit theorem states that the sampling distribution

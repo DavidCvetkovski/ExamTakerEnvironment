@@ -48,6 +48,7 @@ model courses {
   created_at              DateTime                  @default(now()) @db.Timestamp(6)
   updated_at              DateTime?                 @db.Timestamp(6)
   course_enrollments      course_enrollments[]
+  learning_objects        learning_objects[]
   users                   users?                    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   scheduled_exam_sessions scheduled_exam_sessions[]
 
@@ -117,11 +118,15 @@ model item_versions {
 model learning_objects {
   id            String          @id @default(uuid()) @db.Uuid
   bank_id       String          @db.Uuid
+  course_id     String?         @db.Uuid
   created_at    DateTime?       @default(now()) @db.Timestamp(6)
   created_by    String?         @db.Uuid
   item_versions item_versions[]
+  courses       courses?        @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   item_banks    item_banks      @relation(fields: [bank_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   users         users?          @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([course_id], map: "ix_learning_objects_course_id")
 }
 
 model media_assets {

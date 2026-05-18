@@ -64,7 +64,7 @@ export const useCourseStore = create<CourseState>((set, get) => ({
         try {
             const response = await api.post<Course>('/courses/', payload);
             set((state) => ({
-                courses: [...state.courses, response.data].sort((left, right) => left.code.localeCompare(right.code)),
+                courses: [...state.courses, response.data].sort((left, right) => left.title.localeCompare(right.title)),
                 isLoading: false,
             }));
             return response.data;

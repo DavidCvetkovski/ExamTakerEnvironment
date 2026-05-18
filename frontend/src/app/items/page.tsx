@@ -36,16 +36,30 @@ function getMetadataNumber(value: unknown): number | undefined {
     return typeof value === 'number' ? value : undefined;
 }
 
-function LockGlyph({ count }: { count: number }) {
+function LockStatus({ locked, count }: { locked: boolean; count: number }) {
+    const label = locked ? 'Locked' : 'Unlocked';
+    const title = locked
+        ? `Locked by completed or ongoing blueprint. Referenced by ${pluralizeCount(count, 'blueprint')}.`
+        : count > 0
+            ? `Referenced by ${pluralizeCount(count, 'blueprint')}.`
+            : 'Not used in a blueprint.';
     return (
         <span
-            className="inline-flex items-center text-shell-muted-dim"
-            title={`In use by ${pluralizeCount(count, 'blueprint')}`}
-            aria-label={`Locked — in use by ${pluralizeCount(count, 'blueprint')}`}
+            className={cn(
+                'inline-flex items-center gap-1.5 text-meta',
+                locked ? 'text-[var(--color-warning-fg)]' : 'text-shell-muted-dim',
+            )}
+            title={title}
+            aria-label={`${label} - ${title}`}
         >
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                <path d="M5 7V5a3 3 0 1 1 6 0v2h.5A1.5 1.5 0 0 1 13 8.5v4A1.5 1.5 0 0 1 11.5 14h-7A1.5 1.5 0 0 1 3 12.5v-4A1.5 1.5 0 0 1 4.5 7H5Zm1 0h4V5a2 2 0 1 0-4 0v2Z" />
-            </svg>
+            {locked ? (
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                    <path d="M5 7V5a3 3 0 1 1 6 0v2h.5A1.5 1.5 0 0 1 13 8.5v4A1.5 1.5 0 0 1 11.5 14h-7A1.5 1.5 0 0 1 3 12.5v-4A1.5 1.5 0 0 1 4.5 7H5Zm1 0h4V5a2 2 0 1 0-4 0v2Z" />
+                </svg>
+            ) : (
+                <span aria-hidden="true">-</span>
+            )}
+            <span>{label}</span>
         </span>
     );
 }
@@ -84,9 +98,9 @@ function TypeChip({ type }: { type: QType }) {
     );
 }
 
-function SubjectPill({ subject }: { subject: string | null }) {
-    if (!subject) return <span className="text-shell-muted-dim italic">General</span>;
-    const tone = subjectTone(subject);
+function TopicPill({ topic }: { topic: string | null }) {
+    if (!topic) return <span className="text-shell-muted-dim italic">General</span>;
+    const tone = subjectTone(topic);
     return (
         <span
             className={cn(
@@ -96,14 +110,23 @@ function SubjectPill({ subject }: { subject: string | null }) {
                 tone.border,
             )}
         >
-            {subject}
+            {topic}
+        </span>
+    );
+}
+
+function CourseLabel({ title, code }: { title?: string | null; code?: string | null }) {
+    if (!title) return <span className="text-shell-muted-dim italic">Unassigned</span>;
+    return (
+        <span className="font-medium text-foreground" title={code ?? undefined}>
+            {title}
         </span>
     );
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type SortKey = 'preview' | 'subject' | 'points' | 'updated' | 'created';
+type SortKey = 'preview' | 'course' | 'topic' | 'points' | 'type' | 'lock' | 'updated' | 'created';
 type SortDir = 'asc' | 'desc';
 
 function SortArrow({ active, dir }: { active: boolean; dir: SortDir }) {
@@ -113,6 +136,20 @@ function SortArrow({ active, dir }: { active: boolean; dir: SortDir }) {
             {dir === 'asc' ? '↑' : '↓'}
         </span>
     );
+}
+
+// Keeps the column label + sort arrow on one line. Without this, narrow
+// columns (Points, Type) wrap the arrow under the label.
+function SortLabel({
+    children,
+    align = 'left',
+}: {
+    children: React.ReactNode;
+    align?: 'left' | 'right';
+}) {
+    const base = 'inline-flex items-center whitespace-nowrap';
+    const justify = align === 'right' ? ' justify-end w-full' : '';
+    return <span className={base + justify}>{children}</span>;
 }
 
 export default function ItemsLibraryPage() {
@@ -132,10 +169,12 @@ function ItemsLibraryPageInner() {
     const { blueprints, fetchBlueprints, usageMap } = useBlueprintStore();
     const [isCreating, setIsCreating] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [subjectFilter, setSubjectFilter] = useState('all');
+    const [courseFilter, setCourseFilter] = useState('all');
+    const [topicFilter, setTopicFilter] = useState('all');
     const [typeFilter, setTypeFilter] = useState<'all' | 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY'>('all');
+    const [lockFilter, setLockFilter] = useState<'all' | 'locked' | 'unlocked'>('all');
     const [pointsFilter, setPointsFilter] = useState<'all' | '1' | '2' | '3+'>('all');
-    const [sortKey, setSortKey] = useState<SortKey>('preview');
+    const [sortKey, setSortKey] = useState<SortKey>('course');
     const [sortDir, setSortDir] = useState<SortDir>('asc');
     const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
@@ -174,9 +213,17 @@ function ItemsLibraryPageInner() {
         return counts;
     }, [blueprints]);
 
-    const uniqueSubjects = Array.from(
+    const uniqueCourses = Array.from(
+        new Map(
+            items
+                .filter((item) => item.course_id && item.course_title)
+                .map((item) => [item.course_id as string, item.course_title as string])
+        ).entries()
+    ).sort((left, right) => left[1].localeCompare(right[1]));
+
+    const uniqueTopics = Array.from(
         new Set(items.map((item) => getMetadataString(item.metadata_tags?.topic)).filter((v): v is string => v !== null))
-    );
+    ).sort((left, right) => left.localeCompare(right));
 
     const handleColumnSort = (key: SortKey) => {
         if (sortKey === key) {
@@ -194,13 +241,16 @@ function ItemsLibraryPageInner() {
                 ? item.id.toLowerCase() === searchQuery.trim().toLowerCase()
                 : (item.latest_content_preview || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                   item.id.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesSubject = subjectFilter === 'all' || getMetadataString(item.metadata_tags?.topic) === subjectFilter;
+            const matchesCourse = courseFilter === 'all' || (courseFilter === 'unassigned' ? !item.course_id : item.course_id === courseFilter);
+            const matchesTopic = topicFilter === 'all' || getMetadataString(item.metadata_tags?.topic) === topicFilter;
             const matchesType = typeFilter === 'all' || item.latest_question_type === typeFilter;
+            const isLocked = lockedQuestionIds.has(item.id);
+            const matchesLock = lockFilter === 'all' || (lockFilter === 'locked' ? isLocked : !isLocked);
             const pts = getMetadataNumber(item.metadata_tags?.points) ?? 1;
             const matchesPoints = pointsFilter === 'all' ? true :
                 pointsFilter === '3+' ? pts >= 3 :
                 String(pts) === pointsFilter;
-            return matchesSearch && matchesSubject && matchesType && matchesPoints;
+            return matchesSearch && matchesCourse && matchesTopic && matchesType && matchesLock && matchesPoints;
         });
 
         const dir = sortDir === 'asc' ? 1 : -1;
@@ -208,10 +258,16 @@ function ItemsLibraryPageInner() {
             switch (sortKey) {
                 case 'preview':
                     return dir * (a.latest_content_preview || '').localeCompare(b.latest_content_preview || '');
-                case 'subject':
+                case 'course':
+                    return dir * (a.course_title || '').localeCompare(b.course_title || '');
+                case 'topic':
                     return dir * (getMetadataString(a.metadata_tags?.topic) || '').localeCompare(getMetadataString(b.metadata_tags?.topic) || '');
                 case 'points':
                     return dir * ((getMetadataNumber(a.metadata_tags?.points) ?? 1) - (getMetadataNumber(b.metadata_tags?.points) ?? 1));
+                case 'type':
+                    return dir * (a.latest_question_type || '').localeCompare(b.latest_question_type || '');
+                case 'lock':
+                    return dir * (Number(lockedQuestionIds.has(a.id)) - Number(lockedQuestionIds.has(b.id)));
                 case 'updated':
                     return dir * (new Date(a.updated_at).getTime() - new Date(b.updated_at).getTime());
                 case 'created':
@@ -220,7 +276,7 @@ function ItemsLibraryPageInner() {
         });
 
         return list;
-    }, [items, searchQuery, subjectFilter, typeFilter, pointsFilter, sortKey, sortDir]);
+    }, [items, searchQuery, courseFilter, topicFilter, typeFilter, lockFilter, pointsFilter, sortKey, sortDir, lockedQuestionIds]);
 
     const handleCreateNew = async () => {
         setIsCreating(true);
@@ -291,12 +347,25 @@ function ItemsLibraryPageInner() {
                         <div className="min-w-filter">
                             <Select
                                 inputSize="md"
-                                value={subjectFilter}
-                                onChange={(e) => setSubjectFilter(e.target.value)}
+                                value={courseFilter}
+                                onChange={(e) => setCourseFilter(e.target.value)}
                             >
-                                <option value="all">All subjects</option>
-                                {uniqueSubjects.map((s) => (
-                                    <option key={s} value={s}>{s}</option>
+                                <option value="all">All courses</option>
+                                <option value="unassigned">Unassigned</option>
+                                {uniqueCourses.map(([id, title]) => (
+                                    <option key={id} value={id}>{title}</option>
+                                ))}
+                            </Select>
+                        </div>
+                        <div className="min-w-filter">
+                            <Select
+                                inputSize="md"
+                                value={topicFilter}
+                                onChange={(e) => setTopicFilter(e.target.value)}
+                            >
+                                <option value="all">All topics</option>
+                                {uniqueTopics.map((topic) => (
+                                    <option key={topic} value={topic}>{topic}</option>
                                 ))}
                             </Select>
                         </div>
@@ -310,6 +379,17 @@ function ItemsLibraryPageInner() {
                                 <option value="MULTIPLE_CHOICE">Single choice</option>
                                 <option value="MULTIPLE_RESPONSE">Multiple choice</option>
                                 <option value="ESSAY">Essay</option>
+                            </Select>
+                        </div>
+                        <div className="min-w-filter">
+                            <Select
+                                inputSize="md"
+                                value={lockFilter}
+                                onChange={(e) => setLockFilter(e.target.value as typeof lockFilter)}
+                            >
+                                <option value="all">All lock states</option>
+                                <option value="locked">Locked</option>
+                                <option value="unlocked">Unlocked</option>
                             </Select>
                         </div>
                         <div className="min-w-filter">
@@ -353,20 +433,28 @@ function ItemsLibraryPageInner() {
                                 <THead>
                                     <TR>
                                         <TH className={thClass} onClick={() => handleColumnSort('preview')}>
-                                            Preview <SortArrow active={sortKey === 'preview'} dir={sortDir} />
+                                            <SortLabel>Preview <SortArrow active={sortKey === 'preview'} dir={sortDir} /></SortLabel>
                                         </TH>
-                                        <TH className={thClass} onClick={() => handleColumnSort('subject')}>
-                                            Subject <SortArrow active={sortKey === 'subject'} dir={sortDir} />
+                                        <TH className={thClass} onClick={() => handleColumnSort('course')}>
+                                            <SortLabel>Course <SortArrow active={sortKey === 'course'} dir={sortDir} /></SortLabel>
+                                        </TH>
+                                        <TH className={thClass} onClick={() => handleColumnSort('topic')}>
+                                            <SortLabel>Topic <SortArrow active={sortKey === 'topic'} dir={sortDir} /></SortLabel>
                                         </TH>
                                         <TH align="right" className={thClass} onClick={() => handleColumnSort('points')}>
-                                            Points <SortArrow active={sortKey === 'points'} dir={sortDir} />
+                                            <SortLabel align="right">Points <SortArrow active={sortKey === 'points'} dir={sortDir} /></SortLabel>
                                         </TH>
-                                        <TH>Type</TH>
+                                        <TH className={thClass} onClick={() => handleColumnSort('type')}>
+                                            <SortLabel>Type <SortArrow active={sortKey === 'type'} dir={sortDir} /></SortLabel>
+                                        </TH>
+                                        <TH className={thClass} onClick={() => handleColumnSort('lock')}>
+                                            <SortLabel>Lock <SortArrow active={sortKey === 'lock'} dir={sortDir} /></SortLabel>
+                                        </TH>
                                         <TH className={thClass} onClick={() => handleColumnSort('updated')}>
-                                            Last edited <SortArrow active={sortKey === 'updated'} dir={sortDir} />
+                                            <SortLabel>Last edited <SortArrow active={sortKey === 'updated'} dir={sortDir} /></SortLabel>
                                         </TH>
                                         <TH className={thClass} onClick={() => handleColumnSort('created')}>
-                                            First created <SortArrow active={sortKey === 'created'} dir={sortDir} />
+                                            <SortLabel>First created <SortArrow active={sortKey === 'created'} dir={sortDir} /></SortLabel>
                                         </TH>
                                         <TH align="right"></TH>
                                     </TR>
@@ -375,7 +463,7 @@ function ItemsLibraryPageInner() {
                                     {filteredItems.map((item) => {
                                         const isLocked = lockedQuestionIds.has(item.id);
                                         const refCount = blueprintRefCount.get(item.id) ?? 0;
-                                        const subject = getMetadataString(item.metadata_tags?.topic);
+                                        const topic = getMetadataString(item.metadata_tags?.topic);
                                         return (
                                             <TR
                                                 key={item.id}
@@ -390,16 +478,19 @@ function ItemsLibraryPageInner() {
                                                     </div>
                                                 </TD>
                                                 <TD>
-                                                    <SubjectPill subject={subject} />
+                                                    <CourseLabel title={item.course_title} code={item.course_code} />
+                                                </TD>
+                                                <TD>
+                                                    <TopicPill topic={topic} />
                                                 </TD>
                                                 <TD align="right" numeric className="font-medium">
                                                     {getMetadataNumber(item.metadata_tags?.points) ?? 1}
                                                 </TD>
                                                 <TD>
-                                                    <div className="flex items-center gap-2">
-                                                        {refCount > 0 && <LockGlyph count={refCount} />}
-                                                        <TypeChip type={item.latest_question_type as QType} />
-                                                    </div>
+                                                    <TypeChip type={item.latest_question_type as QType} />
+                                                </TD>
+                                                <TD>
+                                                    <LockStatus locked={isLocked} count={refCount} />
                                                 </TD>
                                                 <TD className="text-shell-muted-dim tabular-nums">
                                                     {formatRelativeTime(item.updated_at || item.created_at)}

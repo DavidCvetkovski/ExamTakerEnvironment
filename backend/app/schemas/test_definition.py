@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from uuid import UUID
 from datetime import datetime
 from typing import List, Optional, Literal, Union, Dict, Any, Annotated
@@ -33,7 +33,24 @@ class TestDefinitionBase(BaseModel):
     scoring_config: Dict[str, Any] = Field(default_factory=dict)
 
 class TestDefinitionCreate(TestDefinitionBase):
-    pass
+    @field_validator("blocks")
+    @classmethod
+    def _at_least_one_non_empty_block(cls, blocks: List[TestBlock]) -> List[TestBlock]:
+        """A blueprint must contribute at least one question on write.
+
+        Zero blocks, or every block empty, both fail — there'd be nothing
+        to assemble at session-instantiation time. Enforced on
+        ``TestDefinitionCreate`` (used by both POST and PUT) but
+        intentionally *not* on ``TestDefinitionResponse`` so reading legacy
+        rows that pre-date this rule still works. Frontend mirrors this in
+        ``lib/validateBlueprint.ts`` (advisory); this validator is the
+        authoritative rule per CLAUDE.md §1.
+        """
+        if not any(block.rules for block in blocks):
+            raise ValueError(
+                "Add at least one section with a question before saving."
+            )
+        return blocks
 
 class TestDefinitionResponse(TestDefinitionBase):
     id: UUID

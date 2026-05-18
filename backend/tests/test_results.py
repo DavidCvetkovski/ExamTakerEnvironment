@@ -375,3 +375,184 @@ async def test_csv_export_admin_only(ac: AsyncClient, full_grading_setup):
     assert "text/csv" in rsp.headers["content-type"]
     # Should contain header row
     assert b"email" in rsp.content
+
+
+# ---------------------------------------------------------------------------
+# Manual grading boundary + idempotency edges
+# ---------------------------------------------------------------------------
+
+@pytest.mark.anyio
+async def test_grade_with_unknown_grade_id_returns_404(ac: AsyncClient, full_grading_setup):
+    from uuid import uuid4
+    token = await login(ac, ADMIN_EMAIL, PASS)
+    resp = await ac.patch(
+        f"/api/grading/grades/{uuid4()}",
+        json={"points_awarded": 1.0, "feedback": "x"},
+        headers=auth(token),
+    )
+    assert resp.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_grade_can_be_overwritten(ac: AsyncClient, full_grading_setup):
+    """Resubmitting a manual grade with new points should replace the old
+    value (no UNIQUE constraint blocks the update). Tests idempotency."""
+    s = full_grading_setup
+    token = await login(ac, ADMIN_EMAIL, PASS)
+
+    first = await ac.patch(
+        f"/api/grading/grades/{s['essay_grade_id']}",
+        json={"points_awarded": 2.0, "feedback": "first pass"},
+        headers=auth(token),
+    )
+    assert first.status_code in (200, 204)
+
+    second = await ac.patch(
+        f"/api/grading/grades/{s['essay_grade_id']}",
+        json={"points_awarded": 7.5, "feedback": "revised after appeal"},
+        headers=auth(token),
+    )
+    assert second.status_code in (200, 204)
+
+    # Verify the second write won by reading the row directly.
+    grade = await prisma.question_grades.find_unique(
+        where={"id": s["essay_grade_id"]}
+    )
+    assert grade.points_awarded == 7.5
+    assert grade.feedback == "revised after appeal"
+
+
+@pytest.mark.anyio
+async def test_grade_zero_points_is_valid(ac: AsyncClient, full_grading_setup):
+    """0 is a valid manual grade — not the same as 'ungraded'."""
+    s = full_grading_setup
+    token = await login(ac, ADMIN_EMAIL, PASS)
+    resp = await ac.patch(
+        f"/api/grading/grades/{s['essay_grade_id']}",
+        json={"points_awarded": 0.0, "feedback": "no points"},
+        headers=auth(token),
+    )
+    assert resp.status_code in (200, 204)
+    grade = await prisma.question_grades.find_unique(where={"id": s["essay_grade_id"]})
+    assert grade.points_awarded == 0.0
+    # 'feedback' set ⇒ no longer in the ungraded queue
+    assert grade.feedback == "no points"
+
+
+# ---------------------------------------------------------------------------
+# Publish / unpublish edges
+# ---------------------------------------------------------------------------
+
+@pytest.mark.anyio
+async def test_publish_when_nothing_to_publish_returns_zero(ac: AsyncClient, full_grading_setup):
+    """First publish flips the session to published; second one finds no
+    unpublished rows. The endpoint should not 4xx — it returns published=0."""
+    s = full_grading_setup
+    token = await login(ac, ADMIN_EMAIL, PASS)
+
+    # Grade the essay so the session is FULLY_GRADED.
+    await ac.patch(
+        f"/api/grading/grades/{s['essay_grade_id']}",
+        json={"points_awarded": 8.0, "feedback": "ok"},
+        headers=auth(token),
+    )
+    first = await ac.post(
+        f"/api/grading/tests/{s['test_def'].id}/publish-results",
+        headers=auth(token),
+    )
+    assert first.status_code == 200
+
+    second = await ac.post(
+        f"/api/grading/tests/{s['test_def'].id}/publish-results",
+        headers=auth(token),
+    )
+    assert second.status_code == 200
+    assert second.json().get("published", 0) == 0
+
+
+@pytest.mark.anyio
+async def test_unpublish_then_republish_round_trip(ac: AsyncClient, full_grading_setup):
+    """Admin can retract published results; the row's is_published flips
+    back to False and re-publishing increments the count again."""
+    s = full_grading_setup
+    token = await login(ac, ADMIN_EMAIL, PASS)
+    await ac.patch(
+        f"/api/grading/grades/{s['essay_grade_id']}",
+        json={"points_awarded": 8.0, "feedback": "ok"},
+        headers=auth(token),
+    )
+    await ac.post(
+        f"/api/grading/tests/{s['test_def'].id}/publish-results",
+        headers=auth(token),
+    )
+
+    unpub = await ac.post(
+        f"/api/grading/tests/{s['test_def'].id}/unpublish-results",
+        headers=auth(token),
+    )
+    assert unpub.status_code in (200, 204)
+
+    # Row should be unpublished now.
+    sr = await prisma.session_results.find_unique(
+        where={"session_id": s["session"].id}
+    )
+    assert sr.is_published is False
+
+    # Republishing now has work to do.
+    repub = await ac.post(
+        f"/api/grading/tests/{s['test_def'].id}/publish-results",
+        headers=auth(token),
+    )
+    assert repub.json().get("published", 0) >= 1
+
+
+@pytest.mark.anyio
+async def test_student_blocked_from_unpublish(ac: AsyncClient, full_grading_setup):
+    s = full_grading_setup
+    token = await login(ac, STUDENT_EMAIL, PASS)
+    resp = await ac.post(
+        f"/api/grading/tests/{s['test_def'].id}/unpublish-results",
+        headers=auth(token),
+    )
+    assert resp.status_code in (401, 403)
+
+
+@pytest.mark.anyio
+async def test_student_blocked_from_csv_export(ac: AsyncClient, full_grading_setup):
+    s = full_grading_setup
+    token = await login(ac, STUDENT_EMAIL, PASS)
+    resp = await ac.get(
+        f"/api/grading/tests/{s['test_def'].id}/export",
+        headers=auth(token),
+    )
+    assert resp.status_code in (401, 403)
+
+
+@pytest.mark.anyio
+async def test_student_cannot_read_other_students_result(ac: AsyncClient, full_grading_setup):
+    """Detail endpoint must check ownership — even after publish, another
+    student must not be able to fetch a session that isn't theirs."""
+    s = full_grading_setup
+    token = await login(ac, ADMIN_EMAIL, PASS)
+    await ac.patch(
+        f"/api/grading/grades/{s['essay_grade_id']}",
+        json={"points_awarded": 8.0, "feedback": "ok"},
+        headers=auth(token),
+    )
+    await ac.post(
+        f"/api/grading/tests/{s['test_def'].id}/publish-results",
+        headers=auth(token),
+    )
+
+    # Spin up another student and try to read the first student's result.
+    other = await prisma.users.create(data={
+        "email": "other_student@vu.nl",
+        "hashed_password": hash_password(PASS),
+        "role": UserRole.STUDENT,
+    })
+    other_token = await login(ac, other.email, PASS)
+    resp = await ac.get(
+        f"/api/grading/my-results/{s['session'].id}",
+        headers=auth(other_token),
+    )
+    assert resp.status_code in (403, 404)

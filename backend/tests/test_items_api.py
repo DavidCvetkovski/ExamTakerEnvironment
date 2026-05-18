@@ -159,3 +159,137 @@ async def test_cascading_soft_delete(ac: AsyncClient, setup_test_data):
     history = history_resp.json()
     for entry in history:
         assert entry["status"] == "RETIRED"
+
+
+# ---------------------------------------------------------------------------
+# Epoch 8.7 Stage 2 — PATCH course assignment + RBAC + validation
+# ---------------------------------------------------------------------------
+#
+# The PATCH endpoint returns a LearningObjectListResponse, which is
+# serialized through the same path as the list endpoint and requires the
+# LO to have at least one item_version. The setup_test_data fixture
+# creates the LO without a version; tests below seed one first.
+
+import prisma as prisma_lib
+
+
+async def _attach_draft_version(lo_id: str, user_id: str) -> None:
+    await prisma.item_versions.create(data={
+        "learning_object_id": lo_id,
+        "version_number": 1,
+        "status": ItemStatus.DRAFT,
+        "question_type": QuestionType.MULTIPLE_CHOICE,
+        "content": prisma_lib.Json({"text": "Q"}),
+        "options": prisma_lib.Json([]),
+        "created_by": user_id,
+    })
+
+
+@pytest.mark.anyio
+async def test_patch_assigns_course_to_learning_object(ac: AsyncClient, setup_test_data):
+    """PATCH /learning-objects/{id} with course_id assigns the LO and
+    the assignment is reflected in subsequent reads."""
+    token = await login(ac, PROF_EMAIL, PROF_PASS)
+    await _attach_draft_version(setup_test_data["lo_id"], setup_test_data["user_id"])
+    course = await prisma.courses.create(
+        data={"code": "CS-PATCH", "title": "Patch Course", "created_by": setup_test_data["user_id"]}
+    )
+    resp = await ac.patch(
+        f"/api/learning-objects/{setup_test_data['lo_id']}",
+        json={"course_id": course.id},
+        headers=auth(token),
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["course_id"] == course.id
+    assert resp.json()["course_code"] == "CS-PATCH"
+
+
+@pytest.mark.anyio
+async def test_patch_can_clear_course_assignment(ac: AsyncClient, setup_test_data):
+    """PATCH with course_id=None must unset a previously-assigned course."""
+    token = await login(ac, PROF_EMAIL, PROF_PASS)
+    await _attach_draft_version(setup_test_data["lo_id"], setup_test_data["user_id"])
+    course = await prisma.courses.create(
+        data={"code": "CS-CLR", "title": "Clear Course", "created_by": setup_test_data["user_id"]}
+    )
+    await ac.patch(
+        f"/api/learning-objects/{setup_test_data['lo_id']}",
+        json={"course_id": course.id},
+        headers=auth(token),
+    )
+    resp = await ac.patch(
+        f"/api/learning-objects/{setup_test_data['lo_id']}",
+        json={"course_id": None},
+        headers=auth(token),
+    )
+    assert resp.status_code == 200
+    assert resp.json()["course_id"] is None
+
+
+@pytest.mark.anyio
+async def test_patch_invalid_course_id_rejected(ac: AsyncClient, setup_test_data):
+    """A course_id that doesn't exist (or is inactive) must be rejected,
+    not silently dropped on the floor."""
+    token = await login(ac, PROF_EMAIL, PROF_PASS)
+    fake = str(uuid.uuid4())
+    resp = await ac.patch(
+        f"/api/learning-objects/{setup_test_data['lo_id']}",
+        json={"course_id": fake},
+        headers=auth(token),
+    )
+    assert resp.status_code in (400, 404, 422)
+
+
+@pytest.mark.anyio
+async def test_patch_inactive_course_rejected(ac: AsyncClient, setup_test_data):
+    """A soft-deleted (is_active=False) course must not be accepted as
+    an assignment target."""
+    token = await login(ac, PROF_EMAIL, PROF_PASS)
+    course = await prisma.courses.create(
+        data={
+            "code": "CS-DEAD", "title": "Dead Course",
+            "created_by": setup_test_data["user_id"],
+            "is_active": False,
+        }
+    )
+    resp = await ac.patch(
+        f"/api/learning-objects/{setup_test_data['lo_id']}",
+        json={"course_id": course.id},
+        headers=auth(token),
+    )
+    assert resp.status_code in (400, 404, 422)
+
+
+@pytest.mark.anyio
+async def test_student_cannot_patch_course_assignment(ac: AsyncClient, setup_test_data):
+    """RBAC: STUDENT must not be able to mutate course assignment.
+    Backend is authoritative (CLAUDE.md §1)."""
+    student = await prisma.users.create(
+        data={
+            "email": "student_patch@vu.nl",
+            "hashed_password": hash_password("pass"),
+            "role": UserRole.STUDENT,
+        }
+    )
+    course = await prisma.courses.create(
+        data={"code": "CS-RBAC", "title": "RBAC Course", "created_by": setup_test_data["user_id"]}
+    )
+    token = await login(ac, student.email, "pass")
+    resp = await ac.patch(
+        f"/api/learning-objects/{setup_test_data['lo_id']}",
+        json={"course_id": course.id},
+        headers=auth(token),
+    )
+    assert resp.status_code in (401, 403)
+
+
+@pytest.mark.anyio
+async def test_patch_malformed_course_id_returns_422(ac: AsyncClient, setup_test_data):
+    """Pydantic boundary — non-UUID string must 422, not 500."""
+    token = await login(ac, PROF_EMAIL, PROF_PASS)
+    resp = await ac.patch(
+        f"/api/learning-objects/{setup_test_data['lo_id']}",
+        json={"course_id": "not-a-uuid"},
+        headers=auth(token),
+    )
+    assert resp.status_code == 422

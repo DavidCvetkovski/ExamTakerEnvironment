@@ -264,6 +264,16 @@ function RunCard({
                     >
                         Grade →
                     </Button>
+                ) : run.lifecycle_status === 'CLOSED' ? (
+                    // Completed run with nothing to grade — not a temporary lock.
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled
+                        title="No students submitted this run, so there is nothing to grade."
+                    >
+                        Nothing to grade
+                    </Button>
                 ) : (
                     <Button
                         variant="secondary"
@@ -272,7 +282,7 @@ function RunCard({
                         title={
                             run.ends_at && new Date(run.ends_at) > new Date()
                                 ? `Available after ${formatScheduled(run.ends_at)}`
-                                : 'Not yet gradable'
+                                : 'Available once this run has closed'
                         }
                     >
                         Locked

@@ -1,4 +1,6 @@
-# Epoch 8.7 - Course-Aware Authoring, Quiet Sessions, and Curriculum Seed Overhaul
+# Epoch 8.7 - Course-Aware Authoring, Quiet Sessions, and Curriculum Seed Overhaul ✅
+
+**Status:** ✅ Complete. Merged to `main` as part of the combined Epoch 8.6 release commit (`2fb37da`).
 
 > **Type:** Mixed - UI cleanup, metadata/data-model hardening, question-library ergonomics, and a large e2e seed expansion.
 > **Scope:** Frontend sessions/student cards, authoring metadata, library table/filter/sort, learning-object API/schema, and `seed_e2e.py` plus seed data organization.

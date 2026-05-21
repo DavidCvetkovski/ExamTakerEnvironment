@@ -20,7 +20,7 @@ export default function CutScoreSlider({
     const [displayValue, setDisplayValue] = useState(value);
 
     const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const v = Number(e.target.value);
+        const v = Math.round(Number(e.target.value));
         setDisplayValue(v);
         onChange(v);
     };
@@ -39,10 +39,10 @@ export default function CutScoreSlider({
                 </div>
                 <div className="text-right">
                     <p className="text-3xl font-bold tabular-nums" style={{ color: 'var(--color-brand)' }}>
-                        {syncedDisplay.toFixed(1)}%
+                        {Math.round(syncedDisplay)}%
                     </p>
                     <p className="text-xs text-shell-muted-dim">
-                        Baseline {baselineCut !== null ? `${baselineCut}%` : 'not set'}
+                        Baseline {baselineCut !== null ? `${Math.round(baselineCut)}%` : 'not set'}
                     </p>
                 </div>
             </div>
@@ -52,13 +52,13 @@ export default function CutScoreSlider({
                     type="range"
                     min={0}
                     max={100}
-                    step={0.1}
+                    step={1}
                     value={syncedDisplay}
                     onChange={handleInput}
                     aria-valuemin={0}
                     aria-valuemax={100}
                     aria-valuenow={syncedDisplay}
-                    aria-valuetext={`${syncedDisplay.toFixed(1)}%`}
+                    aria-valuetext={`${Math.round(syncedDisplay)}%`}
                     className="h-2 w-full cursor-pointer appearance-none rounded-full"
                     style={{
                         background: `linear-gradient(to right, var(--color-brand) 0%, var(--color-brand) ${syncedDisplay}%, var(--color-shell-input-alt) ${syncedDisplay}%, var(--color-shell-input-alt) 100%)`,

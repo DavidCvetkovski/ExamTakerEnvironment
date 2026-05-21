@@ -38,6 +38,11 @@ class EnrollmentResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class CourseRosterResponse(BaseModel):
+    enrollments: list[EnrollmentResponse]
+    roster_locked: bool
+
+
 class StudentCandidateResponse(BaseModel):
     id: UUID
     email: str

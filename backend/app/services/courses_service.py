@@ -1,9 +1,11 @@
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 from uuid import UUID
 
 from fastapi import HTTPException, status
 
 from app.core.prisma_db import prisma
+from app.models.scheduled_exam_session import CourseSessionStatus
 from app.models.user import UserRole
 from app.schemas.course import EnrollmentCreateRequest
 
@@ -57,15 +59,44 @@ async def list_courses() -> List[Any]:
     )
 
 
-async def list_course_enrollments(course_id: UUID) -> List[Dict[str, Any]]:
-    """Return active and inactive enrollments for a course."""
+async def is_course_roster_locked(course_id: str) -> bool:
+    """A course roster is frozen once any of its exams has started or ended.
+
+    Derived from the session window (``starts_at <= now``) rather than the
+    persisted status, so a not-yet-synced ACTIVE/CLOSED session still locks the
+    roster. Canceled sessions never lock — they never ran.
+    """
+    started = await prisma.scheduled_exam_sessions.find_first(
+        where={
+            "course_id": course_id,
+            "status": {"not": CourseSessionStatus.CANCELED.value},
+            "starts_at": {"lte": datetime.now(timezone.utc)},
+        }
+    )
+    return started is not None
+
+
+async def assert_roster_mutable(course_id: str) -> None:
+    """Reject roster edits once the course has a started or finished exam."""
+    if await is_course_roster_locked(course_id):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Roster is locked — this course has an exam that has already started.",
+        )
+
+
+async def list_course_enrollments(course_id: UUID) -> Dict[str, Any]:
+    """Return the active roster for a course plus whether it can still change."""
     await get_course_or_404(str(course_id))
     enrollments = await prisma.course_enrollments.find_many(
-        where={"course_id": str(course_id)},
+        where={"course_id": str(course_id), "is_active": True},
         include={"users": True},
         order={"enrolled_at": "asc"},
     )
-    return [serialize_enrollment(enrollment) for enrollment in enrollments]
+    return {
+        "enrollments": [serialize_enrollment(enrollment) for enrollment in enrollments],
+        "roster_locked": await is_course_roster_locked(str(course_id)),
+    }
 
 
 async def list_student_candidates() -> List[Any]:
@@ -98,6 +129,7 @@ async def add_course_enrollment(
 ) -> Dict[str, Any]:
     """Create or reactivate a course enrollment for a student."""
     await get_course_or_404(str(course_id))
+    await assert_roster_mutable(str(course_id))
     student = await resolve_student_for_enrollment(payload)
 
     existing = await prisma.course_enrollments.find_first(
@@ -133,8 +165,9 @@ async def add_course_enrollment(
 
 
 async def remove_course_enrollment(course_id: UUID, student_id: UUID) -> Dict[str, str]:
-    """Soft-remove a course enrollment by marking it inactive."""
+    """Permanently remove a student from a course roster."""
     await get_course_or_404(str(course_id))
+    await assert_roster_mutable(str(course_id))
     enrollment = await prisma.course_enrollments.find_first(
         where={
             "course_id": str(course_id),
@@ -147,8 +180,5 @@ async def remove_course_enrollment(course_id: UUID, student_id: UUID) -> Dict[st
             detail="Enrollment not found.",
         )
 
-    await prisma.course_enrollments.update(
-        where={"id": enrollment.id},
-        data={"is_active": False},
-    )
+    await prisma.course_enrollments.delete(where={"id": enrollment.id})
     return {"status": "removed"}

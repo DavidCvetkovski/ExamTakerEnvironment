@@ -225,7 +225,14 @@ export function DatePicker({ value, onChange, min, max }: DatePickerProps) {
                     <div className="border-t border-shell-border px-3 py-2">
                         <button
                             type="button"
-                            onClick={() => { selectDay(today.getDate()); setViewYear(today.getFullYear()); setViewMonth(today.getMonth()); }}
+                            onClick={() => {
+                                const next = new Date(value ?? today);
+                                next.setFullYear(today.getFullYear(), today.getMonth(), today.getDate());
+                                onChange(next);
+                                setViewYear(today.getFullYear());
+                                setViewMonth(today.getMonth());
+                                setIsOpen(false);
+                            }}
                             className="w-full rounded-lg py-1.5 text-center text-xs font-medium text-shell-muted hover:text-foreground transition-colors"
                         >
                             Today

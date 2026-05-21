@@ -13,6 +13,7 @@ export interface LearningObjectSummary {
     latest_status: 'DRAFT' | 'READY_FOR_REVIEW' | 'APPROVED' | 'RETIRED';
     latest_question_type: 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY';
     latest_content_preview: string;
+    latest_content_full?: string;
     metadata_tags?: Record<string, unknown>;
 }
 

@@ -18,7 +18,7 @@ export default function SubmissionConfirmation({ submittedAt, returnPath, mode =
     const formattedTime = submittedAt
         ? formatAbsolute(submittedAt.endsWith('Z') ? submittedAt : `${submittedAt}Z`)
         : 'Just now';
-    const returnLabel = returnPath === '/my-exams' ? 'Back to My Exams' : 'Back to Session Manager';
+    const returnLabel = returnPath === '/my-exams' ? 'Back to My Exams' : 'Back to Sessions';
 
     return (
         <div className="min-h-screen bg-shell-surface text-foreground flex items-center justify-center p-8">

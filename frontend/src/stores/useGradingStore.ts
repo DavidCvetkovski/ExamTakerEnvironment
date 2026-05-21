@@ -133,7 +133,7 @@ interface GradingState {
     fetchSessionGrades: (sessionId: string) => Promise<void>;
     fetchSessionResult: (sessionId: string) => Promise<void>;
     submitManualGrade: (gradeId: string, payload: ManualGradePayload) => Promise<void>;
-    publishResults: (testId: string) => Promise<void>;
+    publishResults: (testId: string, detailsVisible?: boolean) => Promise<void>;
     unpublishResults: (testId: string) => Promise<void>;
     exportCsv: (testId: string) => Promise<void>;
     toggleBlindMode: () => void;
@@ -261,10 +261,10 @@ export const useGradingStore = create<GradingState>((set, get) => ({
     },
 
     // ── Publication ────────────────────────────────────────────────────────
-    publishResults: async (testId: string) => {
+    publishResults: async (testId: string, detailsVisible: boolean = true) => {
         set({ publishStatus: 'publishing', error: null });
         try {
-            await api.post(`grading/tests/${testId}/publish-results`);
+            await api.post(`grading/tests/${testId}/publish-results`, { details_visible: detailsVisible });
             set({ publishStatus: 'published' });
             // Refresh overview
             const overviewRes = await api.get<SessionGradingSummary[]>(

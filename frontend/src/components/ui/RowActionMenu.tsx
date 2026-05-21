@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from './cn';
 
 export type RowAction = {
@@ -20,15 +21,14 @@ export default function RowActionMenu({ items, ariaLabel = 'Row actions' }: RowA
     const [open, setOpen] = useState(false);
     const [openUp, setOpenUp] = useState(false);
     const triggerRef = useRef<HTMLButtonElement | null>(null);
-    const menuRef = useRef<HTMLDivElement | null>(null);
 
+
+    // Close on outside click / Escape
     useEffect(() => {
         if (!open) return;
         const onDown = (e: MouseEvent) => {
-            if (
-                menuRef.current?.contains(e.target as Node) ||
-                triggerRef.current?.contains(e.target as Node)
-            ) return;
+            const target = e.target as Node;
+            if (triggerRef.current?.contains(target)) return;
             setOpen(false);
         };
         const onKey = (e: KeyboardEvent) => {
@@ -48,10 +48,33 @@ export default function RowActionMenu({ items, ariaLabel = 'Row actions' }: RowA
     const handleToggle = () => {
         if (!open && triggerRef.current) {
             const rect = triggerRef.current.getBoundingClientRect();
-            // Heuristic: if there's < 200px below the trigger, open upward.
-            setOpenUp(window.innerHeight - rect.bottom < 200);
+            // Space below trigger, constrained by nearest scroll container if any
+            let spaceBelow = window.innerHeight - rect.bottom;
+            const container = triggerRef.current.closest('.overflow-x-auto') || triggerRef.current.closest('table');
+            if (container) {
+                const containerRect = container.getBoundingClientRect();
+                const containerSpaceBelow = containerRect.bottom - rect.bottom;
+                spaceBelow = Math.min(spaceBelow, containerSpaceBelow);
+            }
+            setOpenUp(spaceBelow < 160);
         }
-        setOpen((v) => !v);
+        setOpen(v => !v);
+    };
+
+    // Compute inline placement for portal menu
+    const computeMenuStyle = (): React.CSSProperties => {
+        if (!triggerRef.current) return {};
+        const rect = triggerRef.current.getBoundingClientRect();
+        const base: React.CSSProperties = {
+            position: 'absolute',
+            right: `${window.innerWidth - rect.right}px`,
+        };
+        if (openUp) {
+            base.bottom = `${window.innerHeight - rect.top}px`;
+        } else {
+            base.top = `${rect.bottom}px`;
+        }
+        return base;
     };
 
     return (
@@ -75,12 +98,13 @@ export default function RowActionMenu({ items, ariaLabel = 'Row actions' }: RowA
                     <circle cx="13" cy="8" r="1.5" />
                 </svg>
             </button>
-            {open && (
+            {open && createPortal(
                 <div
-                    ref={menuRef}
+
                     role="menu"
+                    style={computeMenuStyle()}
                     className={cn(
-                        'absolute right-0 z-50 min-w-[180px] py-1',
+                        'min-w-[180px] py-1 z-[9999]',
                         'rounded-xl border border-shell-border bg-shell-surface shadow-elevated',
                         openUp ? 'bottom-full mb-1' : 'top-full mt-1',
                     )}
@@ -103,14 +127,15 @@ export default function RowActionMenu({ items, ariaLabel = 'Row actions' }: RowA
                                 item.disabled
                                     ? 'text-shell-muted-dim opacity-60 cursor-not-allowed'
                                     : item.tone === 'danger'
-                                        ? 'text-[var(--color-danger-fg)] hover:bg-[var(--color-danger-bg)]'
-                                        : 'text-foreground hover:bg-shell-input-alt',
+                                    ? 'text-[var(--color-danger-fg)] hover:bg-[var(--color-danger-bg)]'
+                                    : 'text-foreground hover:bg-shell-input-alt',
                             )}
                         >
                             {item.label}
                         </button>
                     ))}
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

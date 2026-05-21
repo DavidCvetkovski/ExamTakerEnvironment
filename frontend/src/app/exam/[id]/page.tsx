@@ -62,7 +62,10 @@ export default function ExamPage() {
                 // If it fails (e.g. backend already expired the session), the expired
                 // banner stays and the store's error field surfaces the reason.
                 setTimeLeft('EXPIRED');
-                submitExam(sessionId);
+                // The session may already be expired server-side; swallow the
+                // rejection so it doesn't surface as an unhandled runtime error.
+                // The expired banner is shown and the store holds the reason.
+                void submitExam(sessionId).catch(() => {});
             } else {
                 const hours = Math.floor(diff / 1000 / 60 / 60);
                 const minutes = Math.floor((diff / 1000 / 60) % 60);

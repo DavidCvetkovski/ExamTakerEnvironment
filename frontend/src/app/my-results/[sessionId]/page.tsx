@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useResultsStore, QuestionResultDetail } from '@/stores/useResultsStore';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { getExamChoiceContent, toExamContentHtml, toExamContentText } from '@/lib/examContent';
+import { getExamChoiceContent, toExamContentHtml } from '@/lib/examContent';
 import { BackButton, Spinner, CheckIcon, XIcon } from '@/components/ui';
 import { formatAbsolute } from '@/lib/relativeTime';
 
@@ -22,15 +22,6 @@ function sanitizeHtml(html: string | null | undefined): string {
             ALLOWED_ATTR: ['class'],
         })
         : '';
-}
-
-function getQuestionHeading(content: QuestionResultDetail['question_content'], index: number): string {
-    const prompt = toExamContentText(content);
-    if (!prompt) {
-        return `Question ${index + 1}`;
-    }
-
-    return prompt.length > 96 ? `${prompt.slice(0, 93).trimEnd()}...` : prompt;
 }
 
 function MCQAnswerDisplay({ detail }: { detail: QuestionResultDetail }) {
@@ -151,9 +142,9 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
                         {isPending ? '?' : isCorrect ? <CheckIcon size={16} /> : isEssay ? '#' : <XIcon size={16} />}
                     </div>
                     <div>
-                        <p className="font-bold text-foreground text-sm">{getQuestionHeading(detail.question_content, index)}</p>
+                        <p className="font-bold text-foreground text-sm">Question {index + 1}</p>
                         <p className="text-xs text-shell-muted-dim capitalize">
-                            Question {index + 1} · {isEssay ? 'Open answer' : detail.question_type?.replace('_', ' ').toLowerCase()}
+                            {isEssay ? 'Open answer' : detail.question_type?.replace('_', ' ').toLowerCase()}
                         </p>
                     </div>
                 </div>
@@ -232,7 +223,7 @@ export default function MyResultDetailPage() {
         <div className="min-h-full bg-shell-bg px-4 py-10 text-foreground sm:px-6 lg:px-8">
             <div className="mx-auto max-w-3xl space-y-8">
                 {/* Back */}
-                <BackButton href="/my-exams" label="Back to my exams" className="mb-0" />
+                <BackButton href="/my-grades" label="Back to my grades" className="mb-0" />
 
                 {/* Error */}
                 {error && (

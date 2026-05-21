@@ -244,8 +244,18 @@ async def compute_test_item_stats(
         iv = iv_map.get(iv_id)
         question_type = str(iv.question_type) if iv else None
 
-        # P and D only for objective questions (is_correct is not None)
-        objective_grades = [g for g in grades if g.is_correct is not None]
+        # Only count responses that have actually been graded — auto-graded
+        # (MCQ) or manually scored (essay with a grader). Ungraded essays would
+        # otherwise drag the difficulty toward 0 and inflate the response count.
+        graded = [g for g in grades if g.is_auto_graded or g.graded_by is not None]
+
+        # P and D apply only to objective (dichotomously-scored) questions.
+        # Essays are point-scored, so "proportion correct" is meaningless —
+        # leave their difficulty/discrimination as N/A and rely on score.
+        is_essay = "ESSAY" in (question_type or "").upper()
+        points_possible = grades[0].points_possible if grades else None
+        exclude_essay = is_essay and (points_possible is None or points_possible > 1.0)
+        objective_grades = [] if exclude_essay else [g for g in graded if g.is_correct is not None]
         p_value = None
         d_value = None
 
@@ -267,8 +277,8 @@ async def compute_test_item_stats(
             "question_type": question_type,
             "p_value": p_value,
             "d_value": d_value,
-            "n_responses": len(grades),
-            "mean_score": round(sum(g.points_awarded for g in grades) / len(grades), 4) if grades else None,
+            "n_responses": len(graded),
+            "mean_score": round(sum(g.points_awarded for g in graded) / len(graded), 4) if graded else None,
             "points_possible": grades[0].points_possible if grades else None,
             "distractors": distractors,
             "flags": flags,
@@ -323,7 +333,11 @@ async def compute_item_version_history(learning_object_id: str) -> Dict:
     versions = []
     for iv_id, grades in grades_by_version.items():
         iv = iv_map.get(iv_id)
-        objective_grades = [g for g in grades if g.is_correct is not None]
+        question_type = str(iv.question_type) if iv else None
+        is_essay = "ESSAY" in (question_type or "").upper()
+        points_possible = grades[0].points_possible if grades else None
+        exclude_essay = is_essay and (points_possible is None or points_possible > 1.0)
+        objective_grades = [] if exclude_essay else [g for g in grades if g.is_correct is not None]
         p_value = None
         d_value = None
 
@@ -576,7 +590,11 @@ async def get_flagged_items_for_bank(bank_id: str) -> Dict:
         )
         for iv_id, grades in versions_dict.items():
             iv = iv_map.get(iv_id)
-            objective_grades = [g for g in grades if g.is_correct is not None]
+            question_type = str(iv.question_type) if iv else None
+            is_essay = "ESSAY" in (question_type or "").upper()
+            points_possible = grades[0].points_possible if grades else None
+            exclude_essay = is_essay and (points_possible is None or points_possible > 1.0)
+            objective_grades = [] if exclude_essay else [g for g in grades if g.is_correct is not None]
             p_value = None
             d_value = None
             if objective_grades:
@@ -857,7 +875,14 @@ async def compute_section_analytics(
 
         p_values = [it["p_value"] for it in block_items if it.get("p_value") is not None]
         d_values = [it["d_value"] for it in block_items if it.get("d_value") is not None]
-        mean_scores = [it["mean_score"] for it in block_items if it.get("mean_score") is not None]
+        # Normalise each item's average points to a fraction of its max so the
+        # section mean is a true 0–1 score (raw points would yield e.g. 400%
+        # for a 4-point essay). Falls back to skipping items without a max.
+        score_fractions = [
+            it["mean_score"] / it["points_possible"]
+            for it in block_items
+            if it.get("mean_score") is not None and it.get("points_possible")
+        ]
 
         def _avg(xs: List[float]) -> Optional[float]:
             return round(sum(xs) / len(xs), 4) if xs else None
@@ -869,7 +894,7 @@ async def compute_section_analytics(
             "graded_item_count": len(block_items),
             "p_value_mean": _avg(p_values),
             "discrimination_mean": _avg(d_values),
-            "mean_score": _avg(mean_scores),
+            "mean_score": _avg(score_fractions),
             "learning_object_ids": [str(it.get("learning_object_id")) for it in block_items],
         })
 
@@ -923,7 +948,11 @@ async def get_item_history_entries(learning_object_id: str) -> Dict:
     entries: List[Dict[str, Any]] = []
     for (item_version_id, test_definition_id), grades in grouped.items():
         iv = iv_map.get(item_version_id)
-        objective_grades = [g for g in grades if g.is_correct is not None]
+        question_type = str(iv.question_type) if iv else None
+        is_essay = "ESSAY" in (question_type or "").upper()
+        points_possible = grades[0].points_possible if grades else None
+        exclude_essay = is_essay and (points_possible is None or points_possible > 1.0)
+        objective_grades = [] if exclude_essay else [g for g in grades if g.is_correct is not None]
         p_value = None
         d_value = None
         if objective_grades:

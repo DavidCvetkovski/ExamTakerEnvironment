@@ -7,6 +7,8 @@ interface TimePickerProps {
     value: Date | null;
     onChange: (date: Date) => void;
     step?: number; // minute increment, default 1
+    /** Earliest allowed time. Picks before this snap forward to it. */
+    min?: Date;
 }
 
 function pad(n: number): string {
@@ -104,7 +106,7 @@ function SpinnerColumn({
     );
 }
 
-export function TimePicker({ value, onChange, step = 1 }: TimePickerProps) {
+export function TimePicker({ value, onChange, step = 1, min }: TimePickerProps) {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -142,7 +144,8 @@ export function TimePicker({ value, onChange, step = 1 }: TimePickerProps) {
         if (isPM) newHour += 12;
         const next = new Date(now);
         next.setHours(newHour, newMinute, 0, 0);
-        onChange(next);
+        // On the same day as `min`, a past time snaps forward to the floor.
+        onChange(min && next < min ? new Date(min) : next);
     };
 
     return (

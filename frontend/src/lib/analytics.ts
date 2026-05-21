@@ -64,9 +64,9 @@ export async function fetchTestAnalytics(
 
     const items: ItemAnalyticsResponse[] = itemsRes.data.items.map((item) => ({
         ...item,
-        mean_score: null,
-        points_possible: null,
-        computed_at: null,
+        mean_score: item.mean_score !== undefined ? item.mean_score : null,
+        points_possible: item.points_possible !== undefined ? item.points_possible : null,
+        computed_at: item.computed_at !== undefined ? item.computed_at : null,
     }));
 
     return {
@@ -100,9 +100,9 @@ export async function fetchFlaggedItems(
     );
     return (res.data.items ?? []).map((item) => ({
         ...item,
-        mean_score: null,
-        points_possible: null,
-        computed_at: null,
+        mean_score: item.mean_score !== undefined ? item.mean_score : null,
+        points_possible: item.points_possible !== undefined ? item.points_possible : null,
+        computed_at: item.computed_at !== undefined ? item.computed_at : null,
     }));
 }
 

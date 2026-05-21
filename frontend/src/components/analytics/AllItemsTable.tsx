@@ -5,81 +5,120 @@ import { useState } from 'react';
 
 import type { ItemAnalyticsResponse } from '@/lib/analytics.types';
 import { Button, InfoTooltip } from '@/components/ui';
+import {
+    formatPercent,
+    formatIndex,
+    discriminationQuality,
+    DISCRIMINATION_LABEL,
+    DISCRIMINATION_TONE,
+} from '@/lib/analyticsFormat';
 import FlagBadge from './FlagBadge';
 
-type SortKey = 'stem' | 'p' | 'd' | 'responses';
+type SortKey = 'stem' | 'type' | 'p' | 'd' | 'responses' | 'flags';
+type SortDir = 'asc' | 'desc';
 
 interface AllItemsTableProps {
     items: ItemAnalyticsResponse[];
     testId: string;
+    /** URL run segment the drill-down should return to (e.g. "combined" or a run id). */
+    runId?: string;
     getItemLabel: (learningObjectId: string) => string;
 }
 
-function formatMetric(value: number | null): string {
-    return value === null ? '—' : value.toFixed(2);
+// Points-based difficulty (avg points ÷ max), defined for every question type
+// — unlike p-value, which is N/A for essays. Higher = easier. Keeps the table,
+// section panel, and drill-down showing the same "difficulty" number.
+function itemDifficulty(item: ItemAnalyticsResponse): number | null {
+    return item.points_possible ? (item.mean_score ?? 0) / item.points_possible : null;
+}
+
+function SortArrow({ active, dir }: { active: boolean; dir: SortDir }) {
+    if (!active) return null;
+    return <span className="ml-1 text-xs text-brand">{dir === 'asc' ? '↑' : '↓'}</span>;
+}
+
+function DiscriminationTag({ value }: { value: number | null }) {
+    const quality = discriminationQuality(value);
+    if (!quality) return null;
+    return (
+        <span className="ml-2 text-xs font-medium" style={{ color: DISCRIMINATION_TONE[quality] }}>
+            {DISCRIMINATION_LABEL[quality]}
+        </span>
+    );
 }
 
 export default function AllItemsTable({
     items,
     testId,
+    runId,
     getItemLabel,
 }: AllItemsTableProps) {
     const router = useRouter();
     const [sortKey, setSortKey] = useState<SortKey>('stem');
+    const [sortDir, setSortDir] = useState<SortDir>('asc');
     const [activeFlag, setActiveFlag] = useState<string>('ALL');
 
     const availableFlags = Array.from(
         new Set(items.flatMap((item) => item.flags.map((flag) => flag.code))),
     );
 
+    // If the item set changes (e.g. a section is selected) and the active flag
+    // no longer applies, treat it as ALL — without this the table would get
+    // stuck empty behind a filter whose chip has disappeared.
+    const effectiveFlag = activeFlag !== 'ALL' && !availableFlags.includes(activeFlag) ? 'ALL' : activeFlag;
+
+    const toggleSort = (key: SortKey) => {
+        if (key === sortKey) {
+            setSortDir((dir) => (dir === 'asc' ? 'desc' : 'asc'));
+        } else {
+            setSortKey(key);
+            setSortDir('asc');
+        }
+    };
+
     const visibleItems = items
-        .filter((item) => activeFlag === 'ALL' || item.flags.some((flag) => flag.code === activeFlag))
+        .filter((item) => effectiveFlag === 'ALL' || item.flags.some((flag) => flag.code === effectiveFlag))
         .sort((left, right) => {
+            let cmp: number;
             if (sortKey === 'stem') {
-                return getItemLabel(left.learning_object_id).localeCompare(getItemLabel(right.learning_object_id));
+                cmp = getItemLabel(left.learning_object_id).localeCompare(getItemLabel(right.learning_object_id));
+            } else if (sortKey === 'type') {
+                cmp = (left.question_type ?? '').localeCompare(right.question_type ?? '');
+            } else if (sortKey === 'responses') {
+                cmp = left.n_responses - right.n_responses;
+            } else if (sortKey === 'p') {
+                cmp = (itemDifficulty(left) ?? 999) - (itemDifficulty(right) ?? 999);
+            } else if (sortKey === 'flags') {
+                cmp = left.flags.length - right.flags.length;
+            } else {
+                cmp = (left.d_value ?? 999) - (right.d_value ?? 999);
             }
-            if (sortKey === 'responses') {
-                return right.n_responses - left.n_responses;
-            }
-            if (sortKey === 'p') {
-                return (left.p_value ?? 999) - (right.p_value ?? 999);
-            }
-            return (left.d_value ?? 999) - (right.d_value ?? 999);
+            return sortDir === 'asc' ? cmp : -cmp;
         });
 
-    const sortBtnClass = (key: SortKey) =>
-        `rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-            sortKey === key
-                ? 'bg-brand text-white'
-                : 'bg-shell-input text-shell-muted hover:text-foreground'
-        }`;
+    const sortableHead = (key: SortKey, label: React.ReactNode, align: 'left' | 'right' = 'left') => (
+        <th
+            className={`px-4 py-3 ${align === 'right' ? 'text-right' : 'text-left'} cursor-pointer select-none hover:text-foreground`}
+            onClick={() => toggleSort(key)}
+        >
+            <span className="inline-flex items-center gap-1.5">
+                {label}
+                <SortArrow active={sortKey === key} dir={sortDir} />
+            </span>
+        </th>
+    );
 
     return (
         <div className="rounded-xl border border-shell-border bg-shell-surface overflow-hidden">
             <div className="border-b border-shell-border px-4 py-4">
                 <div className="flex flex-wrap items-center gap-2">
                     <p className="text-sm font-semibold text-foreground">All Items</p>
-                    <div className="flex-1" />
-                    {([
-                        { key: 'stem', label: 'Sort Stem' },
-                        { key: 'responses', label: 'Sort N' },
-                        { key: 'p', label: 'Sort P' },
-                        { key: 'd', label: 'Sort D' },
-                    ] as const).map((option) => (
-                        <button
-                            key={option.key}
-                            onClick={() => setSortKey(option.key)}
-                            className={sortBtnClass(option.key)}
-                        >
-                            {option.label}
-                        </button>
-                    ))}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                     <button
                         onClick={() => setActiveFlag('ALL')}
                         className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                            activeFlag === 'ALL'
+                            effectiveFlag === 'ALL'
                                 ? 'bg-shell-border text-foreground'
                                 : 'bg-shell-input text-shell-muted hover:text-foreground'
                         }`}
@@ -91,7 +130,7 @@ export default function AllItemsTable({
                             key={flagCode}
                             onClick={() => setActiveFlag(flagCode)}
                             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                                activeFlag === flagCode
+                                effectiveFlag === flagCode
                                     ? 'bg-brand text-white'
                                     : 'bg-shell-input text-shell-muted hover:text-foreground'
                             }`}
@@ -106,28 +145,28 @@ export default function AllItemsTable({
                 <table className="min-w-full text-sm">
                     <thead className="bg-shell-bg/70 text-eyebrow uppercase tracking-eyebrow text-shell-muted-dim">
                         <tr>
-                            <th className="px-4 py-3 text-left">Item</th>
-                            <th className="px-4 py-3 text-left">Type</th>
-                            <th className="px-4 py-3 text-left">
+                            {sortableHead('stem', 'Item')}
+                            {sortableHead('type', 'Type')}
+                            {sortableHead('p', (
                                 <span className="inline-flex items-center gap-1.5">
-                                    P
+                                    Difficulty
                                     <InfoTooltip>
-                                        Difficulty (P-value): proportion of students who answered correctly.
-                                        0.20 = very hard, 0.90 = very easy. The sweet spot is roughly 0.30–0.80.
+                                        Average score on this question as a percentage of its maximum points.
+                                        Higher = easier. 20% = very hard, 90% = very easy; the sweet spot is roughly 30–80%.
                                     </InfoTooltip>
                                 </span>
-                            </th>
-                            <th className="px-4 py-3 text-left">
+                            ))}
+                            {sortableHead('d', (
                                 <span className="inline-flex items-center gap-1.5">
-                                    D
+                                    Discrimination
                                     <InfoTooltip>
-                                        Discrimination (D-value): how well this item separates strong students from weak students.
-                                        Above 0.30 is good; below 0.15 is poor; negative means the item is misleading.
+                                        How well this question separates students who did well overall from those who didn&apos;t.
+                                        0.30 or above is good; 0.15–0.30 is weak; below that (or negative) is poor. Essay questions with more than one point are excluded from calculation.
                                     </InfoTooltip>
                                 </span>
-                            </th>
-                            <th className="px-4 py-3 text-left">Responses</th>
-                            <th className="px-4 py-3 text-left">Flags</th>
+                            ))}
+                            {sortableHead('responses', 'Graded')}
+                            {sortableHead('flags', 'Flags')}
                             <th className="px-4 py-3 text-right">Open</th>
                         </tr>
                     </thead>
@@ -136,13 +175,15 @@ export default function AllItemsTable({
                             <tr key={item.item_version_id} className="hover:bg-shell-input/40">
                                 <td className="px-4 py-4">
                                     <div className="font-medium text-foreground">{getItemLabel(item.learning_object_id)}</div>
-                                    <div className="mt-1 text-xs text-shell-muted-dim">{item.learning_object_id.slice(0, 8)}</div>
                                 </td>
                                 <td className="px-4 py-4 text-shell-muted">
                                     {item.question_type?.replaceAll('_', ' ') ?? '—'}
                                 </td>
-                                <td className="px-4 py-4 text-shell-muted tabular-nums">{formatMetric(item.p_value)}</td>
-                                <td className="px-4 py-4 text-shell-muted tabular-nums">{formatMetric(item.d_value)}</td>
+                                <td className="px-4 py-4 text-shell-muted tabular-nums">{formatPercent(itemDifficulty(item))}</td>
+                                <td className="px-4 py-4 text-shell-muted tabular-nums">
+                                    {formatIndex(item.d_value)}
+                                    <DiscriminationTag value={item.d_value} />
+                                </td>
                                 <td className="px-4 py-4 text-shell-muted tabular-nums">{item.n_responses}</td>
                                 <td className="px-4 py-4">
                                     {item.flags.length > 0 ? (
@@ -159,7 +200,9 @@ export default function AllItemsTable({
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => router.push(`/analytics/items/${item.learning_object_id}?fromTest=${testId}`)}
+                                        onClick={() => router.push(
+                                            `/analytics/items/${item.learning_object_id}?fromTest=${testId}${runId ? `&fromRun=${runId}` : ''}`,
+                                        )}
                                     >
                                         Drill down →
                                     </Button>

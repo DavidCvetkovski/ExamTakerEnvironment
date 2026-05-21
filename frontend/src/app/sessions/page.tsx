@@ -22,6 +22,7 @@ export default function SessionsPage() {
     const {
         courses,
         enrollmentsByCourse,
+        rosterLockedByCourse,
         studentCandidates,
         fetchCourses,
         createCourse,
@@ -124,6 +125,7 @@ export default function SessionsPage() {
                 <CourseEnrollmentDrawer
                     course={selectedCourse}
                     enrollments={drawerCourseId ? enrollmentsByCourse[drawerCourseId] || [] : []}
+                    rosterLocked={drawerCourseId ? rosterLockedByCourse[drawerCourseId] ?? false : false}
                     studentCandidates={studentCandidates}
                     isBusy={coursesLoading}
                     isOpen={Boolean(selectedCourse)}

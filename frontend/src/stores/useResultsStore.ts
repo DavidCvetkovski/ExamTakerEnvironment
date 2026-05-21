@@ -21,6 +21,7 @@ export interface StudentResult {
     passed: boolean | null;
     grading_status: string;
     is_published: boolean;
+    details_visible: boolean;
     published_at: string | null;
 }
 

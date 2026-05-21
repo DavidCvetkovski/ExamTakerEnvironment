@@ -7,7 +7,6 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import AllItemsTable from '@/components/analytics/AllItemsTable';
 import CutScoreSlider from '@/components/analytics/CutScoreSlider';
 import SectionAnalyticsPanel, { type SectionAnalytics } from '@/components/analytics/SectionAnalyticsPanel';
-import FlaggedItemsTable from '@/components/analytics/FlaggedItemsTable';
 import HistogramChart from '@/components/analytics/HistogramChart';
 import StatCard from '@/components/analytics/StatCard';
 import { bundleKey, useAnalyticsStore } from '@/stores/useAnalyticsStore';
@@ -283,18 +282,6 @@ export default function TestAnalyticsDashboardPage() {
                                 </section>
                             </div>
 
-                            <section>
-                                <div className="mb-3">
-                                    <h2 className="text-lg font-semibold text-foreground">Flagged Items</h2>
-                                    <p className="text-sm text-shell-muted-dim">Questions that look too easy, too hard, or weakly discriminating.</p>
-                                </div>
-                                <FlaggedItemsTable
-                                    items={flaggedItems}
-                                    testId={testId}
-                                    getItemLabel={getItemLabel}
-                                />
-                            </section>
-
                             {sections.length > 0 && (
                                 <section>
                                     <div className="mb-3">
@@ -325,6 +312,7 @@ export default function TestAnalyticsDashboardPage() {
                                         return bundle.items.filter((it) => allowed.has(it.learning_object_id));
                                     })()}
                                     testId={testId}
+                                    runId={rawRunId}
                                     getItemLabel={getItemLabel}
                                 />
                             </section>

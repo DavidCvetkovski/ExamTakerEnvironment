@@ -23,6 +23,13 @@ function defaultStartsAt(): Date {
     return new Date(Date.now() + 60_000);
 }
 
+function isToday(date: Date): boolean {
+    const now = new Date();
+    return date.getFullYear() === now.getFullYear()
+        && date.getMonth() === now.getMonth()
+        && date.getDate() === now.getDate();
+}
+
 export default function SessionCreateForm({
     courses,
     blueprints,
@@ -65,6 +72,10 @@ export default function SessionCreateForm({
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         if (!courseId || !testDefinitionId || !startsAt) return;
+        if (startsAt.getTime() <= Date.now()) {
+            toast({ tone: 'danger', title: 'Pick a future time', description: 'The session must start later than now.' });
+            return;
+        }
         await onSubmit({
             course_id: courseId,
             test_definition_id: testDefinitionId,
@@ -77,8 +88,7 @@ export default function SessionCreateForm({
         <div className={isAdmin ? 'grid gap-6 xl:grid-cols-[1.2fr_0.8fr]' : 'mx-auto max-w-3xl'}>
             <form onSubmit={handleSubmit} className="rounded-2xl border border-shell-border bg-shell-surface-deep p-6 shadow-card">
                 <div className="mb-6">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-shell-muted-dim">Session Manager</p>
-                    <h2 className="mt-2 text-3xl font-black text-foreground">Schedule an Exam Window</h2>
+                    <h2 className="text-3xl font-black text-foreground">Schedule an Exam Window</h2>
                     <p className="mt-2 max-w-xl text-sm text-shell-muted-dim">
                         Choose the course, lock a blueprint, and define the exact exam start time. Students only see sessions for courses they are enrolled in.
                     </p>
@@ -141,6 +151,7 @@ export default function SessionCreateForm({
                                 <TimePicker
                                     value={startsAt}
                                     onChange={setStartsAt}
+                                    min={isToday(startsAt) ? new Date() : undefined}
                                 />
                             </Field>
                         </div>
@@ -161,8 +172,7 @@ export default function SessionCreateForm({
 
             {isAdmin && (
                 <form onSubmit={handleCreateCourse} className="rounded-2xl border border-shell-border-deep bg-shell-panel-c p-6 shadow-card">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-shell-muted-dim">Course Setup</p>
-                    <h3 className="mt-2 text-2xl font-black text-foreground">Create a New Course</h3>
+                    <h3 className="text-2xl font-black text-foreground">Create a New Course</h3>
                     <p className="mt-2 text-sm text-shell-muted-dim">
                         Courses gate exam visibility. Enrollments are managed separately once the course exists.
                     </p>

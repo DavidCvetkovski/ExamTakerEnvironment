@@ -5,8 +5,8 @@ import { Badge, Button, Modal } from '@/components/ui';
 
 const QUICK_REFERENCE = [
     { token: '// comment', required: false, description: 'Comment line — stripped before parsing.' },
-    { token: '#BLUEPRINT', required: false, description: 'Opens the blueprint header block.' },
-    { token: 'Title:', required: false, description: 'Blueprint display name.' },
+    { token: '#BLUEPRINT', required: true, description: 'Opens the blueprint header block.' },
+    { token: 'Title:', required: true, description: 'Blueprint display name. Required.' },
     { token: 'Course:', required: false, description: 'Course code stored in blueprint metadata.' },
     { token: 'Duration:', required: false, description: 'Exam duration in minutes (integer ≥ 1).' },
     { token: 'Description:', required: false, description: 'Blueprint description.' },

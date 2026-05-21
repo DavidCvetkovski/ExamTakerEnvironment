@@ -332,6 +332,31 @@ async def join_scheduled_session_for_student(
     )
 
 
+async def finalize_timed_out_session(session: Any) -> Any:
+    """Auto-submit and grade a STARTED session whose window has elapsed.
+
+    Running out of time is treated as an automatic submission: the attempt is
+    marked SUBMITTED, stamped with ``submitted_at``, and auto-graded so the
+    student gets a result and the run counts like any other submission. Without
+    this, timed-out attempts were marked EXPIRED and silently never graded.
+    Grading failure must not block returning the session.
+    """
+    now = datetime.now(timezone.utc)
+    updated = await prisma.exam_sessions.update(
+        where={"id": session.id},
+        data={
+            "status": SessionStatus.SUBMITTED.value,
+            "submitted_at": session.submitted_at or now,
+        },
+    )
+    try:
+        from app.services.grading_service import auto_grade_session
+        await auto_grade_session(session.id)
+    except Exception:
+        pass
+    return updated
+
+
 async def get_exam_session_for_user(
     session_id: UUID,
     current_user: Any,
@@ -350,10 +375,7 @@ async def get_exam_session_for_user(
         now = datetime.now(timezone.utc)
         expires_at = ensure_utc(session.expires_at)
         if now > expires_at:
-            session = await prisma.exam_sessions.update(
-                where={"id": session.id},
-                data={"status": SessionStatus.EXPIRED.value},
-            )
+            session = await finalize_timed_out_session(session)
 
     if session.student_id != current_user.id and current_user.role not in [
         UserRole.ADMIN.value,

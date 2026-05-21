@@ -8,6 +8,7 @@ from app.models.user import User, UserRole
 from app.schemas.course import (
     CourseCreate,
     CourseResponse,
+    CourseRosterResponse,
     EnrollmentCreateRequest,
     EnrollmentResponse,
     StudentCandidateResponse,
@@ -49,12 +50,12 @@ async def list_student_candidates_endpoint(
     return await list_student_candidates()
 
 
-@router.get("/{course_id}/enrollments", response_model=List[EnrollmentResponse])
+@router.get("/{course_id}/enrollments", response_model=CourseRosterResponse)
 async def list_course_enrollments_endpoint(
     course_id: UUID,
     current_user: User = Depends(require_role(UserRole.CONSTRUCTOR, UserRole.ADMIN)),
 ):
-    """List enrollments for a course."""
+    """List the active roster for a course and whether it can still change."""
     return await list_course_enrollments(course_id)
 
 

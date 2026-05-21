@@ -357,11 +357,14 @@ async def submit_manual_grade(
 # ─────────────────────────────────────────────
 
 async def publish_results(
-    test_definition_id: str, publisher_id: str
+    test_definition_id: str, publisher_id: str, details_visible: bool = True
 ) -> Dict[str, Any]:
     """
     Publish all FULLY_GRADED session results for a test.
     Raises 409 if any session is still partially or un-graded.
+
+    ``details_visible`` controls whether students may inspect the per-question
+    breakdown, or only see their grade.
     """
     results = await prisma.session_results.find_many(
         where={"test_definition_id": test_definition_id, "is_published": False}
@@ -389,6 +392,7 @@ async def publish_results(
         where={"session_id": {"in": session_ids}},
         data={
             "is_published": True,
+            "details_visible": details_visible,
             "published_at": now,
             "published_by": publisher_id,
             "updated_at": now,
@@ -485,6 +489,7 @@ async def get_student_published_results(
             "passed": r.passed,
             "grading_status": r.grading_status,
             "is_published": r.is_published,
+            "details_visible": r.details_visible,
             "published_at": r.published_at,
             "submitted_at": getattr(r.exam_sessions, "submitted_at", None) if getattr(r, "exam_sessions", None) else None,
         }
@@ -517,6 +522,12 @@ async def get_student_result_detail(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Results are not yet published.",
+        )
+
+    if not result.details_visible:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="The instructor released grades only for this exam.",
         )
 
     session = await prisma.exam_sessions.find_unique(where={"id": session_id})

@@ -36,6 +36,7 @@ class LearningObjectListResponse(BaseModel):
     latest_status: ItemStatus
     latest_question_type: QuestionType
     latest_content_preview: str  # First few words of the content
+    latest_content_full: str = ""  # Untruncated plain-text stem
     metadata_tags: Optional[Dict[str, Any]] = None
 
     model_config = ConfigDict(from_attributes=True)

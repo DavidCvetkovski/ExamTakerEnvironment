@@ -26,9 +26,15 @@ export interface StudentCandidate {
     email: string;
 }
 
+interface CourseRosterResponse {
+    enrollments: Enrollment[];
+    roster_locked: boolean;
+}
+
 interface CourseState {
     courses: Course[];
     enrollmentsByCourse: Record<string, Enrollment[]>;
+    rosterLockedByCourse: Record<string, boolean>;
     studentCandidates: StudentCandidate[];
     isLoading: boolean;
     error: string | null;
@@ -43,6 +49,7 @@ interface CourseState {
 export const useCourseStore = create<CourseState>((set, get) => ({
     courses: [],
     enrollmentsByCourse: {},
+    rosterLockedByCourse: {},
     studentCandidates: [],
     isLoading: false,
     error: null,
@@ -79,9 +86,10 @@ export const useCourseStore = create<CourseState>((set, get) => ({
     fetchEnrollments: async (courseId) => {
         set({ isLoading: true, error: null });
         try {
-            const response = await api.get<Enrollment[]>(`/courses/${courseId}/enrollments`);
+            const response = await api.get<CourseRosterResponse>(`/courses/${courseId}/enrollments`);
             set((state) => ({
-                enrollmentsByCourse: { ...state.enrollmentsByCourse, [courseId]: response.data },
+                enrollmentsByCourse: { ...state.enrollmentsByCourse, [courseId]: response.data.enrollments },
+                rosterLockedByCourse: { ...state.rosterLockedByCourse, [courseId]: response.data.roster_locked },
                 isLoading: false,
             }));
         } catch (err: unknown) {
@@ -98,10 +106,10 @@ export const useCourseStore = create<CourseState>((set, get) => ({
             await get().fetchEnrollments(courseId);
             set({ isLoading: false });
         } catch (err: unknown) {
-            const message = (err as { response?: { data?: { detail?: string } } })
-                ?.response?.data?.detail || 'Failed to add enrollment';
-            set({ error: message, isLoading: false });
-            throw new Error(message);
+            // Surface the failure to the caller (drawer toasts it); avoid the
+            // page-level error banner for a per-row enrollment problem.
+            set({ isLoading: false });
+            throw err;
         }
     },
 
@@ -112,10 +120,8 @@ export const useCourseStore = create<CourseState>((set, get) => ({
             await get().fetchEnrollments(courseId);
             set({ isLoading: false });
         } catch (err: unknown) {
-            const message = (err as { response?: { data?: { detail?: string } } })
-                ?.response?.data?.detail || 'Failed to remove enrollment';
-            set({ error: message, isLoading: false });
-            throw new Error(message);
+            set({ isLoading: false });
+            throw err;
         }
     },
 

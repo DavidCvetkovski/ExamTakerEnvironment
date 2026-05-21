@@ -31,6 +31,15 @@ class Validator:
                 fix_hint="Split into multiple pastes.",
             ))
 
+        # A declared #BLUEPRINT must name itself; question-only imports (no
+        # header block) don't create a blueprint and need no title.
+        if blueprint.header is not None and not (blueprint.header.title or "").strip():
+            errors.append(ParseError(
+                message="Import is missing a required Title.",
+                severity=ParseErrorSeverity.ERROR,
+                fix_hint="Add a `Title:` line inside the `#BLUEPRINT` header block.",
+            ))
+
         if blueprint.header and blueprint.header.duration_minutes is not None:
             if blueprint.header.duration_minutes <= 0:
                 errors.append(ParseError(

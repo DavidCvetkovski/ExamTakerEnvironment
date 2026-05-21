@@ -73,6 +73,7 @@ def serialize_learning_object_summary(lo) -> Optional[LearningObjectListResponse
         return None
 
     preview = "New Question"
+    full_content = ""
     content_data = latest.content
     if isinstance(content_data, str):
         try:
@@ -83,6 +84,7 @@ def serialize_learning_object_summary(lo) -> Optional[LearningObjectListResponse
     if isinstance(content_data, dict):
         full_text = extract_text_from_tiptap_json(content_data)
         if full_text:
+            full_content = full_text
             preview = full_text[:100] + ("..." if len(full_text) > 100 else "")
 
     course = getattr(lo, "courses", None)
@@ -99,6 +101,7 @@ def serialize_learning_object_summary(lo) -> Optional[LearningObjectListResponse
         latest_status=ItemStatus(latest.status),
         latest_question_type=QuestionType(latest.question_type),
         latest_content_preview=preview,
+        latest_content_full=full_content or preview,
         metadata_tags=latest.metadata_tags,
     )
 

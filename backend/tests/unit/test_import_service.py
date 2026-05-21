@@ -141,6 +141,35 @@ def test_parse_full_blueprint_header():
     assert result.blueprint.header.description == "End-of-semester assessment."
 
 
+def test_blueprint_requires_title():
+    """Declaring a #BLUEPRINT without a Title is a blocking error."""
+    text = """
+#BLUEPRINT
+Course: STAT101
+Duration: 90
+
+#Q What is 1+1?
+TYPE: MCQ
+A) 1
+B) 2 *
+"""
+    result = parse_text(text)
+    assert result.has_blocking_errors
+    assert any("title" in e.message.lower() for e in result.errors)
+
+
+def test_question_only_import_needs_no_title():
+    """Pasting bare questions (no #BLUEPRINT) imports without a Title."""
+    text = """
+#Q What is 1+1?
+TYPE: MCQ
+A) 1
+B) 2 *
+"""
+    result = parse_text(text)
+    assert not result.has_blocking_errors
+
+
 def test_parse_multiple_blocks():
     result = parse_text(FULL_BLUEPRINT)
     assert len(result.blueprint.blocks) == 2

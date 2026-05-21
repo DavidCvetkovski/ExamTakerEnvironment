@@ -104,13 +104,13 @@ class TestPointBiserial:
     async def test_single_response_returns_none(self):
         assert _point_biserial([True], [75.0]) is None
 
-    async def test_all_correct_returns_none(self):
+    async def test_all_correct_returns_zero(self):
         # n_q == 0 → no variance in binary variable
-        assert _point_biserial([True, True, True], [70.0, 80.0, 90.0]) is None
+        assert _point_biserial([True, True, True], [70.0, 80.0, 90.0]) == 0.0
 
-    async def test_all_incorrect_returns_none(self):
+    async def test_all_incorrect_returns_zero(self):
         # n_p == 0
-        assert _point_biserial([False, False, False], [70.0, 80.0, 90.0]) is None
+        assert _point_biserial([False, False, False], [70.0, 80.0, 90.0]) == 0.0
 
     async def test_zero_score_variance_returns_none(self):
         # All students scored identically → std_all = 0

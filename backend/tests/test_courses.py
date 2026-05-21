@@ -72,7 +72,91 @@ async def test_create_course_and_enroll_student(ac: AsyncClient, setup_courses_d
         headers=auth(token),
     )
     assert list_resp.status_code == 200
-    assert len(list_resp.json()) == 1
+    body = list_resp.json()
+    assert body["roster_locked"] is False
+    assert len(body["enrollments"]) == 1
+
+
+@pytest.mark.anyio
+async def test_remove_enrollment_hard_deletes(ac: AsyncClient, setup_courses_data):
+    token = await login(ac, ADMIN_EMAIL, ADMIN_PASS)
+    student_id = setup_courses_data["student_id"]
+
+    create_resp = await ac.post(
+        "/api/courses/",
+        json={"code": "BIO201", "title": "Biology 201"},
+        headers=auth(token),
+    )
+    course_id = create_resp.json()["id"]
+
+    await ac.post(
+        f"/api/courses/{course_id}/enrollments",
+        json={"student_id": student_id},
+        headers=auth(token),
+    )
+
+    remove_resp = await ac.delete(
+        f"/api/courses/{course_id}/enrollments/{student_id}",
+        headers=auth(token),
+    )
+    assert remove_resp.status_code == 200
+
+    list_resp = await ac.get(
+        f"/api/courses/{course_id}/enrollments",
+        headers=auth(token),
+    )
+    assert list_resp.json()["enrollments"] == []
+
+
+@pytest.mark.anyio
+async def test_roster_locked_when_session_started(ac: AsyncClient, setup_courses_data):
+    from datetime import datetime, timedelta, timezone
+
+    import prisma as prisma_lib
+
+    token = await login(ac, ADMIN_EMAIL, ADMIN_PASS)
+    student_id = setup_courses_data["student_id"]
+
+    create_resp = await ac.post(
+        "/api/courses/",
+        json={"code": "BIO301", "title": "Biology 301"},
+        headers=auth(token),
+    )
+    course_id = create_resp.json()["id"]
+
+    # A blueprint + a session whose window has already started locks the roster.
+    test_def = await prisma.test_definitions.create(
+        data={
+            "title": "Locked Exam",
+            "created_by": setup_courses_data["admin_id"],
+            "blocks": prisma_lib.Json([]),
+            "duration_minutes": 60,
+        }
+    )
+    now = datetime.now(timezone.utc)
+    await prisma.scheduled_exam_sessions.create(
+        data={
+            "course_id": course_id,
+            "test_definition_id": test_def.id,
+            "created_by": setup_courses_data["admin_id"],
+            "starts_at": now - timedelta(minutes=5),
+            "ends_at": now + timedelta(minutes=55),
+            "status": "ACTIVE",
+        }
+    )
+
+    list_resp = await ac.get(
+        f"/api/courses/{course_id}/enrollments",
+        headers=auth(token),
+    )
+    assert list_resp.json()["roster_locked"] is True
+
+    enroll_resp = await ac.post(
+        f"/api/courses/{course_id}/enrollments",
+        json={"student_id": student_id},
+        headers=auth(token),
+    )
+    assert enroll_resp.status_code == 409
 
 
 @pytest.mark.anyio

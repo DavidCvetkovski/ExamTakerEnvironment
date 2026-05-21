@@ -116,7 +116,9 @@ async def persist_import(
 
     blueprint_id: Optional[str] = None
     if create_blueprint and parsed.blocks:
-        title = (header.title if header and header.title else "Imported Blueprint")
+        if not (header and header.title and header.title.strip()):
+            raise ValueError("Blueprint title is required.")
+        title = header.title.strip()
         description = (header.description if header and header.description else None)
         duration = (header.duration_minutes if header and header.duration_minutes and header.duration_minutes > 0 else 60)
 

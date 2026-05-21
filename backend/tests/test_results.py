@@ -329,6 +329,40 @@ async def test_full_publish_unpublish_flow(ac: AsyncClient, full_grading_setup):
 
 
 @pytest.mark.anyio
+async def test_publish_grades_only_blocks_detail(ac: AsyncClient, full_grading_setup):
+    """Publishing with details_visible=false lets the student see the grade in
+    the list but blocks the per-question detail with a 403."""
+    s = full_grading_setup
+    admin_token = await login(ac, ADMIN_EMAIL, PASS)
+    student_token = await login(ac, STUDENT_EMAIL, PASS)
+
+    await ac.patch(
+        f"/api/grading/grades/{s['essay_grade_id']}",
+        json={"points_awarded": 8.0, "feedback": "Well done"},
+        headers=auth(admin_token),
+    )
+
+    pub_resp = await ac.post(
+        f"/api/grading/tests/{s['test_def'].id}/publish-results",
+        json={"details_visible": False},
+        headers=auth(admin_token),
+    )
+    assert pub_resp.status_code == 200
+
+    # Grade is visible in the list, flagged as grades-only.
+    my_resp = await ac.get("/api/grading/my-results", headers=auth(student_token))
+    assert my_resp.status_code == 200
+    assert my_resp.json()[0]["details_visible"] is False
+
+    # The per-question detail is blocked.
+    detail_resp = await ac.get(
+        f"/api/grading/my-results/{s['session'].id}",
+        headers=auth(student_token),
+    )
+    assert detail_resp.status_code == 403
+
+
+@pytest.mark.anyio
 async def test_student_my_results_empty_before_publish(ac: AsyncClient, full_grading_setup):
     """Student receives empty list if no results published yet."""
     s = full_grading_setup

@@ -230,6 +230,7 @@ model session_results {
   letter_grade       String?          @db.VarChar
   passed             Boolean?
   is_published       Boolean
+  details_visible    Boolean          @default(true)
   published_at       DateTime?        @db.Timestamp(6)
   published_by       String?          @db.Uuid
   created_at         DateTime         @db.Timestamp(6)

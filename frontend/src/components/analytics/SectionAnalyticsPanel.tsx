@@ -1,6 +1,7 @@
 'use client';
 
 import { cn } from '@/components/ui';
+import { formatPercent, formatIndex } from '@/lib/analyticsFormat';
 
 export interface SectionAnalytics {
     block_index: number;
@@ -17,10 +18,6 @@ interface SectionAnalyticsPanelProps {
     sections: SectionAnalytics[];
     activeBlock: number | null;
     onSelect: (blockIndex: number | null) => void;
-}
-
-function fmt(value: number | null, digits = 2): string {
-    return value === null ? '—' : value.toFixed(digits);
 }
 
 export default function SectionAnalyticsPanel({ sections, activeBlock, onSelect }: SectionAnalyticsPanelProps) {
@@ -45,13 +42,13 @@ export default function SectionAnalyticsPanel({ sections, activeBlock, onSelect 
                             : 'border-shell-border text-shell-muted hover:text-foreground hover:border-shell-border-deep',
                     )}
                 >
-                    All sections
+                    {activeBlock === null ? 'All sections' : 'Show all sections'}
                 </button>
-                {activeBlock !== null && (
-                    <span className="text-meta text-shell-muted-dim">
-                        Filtering items table to this section
-                    </span>
-                )}
+                <span className="text-meta text-shell-muted-dim">
+                    {activeBlock === null
+                        ? 'Pick a section to filter the items table below.'
+                        : 'Items table is filtered to the selected section.'}
+                </span>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -73,21 +70,19 @@ export default function SectionAnalyticsPanel({ sections, activeBlock, onSelect 
                             <div className="flex items-start justify-between gap-2">
                                 <p className="font-semibold text-foreground line-clamp-1">{section.block_title}</p>
                                 <span className="text-eyebrow font-semibold uppercase tracking-wide text-shell-muted-dim shrink-0">
-                                    {section.question_count} q
+                                    {section.question_count === section.graded_item_count
+                                        ? `${section.question_count} questions`
+                                        : `${section.question_count} questions · ${section.graded_item_count} graded`}
                                 </span>
                             </div>
-                            <dl className="mt-3 grid grid-cols-3 gap-3 text-meta">
+                            <dl className="mt-3 grid grid-cols-2 gap-3 text-meta">
                                 <div>
-                                    <dt className="text-shell-muted-dim">P̄</dt>
-                                    <dd className="font-semibold text-foreground tabular-nums">{fmt(section.p_value_mean)}</dd>
+                                    <dt className="text-shell-muted-dim">Avg. difficulty</dt>
+                                    <dd className="font-semibold text-foreground tabular-nums">{formatPercent(section.mean_score)}</dd>
                                 </div>
                                 <div>
-                                    <dt className="text-shell-muted-dim">D̄</dt>
-                                    <dd className="font-semibold text-foreground tabular-nums">{fmt(section.discrimination_mean)}</dd>
-                                </div>
-                                <div>
-                                    <dt className="text-shell-muted-dim">Score</dt>
-                                    <dd className="font-semibold text-foreground tabular-nums">{fmt(section.mean_score)}</dd>
+                                    <dt className="text-shell-muted-dim">Avg. discrimination</dt>
+                                    <dd className="font-semibold text-foreground tabular-nums">{formatIndex(section.discrimination_mean)}</dd>
                                 </div>
                             </dl>
                             {section.graded_item_count === 0 && (

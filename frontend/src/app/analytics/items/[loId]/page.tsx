@@ -5,10 +5,18 @@ import { useParams, useSearchParams } from 'next/navigation';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import DistractorBars from '@/components/analytics/DistractorBars';
-import PDValueTrendChart from '@/components/analytics/PDValueTrendChart';
 import { bundleKey, useAnalyticsStore } from '@/stores/useAnalyticsStore';
 import { useLibraryStore } from '@/stores/useLibraryStore';
-import { BackButton, InfoTooltip, Spinner } from '@/components/ui';
+import { BackButton, InfoTooltip, Spinner, StatCard } from '@/components/ui';
+import { formatPercent, formatIndex, discriminationQuality } from '@/lib/analyticsFormat';
+
+function discriminationStatTone(value: number | null): 'success' | 'warning' | 'danger' | 'neutral' {
+    const quality = discriminationQuality(value);
+    if (quality === 'good') return 'success';
+    if (quality === 'weak') return 'warning';
+    if (quality === 'poor') return 'danger';
+    return 'neutral';
+}
 
 export default function ItemAnalyticsDetailPage() {
     const { loId } = useParams<{ loId: string }>();
@@ -34,21 +42,28 @@ export default function ItemAnalyticsDetailPage() {
     const history = itemHistories[loId];
     const latestHistoryEntry = history?.entries[history.entries.length - 1];
     const sourceTestId = searchParams.get('fromTest') ?? latestHistoryEntry?.test_definition_id ?? null;
-    const sourceHistoryEntry = history?.entries.find((entry) => entry.test_definition_id === sourceTestId) ?? latestHistoryEntry;
+    const sourceRunId = searchParams.get('fromRun');
+    const scopeRunId = sourceRunId && sourceRunId !== 'combined' ? sourceRunId : null;
+    const backHref = sourceTestId
+        ? sourceRunId
+            ? `/analytics/tests/${sourceTestId}/run/${sourceRunId}`
+            : `/analytics/tests/${sourceTestId}`
+        : '/analytics';
 
     useEffect(() => {
         if (sourceTestId) {
-            void loadTestAnalytics(sourceTestId);
+            void loadTestAnalytics(sourceTestId, scopeRunId);
         }
-    }, [loadTestAnalytics, sourceTestId]);
+    }, [loadTestAnalytics, sourceTestId, scopeRunId]);
 
-    // Item history doesn't carry a per-run scope, so we always look at the
-    // combined bundle when joining back to item-level stats.
-    const bundle = sourceTestId ? bundles[bundleKey(sourceTestId, null)] : undefined;
+    // Use the same run scope the user drilled in from ("combined" → all runs)
+    // so the stats here match the table they clicked.
+    const bundle = sourceTestId ? bundles[bundleKey(sourceTestId, scopeRunId)] : undefined;
     const latestItemStats = bundle?.items
         .filter((item) => item.learning_object_id === loId)
         .sort((left, right) => (right.version_number ?? 0) - (left.version_number ?? 0))[0];
-    const previewTitle = items.find((item) => item.id === loId)?.latest_content_preview ?? `Item ${loId.slice(0, 8)}`;
+    const libraryItem = items.find((item) => item.id === loId);
+    const previewTitle = libraryItem?.latest_content_full || libraryItem?.latest_content_preview || `Item ${loId.slice(0, 8)}`;
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
@@ -56,8 +71,8 @@ export default function ItemAnalyticsDetailPage() {
                 <div className="border-b border-shell-border bg-shell-surface px-6 py-5">
                     <div className="mx-auto max-w-6xl">
                         <BackButton
-                            href={sourceTestId ? `/analytics/tests/${sourceTestId}` : '/analytics'}
-                            label="Back to test"
+                            href={backHref}
+                            label="Back to test analytics"
                         />
                         <div>
                             <p className="text-eyebrow font-semibold uppercase tracking-medium text-shell-muted-dim">
@@ -94,19 +109,27 @@ export default function ItemAnalyticsDetailPage() {
 
                     {history && history.entries.length > 0 ? (
                         <div className="space-y-6">
-                            <section>
-                                <div className="mb-3 flex items-center gap-2">
-                                    <h2 className="text-lg font-semibold text-foreground">Version Trend</h2>
-                                    <InfoTooltip>
-                                        Tracks how P-value (difficulty) and D-value (discrimination) shift each time
-                                        the item is revised. A new dot is plotted for every published version.
-                                    </InfoTooltip>
-                                </div>
-                                <p className="mb-3 text-sm text-shell-muted-dim">
-                                    P-value and D-value progression across the recorded item history.
-                                </p>
-                                <PDValueTrendChart entries={history.entries} />
-                            </section>
+                            {latestItemStats ? (
+                                <section className="grid gap-3 sm:grid-cols-2">
+                                    <StatCard
+                                        label="Avg. difficulty"
+                                        value={formatPercent(
+                                            latestItemStats.points_possible
+                                                ? (latestItemStats.mean_score ?? 0) / latestItemStats.points_possible
+                                                : null,
+                                        )}
+                                        note="Average points earned, as a % of max"
+                                        info="The average score on this question across all responses, as a percentage of its maximum points. Higher = easier."
+                                    />
+                                    <StatCard
+                                        label="Discrimination"
+                                        value={formatIndex(latestItemStats.d_value)}
+                                        tone={discriminationStatTone(latestItemStats.d_value)}
+                                        note="How well it separates strong from weak students"
+                                        info="0.30 or above is good; 0.15–0.30 is weak; below that (or negative) is poor. Essay questions with more than one point are excluded from calculation."
+                                    />
+                                </section>
+                            ) : null}
 
                             {latestItemStats && latestItemStats.question_type !== 'ESSAY' && latestItemStats.distractors.length > 0 ? (
                                 <section>
@@ -114,12 +137,12 @@ export default function ItemAnalyticsDetailPage() {
                                         <h2 className="text-lg font-semibold text-foreground">Latest Distractor Breakdown</h2>
                                         <InfoTooltip>
                                             For each option, shows the share of students who picked it. A
-                                            "Non-functional" distractor (chosen by &lt;5% of students) is dead weight —
+                                            &quot;Non-functional&quot; distractor (chosen by &lt;5% of students) is dead weight —
                                             consider rewriting or removing it.
                                         </InfoTooltip>
                                     </div>
                                     <p className="mb-3 text-sm text-shell-muted-dim">
-                                        Response share for the loaded source test, {sourceHistoryEntry?.test_title ?? 'the latest test'}.
+                                        Response share across all recorded responses.
                                     </p>
                                     <DistractorBars distractors={latestItemStats.distractors} />
                                 </section>

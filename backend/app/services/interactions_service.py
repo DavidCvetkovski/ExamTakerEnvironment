@@ -9,7 +9,7 @@ from prisma import Json
 from app.core.prisma_db import prisma
 from app.models.exam_session import SessionStatus
 from app.models.interaction_event import InteractionEventType
-from app.services.exam_sessions_service import serialize_exam_session
+from app.services.exam_sessions_service import finalize_timed_out_session, serialize_exam_session
 
 
 async def _get_session_with_ownership_check(
@@ -45,10 +45,7 @@ async def _get_session_with_ownership_check(
         if sess_expires.tzinfo is None:
             sess_expires = sess_expires.replace(tzinfo=timezone.utc)
         if now > sess_expires:
-            session = await prisma.exam_sessions.update(
-                where={"id": session.id},
-                data={"status": SessionStatus.EXPIRED.value},
-            )
+            session = await finalize_timed_out_session(session)
 
     return session
 

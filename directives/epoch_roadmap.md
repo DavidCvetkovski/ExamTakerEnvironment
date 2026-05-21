@@ -662,7 +662,7 @@
 
 ---
 
-## Epoch 8.6 — Reactive Lifecycle & Per-Run Drill-Ins
+## Epoch 8.6 — Reactive Lifecycle & Per-Run Drill-Ins ✅
 
 **Goal:** Fix two distinct UX bugs that surfaced during continued use of the Epoch 8.5 build (2026-05-16): (1) scheduled-session countdowns count *up* past `ends_at` instead of moving the row to Completed, and the Scheduled → Ongoing transition has the same lag; (2) grading and analytics treat one blueprint as one bucket of submissions, with no way to drill into "which scheduled run of this blueprint do I want to grade / analyze?". See `directives/epoch_8_6_blueprint.md`.
 
@@ -681,9 +681,11 @@
 - Widened color audit returns zero hits across the new surfaces.
 - Aikido: zero new Critical/High findings.
 
+**Status:** ✅ Complete. Merged to `main` as part of PR #12 (commit `2fb37da`).
+
 ---
 
-## Epoch 8.7 — Course-Aware Authoring, Quiet Sessions & Curriculum Seed Overhaul
+## Epoch 8.7 — Course-Aware Authoring, Quiet Sessions & Curriculum Seed Overhaul ✅
 
 **Goal:** Before the seed overhaul, remove course-code clutter from ordinary session/student/grading/analytics surfaces, make questions belong to a real course, rename user-facing `Subject` wording to `Topic`, upgrade the question library with Course and separate Lock columns plus course/lock filters and type sorting, then expand the e2e seed into a full curriculum with practice exams, analytics/grading fixtures, and short 1-minute functionality tests. See `directives/epoch_8_7_blueprint.md`.
 
@@ -701,6 +703,33 @@
 - `/items` can filter by course and lock status, sort by type, and scan Course / Topic / Lock separately.
 - Seeded data feels like a curriculum, not a tiny CS-only demo, and immediately exposes active/scheduled/closed test windows.
 - `tsc --noEmit`, targeted backend tests, and Playwright smoke checks pass.
+
+**Status:** ✅ Complete. Merged to `main` inside the Epoch 8.6 release commit (`2fb37da`).
+
+---
+
+## Epoch 8.8 — Enrollment Revamp, Analytics Literacy & Copy Cleanup
+
+**Goal:** Resolve a batch of distinct UX bugs from continued use of the Epoch 8.7 build (2026-05-20): rework the course-enrollment procedure (typeahead over registered students, confirm-on-remove, hard removal instead of grey-out, roster frozen once an exam has started/ended, and no more "already enrolled" runtime crash); fix two broken back-navigation paths (per-submission grading → run list; item drill-down → test analytics); make psychometric analytics legible to non-statisticians (P as a percentage, D labelled "Discrimination" with a quality tag, arrow-based sort, readable By-section panel, whole-percent cut score) and drop the obsolete Version Trend; guard past dates *and* past times in scheduling; retire the "Session Manager" / "Course Setup" copy; rename user-facing "learning objects" to "Questions" in the library; and require a `Title:` on import. See `directives/epoch_8_8_blueprint.md`.
+
+### Stages
+1. **Enrollment Revamp** — typeahead enroll (registered, not-yet-enrolled students only), confirm dialog on remove, hard delete, roster lock (backend `409`) once a course's session is ongoing/closed, idempotent add.
+2. **Grading Back Navigation** — per-submission Back returns to the run's submission list via origin query params, not the dashboard.
+3. **Analytics Literacy** — Difficulty as %, Discrimination + Good/Weak/Poor tag, header-arrow sort reusing the library `SortArrow`, readable section panel, Version Trend removed, drill-down Back fixed, whole-percent cut score.
+4. **Scheduling Calendar Guard** — fix the "Today" button (was jumping to the wrong month) and disable past times on today in the session scheduler (past dates already greyed).
+5. **Copy Cleanup** — retire "Session Manager" and "Course Setup"; "learning objects" → "Questions" in the Question Library (copy only, not data model).
+6. **Import Requires Title** — `Title:` becomes mandatory in the format guide, parser/validator, and persister.
+
+**Exit Criteria:**
+- Enrollment: typeahead over registered students; confirm-on-remove that hard-deletes; no grey-out / no Inactive rows; roster add/remove rejected `409` once an exam has started/ended; duplicate add never throws a runtime overlay.
+- Grading: a submission's Back returns to the originating run's submission list.
+- Analytics: difficulty shown as %, discrimination labelled with a quality tag, sortable via header arrows, By-section panel uses full words + explicit question counts, no Version Trend, drill-down Back returns to the test/run, cut score is a whole percent.
+- Scheduling refuses past dates and past times.
+- No "Session Manager" / "Course Setup" / "learning object" copy on the named surfaces.
+- Import without a `Title:` is rejected.
+- `tsc --noEmit`, `next build`, targeted backend tests, and the three-theme visual matrix pass; Aikido zero new Critical/High.
+
+**Status:** ⬜ Planned.
 
 ---
 

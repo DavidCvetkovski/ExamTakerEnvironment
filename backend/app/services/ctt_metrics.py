@@ -50,7 +50,7 @@ def point_biserial(correct_flags: List[bool], scores: List[float]) -> Optional[f
     n_p = sum(1 for c in correct_flags if c)
     n_q = n - n_p
     if n_p == 0 or n_q == 0:
-        return None
+        return 0.0
 
     p = n_p / n
     mean_all = sum(scores) / n

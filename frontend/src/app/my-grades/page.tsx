@@ -1,14 +1,15 @@
 'use client';
 
 import { useEffect } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useResultsStore } from '@/stores/useResultsStore';
-import { Badge, Card, EmptyState, PageHeader, SectionHeader, Spinner } from '@/components/ui';
+import { Badge, Button, Card, EmptyState, PageHeader, SectionHeader, Spinner } from '@/components/ui';
 import { formatRelativeTime } from '@/lib/relativeTime';
 
 export default function MyGradesPage() {
+    const router = useRouter();
     const { myResults, myResultsLoading, fetchMyResults } = useResultsStore();
 
     useEffect(() => {
@@ -78,8 +79,7 @@ export default function MyGradesPage() {
                                     />
                                     <div className="grid gap-4 lg:grid-cols-2">
                                         {published.map((result) => (
-                                            <Link key={result.session_id} href={`/my-results/${result.session_id}`} className="block">
-                                                <Card variant="surface" padding="md" interactive>
+                                                <Card key={result.session_id} variant="surface" padding="md">
                                                     <div className="flex items-start justify-between gap-3">
                                                         <div className="min-w-0">
                                                             <p className="font-semibold text-foreground text-h3">
@@ -100,16 +100,26 @@ export default function MyGradesPage() {
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    {result.letter_grade ? (
-                                                        <div className="mt-3 flex items-center gap-2">
+                                                    <div className="mt-3 flex items-center gap-3">
+                                                        {result.letter_grade ? (
                                                             <Badge tone={result.passed ? 'success' : 'danger'} size="sm">
                                                                 {result.letter_grade}
                                                             </Badge>
-                                                            <span className="text-meta font-medium text-brand">View details →</span>
-                                                        </div>
-                                                    ) : null}
+                                                        ) : null}
+                                                        {result.details_visible ? (
+                                                            <Button
+                                                                variant="secondary"
+                                                                size="sm"
+                                                                className="ml-auto"
+                                                                onClick={() => router.push(`/my-results/${result.session_id}`)}
+                                                            >
+                                                                Inspect
+                                                            </Button>
+                                                        ) : (
+                                                            <span className="ml-auto text-meta text-shell-muted-dim">Grades only</span>
+                                                        )}
+                                                    </div>
                                                 </Card>
-                                            </Link>
                                         ))}
                                     </div>
                                 </section>

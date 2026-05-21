@@ -2,7 +2,7 @@
 
 import DOMPurify from 'dompurify';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useGradingStore, QuestionGrade, ManualGradePayload } from '@/stores/useGradingStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { getExamChoiceContent, toExamContentHtml, toExamContentText } from '@/lib/examContent';
@@ -227,6 +227,11 @@ function EssayGradingPanel({
 export default function SessionGradingPage() {
     const { sessionId } = useParams<{ sessionId: string }>();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const fromTest = searchParams.get('fromTest');
+    const fromRun = searchParams.get('fromRun');
+    const backHref = fromTest && fromRun ? `/grading/test/${fromTest}/run/${fromRun}` : '/grading';
+    const backLabel = fromTest && fromRun ? 'Back to submissions' : 'Back to dashboard';
     const { user } = useAuthStore();
     const {
         questionGrades, sessionResult, gradesLoading,
@@ -250,7 +255,7 @@ export default function SessionGradingPage() {
             {/* ── Top bar ── */}
             <div className="bg-shell-surface border-b border-shell-border px-6 py-4 sticky top-0 z-10">
                 <div className="max-w-5xl mx-auto flex items-center gap-4">
-                    <BackButton href="/grading" label="Back to dashboard" className="mb-0" />
+                    <BackButton href={backHref} label={backLabel} className="mb-0" />
 
                     <div className="flex-1">
                         <p className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim">

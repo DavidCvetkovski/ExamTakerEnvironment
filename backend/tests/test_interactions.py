@@ -447,12 +447,13 @@ async def test_heartbeat_rejects_expired_session(ac: AsyncClient, heartbeat_data
 
 
 @pytest.mark.anyio
-async def test_submit_rejects_expired_session(ac: AsyncClient, heartbeat_data):
-    """Submitting an expired session returns 400."""
+async def test_timed_out_session_is_auto_submitted_and_graded(ac: AsyncClient, heartbeat_data):
+    """Running out of time auto-submits and grades the attempt rather than
+    losing it. A subsequent manual submit reports it as already submitted."""
     token = await login(ac, STUDENT_EMAIL, STUDENT_PASS)
     d = heartbeat_data
 
-    # Expire the session
+    # Push the deadline into the past to simulate the window elapsing.
     await prisma.exam_sessions.update(
         where={"id": d["session_id"]},
         data={
@@ -460,12 +461,19 @@ async def test_submit_rejects_expired_session(ac: AsyncClient, heartbeat_data):
         },
     )
 
+    # The submit fetch finalises the timed-out attempt (SUBMITTED + graded),
+    # so a manual submit now reports it as already submitted — not "expired".
     resp = await ac.post(
         f"/api/sessions/{d['session_id']}/submit",
         headers=auth(token),
     )
     assert resp.status_code == 400
-    assert "expired" in resp.json()["detail"].lower()
+    assert "already been submitted" in resp.json()["detail"].lower()
+
+    # The attempt was finalised, not left dangling as EXPIRED.
+    session = await prisma.exam_sessions.find_unique(where={"id": d["session_id"]})
+    assert session.status == "SUBMITTED"
+    assert session.submitted_at is not None
 
 
 # ---------------------------------------------------------------------------

@@ -321,7 +321,7 @@ function ItemsLibraryPageInner() {
                     )}
                     <PageHeader
                         title="Question Library"
-                        subtitle="Browse, filter, and author the learning objects that feed every test."
+                        subtitle="Browse, filter, and author the questions that feed every test."
                         actions={
                             <div className="flex items-center gap-2">
                                 <Button variant="secondary" size="md" onClick={() => router.push('/import?mode=questions&from=library')}>
@@ -420,7 +420,7 @@ function ItemsLibraryPageInner() {
                     ) : items.length === 0 ? (
                         <EmptyState
                             title="No questions yet"
-                            description="Get started by creating your first learning object."
+                            description="Get started by creating your first question."
                             action={
                                 <Button variant="primary" size="md" onClick={handleCreateNew} loading={isCreating}>
                                     + New question

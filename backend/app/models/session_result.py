@@ -36,6 +36,7 @@ class SessionResult(Base):
 
     # Publication
     is_published = Column(Boolean, nullable=False, default=False)
+    details_visible = Column(Boolean, nullable=False, default=True, server_default="true")
     published_at = Column(DateTime, nullable=True)
     published_by = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
 

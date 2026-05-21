@@ -9,6 +9,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from app.core.dependencies import get_current_user, require_role
 from app.models.user import UserRole
@@ -255,19 +256,26 @@ async def get_grading_queue(
 # Grade publication  (admin only)
 # ─────────────────────────────────────────────
 
+class PublishRequest(BaseModel):
+    details_visible: bool = True
+
+
 @router.post("/tests/{test_definition_id}/publish-results", summary="Publish results for a test")
 async def publish_results(
     test_definition_id: UUID,
+    payload: Optional[PublishRequest] = None,
     current_user=Depends(_require_admin),
 ) -> Dict[str, Any]:
     """
     Publish all fully-graded session results for a test.
     Raises 409 if any session is still partially or un-graded.
-    Students can only see their results after publication.
+    Students can only see their results after publication; ``details_visible``
+    controls whether they can inspect the per-question breakdown or only the grade.
     """
     return await results_service.publish_results(
         test_definition_id=str(test_definition_id),
         publisher_id=str(current_user.id),
+        details_visible=(payload.details_visible if payload else True),
     )
 
 

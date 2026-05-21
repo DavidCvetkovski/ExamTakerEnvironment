@@ -13,6 +13,7 @@ import {
     PageHeader,
     Spinner,
     StatCard,
+    Modal,
     Table,
     TableContainer,
     TBody,
@@ -90,6 +91,12 @@ export default function TestGradingDashboard() {
     const [filterStatus, setFilterStatus] = useState<GradingStatus | 'ALL'>('ALL');
     const [sortKey, setSortKey] = useState<'student' | 'status' | 'percentage' | 'submitted'>('student');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+    const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+
+    const handlePublish = (detailsVisible: boolean) => {
+        setPublishDialogOpen(false);
+        if (testId) void publishResults(testId, detailsVisible);
+    };
 
     // Keep the store in sync with the URL — single source of truth is the route param.
     useEffect(() => {
@@ -246,13 +253,39 @@ export default function TestGradingDashboard() {
                         <Button
                             variant="success"
                             size="sm"
-                            onClick={() => testId && publishResults(testId)}
+                            onClick={() => setPublishDialogOpen(true)}
                             loading={publishStatus === 'publishing'}
                         >
                             Publish results
                         </Button>
                     ))}
                 </div>
+
+                <Modal
+                    isOpen={publishDialogOpen}
+                    onClose={() => setPublishDialogOpen(false)}
+                    title="Publish results"
+                    size="sm"
+                    footer={
+                        <>
+                            <Button variant="ghost" size="sm" onClick={() => setPublishDialogOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button variant="secondary" size="sm" onClick={() => handlePublish(false)}>
+                                Grades only
+                            </Button>
+                            <Button variant="success" size="sm" onClick={() => handlePublish(true)}>
+                                Show full exam + grades
+                            </Button>
+                        </>
+                    }
+                >
+                    <p className="text-body text-shell-muted leading-relaxed">
+                        How much should students see? <strong className="text-foreground">Show full exam + grades</strong> lets
+                        them inspect every question, their answer, and the correct answer. <strong className="text-foreground">Grades
+                        only</strong> releases the score and letter grade without the per-question breakdown.
+                    </p>
+                </Modal>
 
                 {overviewLoading ? (
                     <div className="flex items-center justify-center py-16 text-shell-muted-dim text-meta gap-3">
@@ -342,7 +375,7 @@ export default function TestGradingDashboard() {
                                             <Button
                                                 variant="secondary"
                                                 size="sm"
-                                                onClick={() => router.push(`/grading/${session.session_id}`)}
+                                                onClick={() => router.push(`/grading/${session.session_id}?fromTest=${testId}&fromRun=${runId}`)}
                                             >
                                                 Grade →
                                             </Button>

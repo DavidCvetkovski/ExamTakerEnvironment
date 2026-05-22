@@ -80,6 +80,21 @@ async def ensure_scheduled_session_current(record: Any) -> Any:
     )
 
 
+def _assert_blueprint_allowed_for_course(test_definition: Any, course_id: str) -> None:
+    """Guard the course↔blueprint pairing at scheduling time (Epoch 8.9.1).
+
+    A blueprint may be scheduled into a course only when it is unassigned
+    (``course_id is None``) or assigned to that same course. Authoritative —
+    the session-form blueprint filter is advisory UX (CLAUDE.md §1).
+    """
+    bp_course_id = getattr(test_definition, "course_id", None)
+    if bp_course_id is not None and str(bp_course_id) != str(course_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This blueprint is not available for the selected course.",
+        )
+
+
 async def create_scheduled_session(payload: Any, current_user_id: str) -> Dict[str, Any]:
     """Create a future scheduled exam session for a course."""
     course = await prisma.courses.find_unique(where={"id": str(payload.course_id)})
@@ -97,6 +112,8 @@ async def create_scheduled_session(payload: Any, current_user_id: str) -> Dict[s
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Test definition not found.",
         )
+
+    _assert_blueprint_allowed_for_course(test_definition, str(payload.course_id))
 
     starts_at = ensure_utc(payload.starts_at)
     if starts_at <= datetime.now(timezone.utc):

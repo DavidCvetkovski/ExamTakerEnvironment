@@ -51,6 +51,7 @@ model courses {
   learning_objects        learning_objects[]
   users                   users?                    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   scheduled_exam_sessions scheduled_exam_sessions[]
+  test_definitions        test_definitions[]
 
   @@index([created_by], map: "ix_courses_created_by")
 }
@@ -145,6 +146,7 @@ model test_definitions {
   title                   String                    @db.VarChar
   description             String?
   created_by              String?                   @db.Uuid
+  course_id               String?                   @db.Uuid
   blocks                  Json
   duration_minutes        Int
   shuffle_questions       Boolean?
@@ -154,7 +156,10 @@ model test_definitions {
   exam_sessions           exam_sessions[]
   scheduled_exam_sessions scheduled_exam_sessions[]
   session_results         session_results[]
+  courses                 courses?                  @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   users                   users?                    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([course_id], map: "ix_test_definitions_course_id")
 }
 
 model users {

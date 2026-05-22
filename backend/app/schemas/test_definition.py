@@ -27,6 +27,10 @@ class TestBlock(BaseModel):
 class TestDefinitionBase(BaseModel):
     title: str
     description: Optional[str] = None
+    # Optional course association (Epoch 8.9.1). None == "Unassigned".
+    # Course existence/active state is validated in the service layer
+    # (needs DB access), not here — see blueprints_service._validate_course.
+    course_id: Optional[UUID] = None
     blocks: List[TestBlock]
     duration_minutes: int = Field(default=60, gt=0)
     shuffle_questions: bool = False

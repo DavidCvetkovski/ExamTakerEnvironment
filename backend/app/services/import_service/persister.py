@@ -139,6 +139,10 @@ async def persist_import(
                 "title": title,
                 "description": description,
                 "created_by": author_user_id,
+                # Same resolved course as the questions (Epoch 8.9.1). The
+                # `Course:` header now assigns the generated blueprint too;
+                # an unknown/blank code leaves it Unassigned (no hard error).
+                "course_id": course_id,
                 "blocks": Json(blocks_data),
                 "duration_minutes": duration,
                 "shuffle_questions": False,

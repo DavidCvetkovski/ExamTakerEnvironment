@@ -68,10 +68,15 @@ async def create_test_definition(
 
 @router.get("/", response_model=List[TestDefinitionResponse])
 async def list_test_definitions(
+    course_id: Optional[str] = None,
     current_user: User = Depends(get_current_user),
 ):
-    """List all available test blueprints."""
-    return await svc_list_test_definitions()
+    """List test blueprints, optionally filtered by course (Epoch 8.9.1).
+
+    ``course_id`` accepts a course UUID, or the literal ``unassigned`` to
+    return only blueprints with no course. Omit it to return all.
+    """
+    return await svc_list_test_definitions(course_id=course_id)
 
 @router.get("/{test_id}/usage", response_model=BlueprintUsage)
 async def get_blueprint_usage(
@@ -145,6 +150,7 @@ async def duplicate_test_definition(
         "title": f"{original.title} (Copy)",
         "description": original.description,
         "created_by": str(current_user.id),
+        "course_id": original.course_id,
         "blocks": Json(original.blocks),
         "duration_minutes": original.duration_minutes,
         "shuffle_questions": original.shuffle_questions,

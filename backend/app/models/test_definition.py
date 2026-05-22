@@ -12,6 +12,10 @@ class TestDefinition(Base):
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+
+    # Optional course association (Epoch 8.9.1). NULL == "Unassigned",
+    # mirroring learning_objects.course_id. Indexed for course-filtered reads.
+    course_id = Column(UUID(as_uuid=True), ForeignKey("courses.id"), nullable=True, index=True)
     
     # Nested structure of sections (blocks) and their selection rules
     # [
@@ -37,3 +41,5 @@ class TestDefinition(Base):
 
     # Relationship to user
     creator = relationship("User")
+    # Relationship to course (Epoch 8.9.1) — optional association
+    course = relationship("Course")

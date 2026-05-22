@@ -26,6 +26,7 @@ function AuthorPageInner() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const loIdParam = searchParams.get('lo_id');
+    const seedFromParam = searchParams.get('seedFrom');
     const fromBlueprint = searchParams.get('from') === 'blueprint';
     const blueprintId = searchParams.get('blueprint_id');
     const fetchedRef = useRef<string | null>(null);
@@ -34,8 +35,8 @@ function AuthorPageInner() {
 
     const {
         saveStatus, questionType, setQuestionType,
-        fetchLatestVersion, learningObjectId, saveDraft, revertChanges,
-        metadataTags, updateMetadataField, isDirty,
+        fetchLatestVersion, seedFromSource, learningObjectId, saveDraft, revertChanges,
+        metadataTags, updateMetadataField, isDirty, isNewDraft,
         courseId, setCourseId,
         tiptapJson, options,
     } = useAuthoringStore();
@@ -53,6 +54,13 @@ function AuthorPageInner() {
     const isLocked = !!learningObjectId && lockedQuestionIds.has(learningObjectId);
 
     useEffect(() => {
+        // Duplicate flow: seed an unsaved new question from the source. No LO
+        // exists yet (created on Save), so this path has no lo_id.
+        if (seedFromParam && fetchedRef.current !== `seed:${seedFromParam}`) {
+            fetchedRef.current = `seed:${seedFromParam}`;
+            seedFromSource(seedFromParam).catch(() => router.replace('/items'));
+            return;
+        }
         if (loIdParam && fetchedRef.current !== loIdParam) {
             fetchedRef.current = loIdParam;
             setLastEditingLoId(loIdParam);
@@ -62,7 +70,7 @@ function AuthorPageInner() {
                 router.replace('/items');
             });
         }
-    }, [loIdParam, fetchLatestVersion, setLastEditingLoId, router]);
+    }, [loIdParam, seedFromParam, fetchLatestVersion, seedFromSource, setLastEditingLoId, router]);
 
     useEffect(() => {
         // Need blueprint usage data to know whether this question is locked.
@@ -149,7 +157,13 @@ function AuthorPageInner() {
                         </div>
                     )}
 
-                    {!learningObjectId ? (
+                    {isNewDraft && (
+                        <div className="mb-5 rounded-xl border border-[var(--color-info-border)] bg-[var(--color-info-bg)] px-4 py-3 text-sm text-[var(--color-info-fg)]">
+                            Editing a copy — click <strong>Save</strong> to create it. Leave without saving and nothing is added.
+                        </div>
+                    )}
+
+                    {!learningObjectId && !isNewDraft ? (
                         <Card variant="surface" padding="lg" className="text-center">
                             <Spinner size="lg" className="mx-auto mb-3" />
                             <p className="text-shell-muted text-meta">Linking to learning object…</p>

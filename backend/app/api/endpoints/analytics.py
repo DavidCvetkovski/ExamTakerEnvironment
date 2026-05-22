@@ -127,6 +127,7 @@ async def get_test_analytics_bundle(
     test_definition_id: UUID,
     cut_scores: Optional[str] = Query(default=None),
     run_id: Optional[str] = Query(default=None, description="Scoped to one scheduled run, 'practice', or 'combined' / omit for all."),
+    include_unpublished: bool = Query(default=False, description="Educator preview: include graded-but-unpublished results."),
     current_user=Depends(_require_analytics_user),
 ) -> Dict[str, Any]:
     await _require_test_access(str(test_definition_id), current_user)
@@ -135,6 +136,7 @@ async def get_test_analytics_bundle(
         str(test_definition_id),
         cut_scores=_parse_cut_scores(cut_scores),
         run_id=run_id,
+        include_unpublished=include_unpublished,
     )
     if bundle is None:
         raise HTTPException(
@@ -153,6 +155,7 @@ async def recompute_test_analytics_bundle(
     test_definition_id: UUID,
     cut_scores: Optional[str] = Query(default=None),
     run_id: Optional[str] = Query(default=None),
+    include_unpublished: bool = Query(default=False),
     current_user=Depends(_require_analytics_user),
 ) -> Dict[str, Any]:
     await _require_test_access(str(test_definition_id), current_user)
@@ -162,6 +165,7 @@ async def recompute_test_analytics_bundle(
             str(test_definition_id),
             cut_scores=_parse_cut_scores(cut_scores),
             run_id=run_id,
+            include_unpublished=include_unpublished,
         )
     except ValueError as exc:
         raise HTTPException(
@@ -216,6 +220,7 @@ async def get_cut_score_scenarios(
 async def get_test_item_stats(
     test_definition_id: UUID,
     run_id: Optional[str] = Query(default=None),
+    include_unpublished: bool = Query(default=False, description="Educator preview: include graded-but-unpublished results."),
     current_user=Depends(_require_analytics_user),
 ) -> Dict[str, Any]:
     """
@@ -228,7 +233,7 @@ async def get_test_item_stats(
     await _require_test_access(str(test_definition_id), current_user)
     await assert_run_belongs_to_test(run_id, str(test_definition_id))
     return await psychometrics_service.compute_test_item_stats(
-        str(test_definition_id), run_id=run_id,
+        str(test_definition_id), run_id=run_id, include_unpublished=include_unpublished,
     )
 
 
@@ -264,6 +269,7 @@ async def get_test_stats(
         description="Comma-separated cut-score percentages for pass-rate simulation (e.g. '45,50,55,60').",
     ),
     run_id: Optional[str] = Query(default=None),
+    include_unpublished: bool = Query(default=False, description="Educator preview: include graded-but-unpublished results."),
     current_user=Depends(_require_analytics_user),
 ) -> Dict[str, Any]:
     """
@@ -281,6 +287,7 @@ async def get_test_stats(
 
     return await psychometrics_service.compute_test_stats(
         str(test_definition_id), cut_scores=parsed_cuts, run_id=run_id,
+        include_unpublished=include_unpublished,
     )
 
 
@@ -384,6 +391,7 @@ async def export_test_analytics_report(
 async def get_test_section_analytics(
     test_definition_id: UUID,
     run_id: Optional[str] = Query(default=None),
+    include_unpublished: bool = Query(default=False),
     current_user=Depends(_require_analytics_user),
 ) -> Dict[str, Any]:
     """
@@ -395,7 +403,7 @@ async def get_test_section_analytics(
     await _require_test_access(str(test_definition_id), current_user)
     await assert_run_belongs_to_test(run_id, str(test_definition_id))
     return await psychometrics_service.compute_section_analytics(
-        str(test_definition_id), run_id=run_id,
+        str(test_definition_id), run_id=run_id, include_unpublished=include_unpublished,
     )
 
 
@@ -406,23 +414,35 @@ async def get_test_section_analytics(
 async def export_pdf_report(
     test_definition_id: UUID,
     run_id: Optional[str] = Query(default=None),
+    include_unpublished: bool = Query(default=False),
     current_user=Depends(_require_analytics_user),
 ) -> Response:
     """
-    Generate and download a one-page PDF analytics report for a test.
+    Generate and download an analytics report PDF for a test.
 
-    Includes summary statistics, score distribution histogram, and flagged items.
-    Suitable for exam-board submission. Requires CONSTRUCTOR or ADMIN role.
+    Includes summary statistics, score distribution, and per-item statistics
+    with question text. Requires CONSTRUCTOR or ADMIN role.
     """
+    import re
+    from datetime import datetime, timezone
+
     await _require_test_access(str(test_definition_id), current_user)
     await assert_run_belongs_to_test(run_id, str(test_definition_id))
     from app.services.analytics_pdf_service import render_pdf
+    from app.core.prisma_db import prisma
 
-    pdf_bytes = await render_pdf(str(test_definition_id), run_id=run_id)
+    test_def = await prisma.test_definitions.find_unique(where={"id": str(test_definition_id)})
+    title = (test_def.title if test_def else None) or "analytics"
+    slug = re.sub(r"[^A-Za-z0-9]+", "-", title).strip("-").lower() or "analytics"
+    date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    run_suffix = "" if not run_id or run_id == "combined" else f"_run-{run_id[:8]}"
+    filename = f"{slug}_analytics{run_suffix}_{date}.pdf"
+
+    pdf_bytes = await render_pdf(
+        str(test_definition_id), run_id=run_id, include_unpublished=include_unpublished,
+    )
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={
-            "Content-Disposition": f'attachment; filename="analytics_{test_definition_id}.pdf"'
-        },
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

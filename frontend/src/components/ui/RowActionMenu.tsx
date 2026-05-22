@@ -19,16 +19,18 @@ interface RowActionMenuProps {
 
 export default function RowActionMenu({ items, ariaLabel = 'Row actions' }: RowActionMenuProps) {
     const [open, setOpen] = useState(false);
-    const [openUp, setOpenUp] = useState(false);
+    const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
     const triggerRef = useRef<HTMLButtonElement | null>(null);
+    const menuRef = useRef<HTMLDivElement | null>(null);
 
-
-    // Close on outside click / Escape
+    // Close on outside click / Escape. The menu is portaled to <body>, so it is
+    // NOT inside the trigger — we must also ignore clicks landing in the menu,
+    // otherwise mousedown on a menu item closes it before the click fires.
     useEffect(() => {
         if (!open) return;
         const onDown = (e: MouseEvent) => {
             const target = e.target as Node;
-            if (triggerRef.current?.contains(target)) return;
+            if (triggerRef.current?.contains(target) || menuRef.current?.contains(target)) return;
             setOpen(false);
         };
         const onKey = (e: KeyboardEvent) => {
@@ -56,25 +58,17 @@ export default function RowActionMenu({ items, ariaLabel = 'Row actions' }: RowA
                 const containerSpaceBelow = containerRect.bottom - rect.bottom;
                 spaceBelow = Math.min(spaceBelow, containerSpaceBelow);
             }
-            setOpenUp(spaceBelow < 160);
+            const up = spaceBelow < 160;
+            // Compute placement here (event handler, not render) so the portal
+            // menu is positioned without reading refs during render. Fixed
+            // positioning matches viewport-relative getBoundingClientRect.
+            setMenuStyle({
+                position: 'fixed',
+                right: `${window.innerWidth - rect.right}px`,
+                ...(up ? { bottom: `${window.innerHeight - rect.top}px` } : { top: `${rect.bottom}px` }),
+            });
         }
         setOpen(v => !v);
-    };
-
-    // Compute inline placement for portal menu
-    const computeMenuStyle = (): React.CSSProperties => {
-        if (!triggerRef.current) return {};
-        const rect = triggerRef.current.getBoundingClientRect();
-        const base: React.CSSProperties = {
-            position: 'absolute',
-            right: `${window.innerWidth - rect.right}px`,
-        };
-        if (openUp) {
-            base.bottom = `${window.innerHeight - rect.top}px`;
-        } else {
-            base.top = `${rect.bottom}px`;
-        }
-        return base;
     };
 
     return (
@@ -100,13 +94,12 @@ export default function RowActionMenu({ items, ariaLabel = 'Row actions' }: RowA
             </button>
             {open && createPortal(
                 <div
-
+                    ref={menuRef}
                     role="menu"
-                    style={computeMenuStyle()}
+                    style={menuStyle}
                     className={cn(
-                        'min-w-[180px] py-1 z-[9999]',
+                        'min-w-[180px] py-1 z-50',
                         'rounded-xl border border-shell-border bg-shell-surface shadow-elevated',
-                        openUp ? 'bottom-full mb-1' : 'top-full mt-1',
                     )}
                 >
                     {items.map((item, idx) => (

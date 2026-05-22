@@ -120,7 +120,7 @@ export default function CourseEnrollmentDrawer({
                     <div className="rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-4 py-3">
                         <p className="text-sm font-semibold text-[var(--color-warning-fg)]">Roster locked</p>
                         <p className="mt-1 text-sm text-shell-muted">
-                            This course has an exam that has already started or finished, so enrollments can no longer change.
+                            This course has an exam in progress, so enrollments can&apos;t change until it ends.
                         </p>
                     </div>
                 ) : (

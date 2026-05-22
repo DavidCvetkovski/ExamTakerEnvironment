@@ -329,6 +329,56 @@ async def test_full_publish_unpublish_flow(ac: AsyncClient, full_grading_setup):
 
 
 @pytest.mark.anyio
+async def test_set_cut_score_rederives_pass_fail(ac: AsyncClient, full_grading_setup):
+    """Setting a cut score persists it and re-derives passed for results."""
+    s = full_grading_setup
+    admin_token = await login(ac, ADMIN_EMAIL, PASS)
+
+    # Grade the essay so the session has a final percentage.
+    await ac.patch(
+        f"/api/grading/grades/{s['essay_grade_id']}",
+        json={"points_awarded": 8.0, "feedback": "ok"},
+        headers=auth(admin_token),
+    )
+
+    result = await prisma.session_results.find_unique(where={"session_id": s["session"].id})
+    pct = result.percentage
+
+    # Cut score just above this session's percentage → should fail.
+    above = min(100, pct + 5)
+    resp = await ac.patch(
+        f"/api/grading/tests/{s['test_def'].id}/cut-score",
+        json={"cut_score": above},
+        headers=auth(admin_token),
+    )
+    assert resp.status_code == 200
+    refreshed = await prisma.session_results.find_unique(where={"session_id": s["session"].id})
+    assert refreshed.passed is False
+
+    # Cut score at/below the percentage → should pass.
+    below = max(0, pct - 5)
+    await ac.patch(
+        f"/api/grading/tests/{s['test_def'].id}/cut-score",
+        json={"cut_score": below},
+        headers=auth(admin_token),
+    )
+    refreshed = await prisma.session_results.find_unique(where={"session_id": s["session"].id})
+    assert refreshed.passed is True
+
+
+@pytest.mark.anyio
+async def test_student_cannot_set_cut_score(ac: AsyncClient, full_grading_setup):
+    s = full_grading_setup
+    token = await login(ac, STUDENT_EMAIL, PASS)
+    resp = await ac.patch(
+        f"/api/grading/tests/{s['test_def'].id}/cut-score",
+        json={"cut_score": 50},
+        headers=auth(token),
+    )
+    assert resp.status_code == 403
+
+
+@pytest.mark.anyio
 async def test_publish_grades_only_blocks_detail(ac: AsyncClient, full_grading_setup):
     """Publishing with details_visible=false lets the student see the grade in
     the list but blocks the per-question detail with a 403."""

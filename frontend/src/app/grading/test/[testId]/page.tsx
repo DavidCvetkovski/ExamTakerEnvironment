@@ -29,6 +29,7 @@ import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import { useGradingStore, type GradingRun } from '@/stores/useGradingStore';
 import { formatAbsolute, formatScheduled } from '@/lib/relativeTime';
 import { pluralizeCount } from '@/lib/pluralize';
+import { numberRunsByCourse } from '@/lib/runOrdinal';
 
 // Sort controls for the per-blueprint runs picker. Same option set as the
 // analytics picker (so muscle memory transfers between tabs) plus
@@ -140,8 +141,12 @@ export default function GradingRunsPickerPage() {
         () => blueprints.find((b) => b.id === testId) ?? null,
         [blueprints, testId],
     );
-    const rawRuns: GradingRun[] = (testId && runsByTestId[testId]) || [];
+    const rawRuns: GradingRun[] = useMemo(
+        () => (testId && runsByTestId[testId]) || [],
+        [testId, runsByTestId],
+    );
     const [sortKey, setSortKey] = useState<SortKey>('most_pending');
+    const runNumbers = useMemo(() => numberRunsByCourse(rawRuns), [rawRuns]);
     const scheduledRuns = useMemo(
         () => sortRuns(rawRuns, sortKey),
         [rawRuns, sortKey],
@@ -210,7 +215,7 @@ export default function GradingRunsPickerPage() {
                             </div>
                             <div className="flex flex-col gap-3">
                                 {scheduledRuns.map((run) => (
-                                    <RunCard key={run.run_id} testId={testId!} run={run} router={router} />
+                                    <RunCard key={run.run_id} testId={testId!} run={run} router={router} seq={runNumbers.get(run.run_id)} />
                                 ))}
                             </div>
                         </div>
@@ -225,7 +230,9 @@ function RunCard({
     testId,
     run,
     router,
+    seq,
 }: {
+    seq?: number;
     testId: string;
     run: GradingRun;
     router: ReturnType<typeof useRouter>;
@@ -245,6 +252,11 @@ function RunCard({
             <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                     <p className="text-h3 font-semibold text-foreground" title={run.course_code ?? undefined}>
+                        {seq != null && (
+                            <span className="mr-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-shell-input px-1.5 text-meta font-semibold text-shell-muted">
+                                {seq}
+                            </span>
+                        )}
                         {run.course_title ?? 'Scheduled run'}
                     </p>
                     <p

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import type { ItemAnalyticsResponse } from '@/lib/analytics.types';
-import { Button, InfoTooltip } from '@/components/ui';
+import { Button, InfoTooltip, useToast } from '@/components/ui';
 import {
     formatPercent,
     formatIndex,
@@ -54,6 +54,13 @@ export default function AllItemsTable({
     getItemLabel,
 }: AllItemsTableProps) {
     const router = useRouter();
+    const { toast } = useToast();
+
+    const copyId = (learningObjectId: string) => {
+        navigator.clipboard.writeText(learningObjectId).then(() => {
+            toast({ tone: 'success', title: 'ID copied' });
+        });
+    };
     const [sortKey, setSortKey] = useState<SortKey>('stem');
     const [sortDir, setSortDir] = useState<SortDir>('asc');
     const [activeFlag, setActiveFlag] = useState<string>('ALL');
@@ -196,7 +203,15 @@ export default function AllItemsTable({
                                         <span className="text-xs text-shell-muted-dim">Clean</span>
                                     )}
                                 </td>
-                                <td className="px-4 py-4 text-right">
+                                <td className="px-4 py-4 text-right whitespace-nowrap">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => copyId(item.learning_object_id)}
+                                        title="Copy question ID"
+                                    >
+                                        Copy ID
+                                    </Button>
                                     <Button
                                         variant="ghost"
                                         size="sm"

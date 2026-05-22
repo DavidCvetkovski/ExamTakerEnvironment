@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useLibraryStore } from '@/stores/useLibraryStore';
 import { deriveLockedQuestionIds, useBlueprintStore } from '@/stores/useBlueprintStore';
-import { api } from '@/lib/api';
 import {
     Button,
     EmptyState,
@@ -176,7 +175,6 @@ function ItemsLibraryPageInner() {
     const [pointsFilter, setPointsFilter] = useState<'all' | '1' | '2' | '3+'>('all');
     const [sortKey, setSortKey] = useState<SortKey>('course');
     const [sortDir, setSortDir] = useState<SortDir>('asc');
-    const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
     useEffect(() => {
         if (lastEditingLoId) {
@@ -290,18 +288,11 @@ function ItemsLibraryPageInner() {
         }
     };
 
-    const handleDuplicate = async (id: string) => {
-        setDuplicatingId(id);
-        try {
-            const res = await api.post<{ learning_object_id: string }>(`learning-objects/${id}/duplicate`);
-            toast({ tone: 'success', title: 'Question duplicated' });
-            await fetchItems();
-            router.push(`/author?lo_id=${res.data.learning_object_id}`);
-        } catch {
-            toast({ tone: 'danger', title: 'Duplicate failed', description: 'Try again.' });
-        } finally {
-            setDuplicatingId(null);
-        }
+    const handleDuplicate = (id: string) => {
+        // Open the editor seeded from the source as an unsaved new question.
+        // Nothing is persisted until the user hits Save (see useAuthoringStore
+        // seedFromSource / saveDraft create-on-save).
+        router.push(`/author?seedFrom=${id}`);
     };
 
     const handleCopyId = (id: string) => {
@@ -504,9 +495,8 @@ function ItemsLibraryPageInner() {
                                                         items={[
                                                             { label: 'Copy ID', onClick: () => handleCopyId(item.id) },
                                                             {
-                                                                label: duplicatingId === item.id ? 'Duplicating…' : 'Duplicate',
+                                                                label: 'Duplicate',
                                                                 onClick: () => handleDuplicate(item.id),
-                                                                disabled: duplicatingId === item.id,
                                                             },
                                                             {
                                                                 label: isLocked ? 'Inspect' : 'Edit',

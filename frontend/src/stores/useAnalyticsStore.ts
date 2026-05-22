@@ -38,7 +38,7 @@ interface AnalyticsState {
     status: AnalyticsStatus;
     error: string | null;
     lastTestId: string | null;
-    loadTestAnalytics: (testId: string, runId?: string | null, force?: boolean) => Promise<void>;
+    loadTestAnalytics: (testId: string, runId?: string | null, force?: boolean, includeUnpublished?: boolean) => Promise<void>;
     recompute: (testId: string, runId?: string | null) => Promise<void>;
     loadFlaggedItems: (testId: string, runId?: string | null) => Promise<void>;
     loadItemHistory: (loId: string) => Promise<void>;
@@ -63,7 +63,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
     error: null,
     lastTestId: null,
 
-    loadTestAnalytics: async (testId, runId = null, force = false) => {
+    loadTestAnalytics: async (testId, runId = null, force = false, includeUnpublished = false) => {
         const key = bundleKey(testId, runId);
         const existing = get().lastLoadedAt[key];
         if (!force && existing && Date.now() - existing < ANALYTICS_TTL_MS) {
@@ -72,7 +72,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
 
         set({ status: 'loading', error: null });
         try {
-            const bundle = await fetchTestAnalytics(testId, runId);
+            const bundle = await fetchTestAnalytics(testId, runId, includeUnpublished);
             set((state) => ({
                 bundles: { ...state.bundles, [key]: bundle },
                 lastLoadedAt: { ...state.lastLoadedAt, [key]: Date.now() },

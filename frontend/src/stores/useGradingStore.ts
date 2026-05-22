@@ -135,6 +135,7 @@ interface GradingState {
     submitManualGrade: (gradeId: string, payload: ManualGradePayload) => Promise<void>;
     publishResults: (testId: string, detailsVisible?: boolean) => Promise<void>;
     unpublishResults: (testId: string) => Promise<void>;
+    setCutScore: (testId: string, cutScore: number) => Promise<void>;
     exportCsv: (testId: string) => Promise<void>;
     toggleBlindMode: () => void;
     clearError: () => void;
@@ -288,6 +289,14 @@ export const useGradingStore = create<GradingState>((set, get) => ({
         } catch (err) {
             set({ publishStatus: 'error', error: getApiErrorMessage(err, 'Failed to unpublish results') });
         }
+    },
+
+    setCutScore: async (testId: string, cutScore: number) => {
+        await api.patch(`grading/tests/${testId}/cut-score`, { cut_score: cutScore });
+        const overviewRes = await api.get<SessionGradingSummary[]>(
+            `grading/tests/${testId}/grading-overview`
+        );
+        set({ gradingOverview: overviewRes.data });
     },
 
     // ── CSV Export ─────────────────────────────────────────────────────────

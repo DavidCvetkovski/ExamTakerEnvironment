@@ -28,6 +28,7 @@ interface BackendTestStats {
     cronbach_alpha: number | null;
     sem: number | null;
     n_items: number;
+    cut_score: number | null;
     cut_score_analysis: CutScoreScenario[];
 }
 
@@ -55,8 +56,11 @@ interface BackendVersionHistory {
 export async function fetchTestAnalytics(
     testId: string,
     runId: string | null = null,
+    includeUnpublished = false,
 ): Promise<TestAnalyticsBundle> {
-    const params = runId ? { run_id: runId } : undefined;
+    const params: Record<string, string> = {};
+    if (runId) params.run_id = runId;
+    if (includeUnpublished) params.include_unpublished = 'true';
     const [statsRes, itemsRes] = await Promise.all([
         api.get<BackendTestStats>(`analytics/tests/${testId}/stats`, { params }),
         api.get<BackendItemStats>(`analytics/tests/${testId}/item-stats`, { params }),
@@ -72,7 +76,7 @@ export async function fetchTestAnalytics(
     return {
         test: {
             ...statsRes.data,
-            cut_score: 55,
+            cut_score: statsRes.data.cut_score ?? 55,
             computed_at: new Date().toISOString(),
             is_stale: false,
         },

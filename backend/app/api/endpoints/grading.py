@@ -260,6 +260,23 @@ class PublishRequest(BaseModel):
     details_visible: bool = True
 
 
+class CutScoreRequest(BaseModel):
+    cut_score: float
+
+
+@router.patch("/tests/{test_definition_id}/cut-score", summary="Set the pass cut score for a test")
+async def set_cut_score(
+    test_definition_id: UUID,
+    payload: CutScoreRequest,
+    current_user=Depends(_require_admin),
+) -> Dict[str, Any]:
+    """Persist the pass threshold and re-derive pass/fail for all results."""
+    return await results_service.set_test_cut_score(
+        test_definition_id=str(test_definition_id),
+        cut_score=payload.cut_score,
+    )
+
+
 @router.post("/tests/{test_definition_id}/publish-results", summary="Publish results for a test")
 async def publish_results(
     test_definition_id: UUID,

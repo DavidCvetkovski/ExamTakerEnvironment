@@ -160,6 +160,59 @@ async def test_roster_locked_when_session_started(ac: AsyncClient, setup_courses
 
 
 @pytest.mark.anyio
+async def test_closed_session_does_not_lock_roster(ac: AsyncClient, setup_courses_data):
+    """A past/closed exam must not lock the roster — staff still need to enroll
+    students for the next scheduled session in that course."""
+    from datetime import datetime, timedelta, timezone
+
+    import prisma as prisma_lib
+
+    token = await login(ac, ADMIN_EMAIL, ADMIN_PASS)
+    student_id = setup_courses_data["student_id"]
+
+    create_resp = await ac.post(
+        "/api/courses/",
+        json={"code": "BIO401", "title": "Biology 401"},
+        headers=auth(token),
+    )
+    course_id = create_resp.json()["id"]
+
+    test_def = await prisma.test_definitions.create(
+        data={
+            "title": "Past Exam",
+            "created_by": setup_courses_data["admin_id"],
+            "blocks": prisma_lib.Json([]),
+            "duration_minutes": 60,
+        }
+    )
+    now = datetime.now(timezone.utc)
+    # Window entirely in the past → closed, must not lock.
+    await prisma.scheduled_exam_sessions.create(
+        data={
+            "course_id": course_id,
+            "test_definition_id": test_def.id,
+            "created_by": setup_courses_data["admin_id"],
+            "starts_at": now - timedelta(hours=2),
+            "ends_at": now - timedelta(hours=1),
+            "status": "CLOSED",
+        }
+    )
+
+    list_resp = await ac.get(
+        f"/api/courses/{course_id}/enrollments",
+        headers=auth(token),
+    )
+    assert list_resp.json()["roster_locked"] is False
+
+    enroll_resp = await ac.post(
+        f"/api/courses/{course_id}/enrollments",
+        json={"student_id": student_id},
+        headers=auth(token),
+    )
+    assert enroll_resp.status_code == 201
+
+
+@pytest.mark.anyio
 async def test_constructor_cannot_create_course(ac: AsyncClient, setup_courses_data):
     token = await login(ac, CONSTRUCTOR_EMAIL, CONSTRUCTOR_PASS)
 

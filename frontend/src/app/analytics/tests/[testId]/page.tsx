@@ -31,6 +31,7 @@ import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import { formatAbsolute, formatScheduled } from '@/lib/relativeTime';
 import { pluralizeCount } from '@/lib/pluralize';
 import type { AnalyticsRun } from '@/lib/analytics';
+import { numberRunsByCourse } from '@/lib/runOrdinal';
 
 // Sort controls for the "Individual sessions" picker. "Most recent" is the
 // default because the typical drill-in is "what did the last cohort look like
@@ -120,9 +121,13 @@ export default function AnalyticsRunsPickerPage() {
         () => blueprints.find((b) => b.id === testId) ?? null,
         [blueprints, testId],
     );
-    const runs: AnalyticsRun[] = (testId && runsByTestId[testId]) || [];
+    const runs: AnalyticsRun[] = useMemo(
+        () => (testId && runsByTestId[testId]) || [],
+        [testId, runsByTestId],
+    );
     const combined = runs.find((r) => r.kind === 'COMBINED') ?? null;
     const [sortKey, setSortKey] = useState<SortKey>('most_recent');
+    const runNumbers = useMemo(() => numberRunsByCourse(runs), [runs]);
     // "Individual sessions" = scheduled runs only.
     const otherRuns = useMemo(
         () => sortRuns(runs.filter((r) => r.kind === 'ASSIGNED'), sortKey),
@@ -205,6 +210,7 @@ export default function AnalyticsRunsPickerPage() {
                                             testId={testId!}
                                             run={run}
                                             router={router}
+                                            seq={runNumbers.get(run.run_id)}
                                         />
                                     ))}
                                 </div>
@@ -263,7 +269,9 @@ function RunCard({
     testId,
     run,
     router,
+    seq,
 }: {
+    seq?: number;
     testId: string;
     run: AnalyticsRun;
     router: ReturnType<typeof useRouter>;
@@ -283,6 +291,11 @@ function RunCard({
             <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                     <p className="text-h3 font-semibold text-foreground" title={run.course_code ?? undefined}>
+                        {seq != null && (
+                            <span className="mr-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-shell-input px-1.5 text-meta font-semibold text-shell-muted">
+                                {seq}
+                            </span>
+                        )}
                         {run.course_title ?? 'Scheduled run'}
                     </p>
                     <p

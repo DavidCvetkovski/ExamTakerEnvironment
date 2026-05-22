@@ -185,6 +185,7 @@ async def list_analytics_index(
 async def compute_test_item_stats(
     test_definition_id: str,
     run_id: Optional[str] = None,
+    include_unpublished: bool = False,
 ) -> Dict:
     """
     For a given test, compute P-value, D-value, distractor analysis, and flags
@@ -199,14 +200,17 @@ async def compute_test_item_stats(
     author previews, not cohort data. The combined cohort is the
     statistically right default; per-run drill-in is for cohort comparisons.
     Caller is responsible for ``assert_run_belongs_to_test`` first.
+
+    ``include_unpublished`` (educator preview only) drops the published-only
+    filter so analytics can be reviewed before grades are released.
     """
-    all_results = await prisma.session_results.find_many(
-        where={
-            "test_definition_id": test_definition_id,
-            "is_published": True,
-            **build_session_results_run_filter(run_id),
-        }
-    )
+    where: Dict[str, Any] = {
+        "test_definition_id": test_definition_id,
+        **build_session_results_run_filter(run_id),
+    }
+    if not include_unpublished:
+        where["is_published"] = True
+    all_results = await prisma.session_results.find_many(where=where)
     graded_results = [r for r in all_results if r.grading_status != "UNGRADED"]
 
     if not graded_results:
@@ -386,6 +390,7 @@ async def compute_test_stats(
     test_definition_id: str,
     cut_scores: Optional[List[float]] = None,
     run_id: Optional[str] = None,
+    include_unpublished: bool = False,
 ) -> Dict:
     """
     Per-test analytics for Stage 2:
@@ -399,13 +404,13 @@ async def compute_test_stats(
     if cut_scores is None:
         cut_scores = _DEFAULT_CUT_SCORES
 
-    all_results = await prisma.session_results.find_many(
-        where={
-            "test_definition_id": test_definition_id,
-            "is_published": True,
-            **build_session_results_run_filter(run_id),
-        }
-    )
+    stats_where: Dict[str, Any] = {
+        "test_definition_id": test_definition_id,
+        **build_session_results_run_filter(run_id),
+    }
+    if not include_unpublished:
+        stats_where["is_published"] = True
+    all_results = await prisma.session_results.find_many(where=stats_where)
     graded_results = [r for r in all_results if r.grading_status != "UNGRADED"]
 
     test_definition = await prisma.test_definitions.find_unique(
@@ -769,13 +774,20 @@ async def get_latest_test_analytics_bundle(
     test_definition_id: str,
     cut_scores: Optional[List[float]] = None,
     run_id: Optional[str] = None,
+    include_unpublished: bool = False,
 ) -> Optional[Dict]:
-    """Return a live analytics bundle based on the latest published graded results."""
+    """Return a live analytics bundle based on the latest graded results.
+
+    With ``include_unpublished`` (educator preview) the published-only filter
+    is dropped so analytics can be reviewed before grades are released.
+    """
     import asyncio
 
     test_stats, item_stats = await asyncio.gather(
-        compute_test_stats(test_definition_id, cut_scores=cut_scores, run_id=run_id),
-        compute_test_item_stats(test_definition_id, run_id=run_id),
+        compute_test_stats(test_definition_id, cut_scores=cut_scores, run_id=run_id,
+                           include_unpublished=include_unpublished),
+        compute_test_item_stats(test_definition_id, run_id=run_id,
+                                include_unpublished=include_unpublished),
     )
     if test_stats["total_sessions"] == 0:
         return None
@@ -791,16 +803,19 @@ async def recompute_test_analytics_bundle(
     test_definition_id: str,
     cut_scores: Optional[List[float]] = None,
     run_id: Optional[str] = None,
+    include_unpublished: bool = False,
 ) -> Dict:
     """Recompute and return the live analytics bundle."""
     bundle = await get_latest_test_analytics_bundle(
         test_definition_id,
         cut_scores=cut_scores,
         run_id=run_id,
+        include_unpublished=include_unpublished,
     )
     if bundle is None:
         test_stats = await compute_test_stats(
             test_definition_id, cut_scores=cut_scores, run_id=run_id,
+            include_unpublished=include_unpublished,
         )
         if test_stats["total_sessions"] == 0:
             raise ValueError("No published analytics data available for this test.")
@@ -820,10 +835,12 @@ async def get_cut_score_scenarios(
     test_definition_id: str,
     cut_scores: List[float],
     run_id: Optional[str] = None,
+    include_unpublished: bool = False,
 ) -> List[Dict]:
     """Return pass-rate scenarios for the supplied cut scores."""
     test_stats = await compute_test_stats(
         test_definition_id, cut_scores=cut_scores, run_id=run_id,
+        include_unpublished=include_unpublished,
     )
     return test_stats["cut_score_analysis"]
 
@@ -831,6 +848,7 @@ async def get_cut_score_scenarios(
 async def compute_section_analytics(
     test_definition_id: str,
     run_id: Optional[str] = None,
+    include_unpublished: bool = False,
 ) -> Dict:
     """
     Per-section (per-block) aggregate analytics for a test (Epoch 8.4 Stage 9).
@@ -855,7 +873,9 @@ async def compute_section_analytics(
             if rule.get("rule_type") == "FIXED" and rule.get("learning_object_id"):
                 lo_to_section[str(rule["learning_object_id"])] = idx
 
-    item_stats = await compute_test_item_stats(test_definition_id, run_id=run_id)
+    item_stats = await compute_test_item_stats(
+        test_definition_id, run_id=run_id, include_unpublished=include_unpublished,
+    )
     items = item_stats.get("items", [])
 
     section_items: Dict[int, List[Dict]] = defaultdict(list)

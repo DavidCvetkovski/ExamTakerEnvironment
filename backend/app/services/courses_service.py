@@ -60,28 +60,32 @@ async def list_courses() -> List[Any]:
 
 
 async def is_course_roster_locked(course_id: str) -> bool:
-    """A course roster is frozen once any of its exams has started or ended.
+    """A course roster is frozen only while one of its exams is *currently
+    ongoing* (``starts_at <= now < ends_at``, not canceled).
 
-    Derived from the session window (``starts_at <= now``) rather than the
-    persisted status, so a not-yet-synced ACTIVE/CLOSED session still locks the
-    roster. Canceled sessions never lock — they never ran.
+    Closed/past and future/scheduled sessions do not lock — otherwise a course
+    with any past exam could never enroll students for an upcoming session.
+    Derived from the window rather than the persisted status so a not-yet-synced
+    ACTIVE session still locks.
     """
-    started = await prisma.scheduled_exam_sessions.find_first(
+    now = datetime.now(timezone.utc)
+    ongoing = await prisma.scheduled_exam_sessions.find_first(
         where={
             "course_id": course_id,
             "status": {"not": CourseSessionStatus.CANCELED.value},
-            "starts_at": {"lte": datetime.now(timezone.utc)},
+            "starts_at": {"lte": now},
+            "ends_at": {"gt": now},
         }
     )
-    return started is not None
+    return ongoing is not None
 
 
 async def assert_roster_mutable(course_id: str) -> None:
-    """Reject roster edits once the course has a started or finished exam."""
+    """Reject roster edits while the course has an exam in progress."""
     if await is_course_roster_locked(course_id):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Roster is locked — this course has an exam that has already started.",
+            detail="Roster is locked — this course has an exam in progress.",
         )
 
 

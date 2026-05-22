@@ -56,6 +56,9 @@ interface AuthoringState {
     serverSnapshot: DraftSnapshot | null;
     isDirty: boolean;
     partialPoints: boolean;
+    /** True while editing a brand-new question that has no LO yet (duplicate
+     * flow). saveDraft creates the LO on first save. */
+    isNewDraft: boolean;
 
     setLearningObjectId: (id: string) => void;
     setQuestionType: (type: 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY') => void;
@@ -67,6 +70,7 @@ interface AuthoringState {
     saveDraft: () => Promise<void>;
     revertChanges: () => void;
     fetchLatestVersion: (loId: string) => Promise<void>;
+    seedFromSource: (sourceLoId: string) => Promise<void>;
     setPartialPoints: (on: boolean) => void;
 }
 
@@ -95,6 +99,7 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
     serverSnapshot: null,
     isDirty: false,
     partialPoints: true,
+    isNewDraft: false,
 
     setLearningObjectId: (id) => set({ learningObjectId: id }),
 
@@ -162,12 +167,20 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
     },
 
     saveDraft: async () => {
-        const state = get();
-        if (!state.learningObjectId) return;
+        let state = get();
+        if (!state.learningObjectId && !state.isNewDraft) return;
 
         set({ saveStatus: 'SAVING' });
 
         try {
+            // New duplicate/draft: create the owning LO on first save so nothing
+            // is persisted until the user commits.
+            if (!state.learningObjectId) {
+                const created = await api.post<{ learning_object_id: string }>('learning-objects');
+                set({ learningObjectId: created.data.learning_object_id, isNewDraft: false });
+                state = get();
+            }
+
             const snap = state.serverSnapshot;
             const versionDirty = !snap || (
                 JSON.stringify(state.tiptapJson) !== JSON.stringify(snap.tiptapJson) ||
@@ -327,6 +340,80 @@ export const useAuthoringStore = create<AuthoringState>((set, get) => ({
             if (status === 404) {
                 throw error;
             }
+        }
+    },
+
+    // Seed the editor with a copy of another question's latest version as a
+    // brand-new, UNSAVED question (no LO created yet). The baseline snapshot is
+    // empty, so the seeded content reads dirty and stays dirty as the user
+    // edits; saveDraft creates the LO + first version on Save. Leaving without
+    // saving persists nothing.
+    seedFromSource: async (sourceLoId: string) => {
+        set({ saveStatus: 'SAVING' });
+        try {
+            const [summaryRes, res] = await Promise.all([
+                api.get<LearningObjectSummary>(`learning-objects/${sourceLoId}`),
+                api.get<StoredItemVersion[]>(`learning-objects/${sourceLoId}/versions`),
+            ]);
+            const courseId = summaryRes.data.course_id ?? null;
+            const versions = res.data;
+            if (!versions || versions.length === 0) {
+                set({ saveStatus: 'IDLE' });
+                return;
+            }
+            const latest = versions[0];
+            let content = latest.content || {};
+            if (content.text && !content.type) {
+                content = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: content.text }] }] };
+            }
+
+            let optionsData: MCQOption[] | EssayOptions;
+            if (latest.question_type === 'MULTIPLE_CHOICE' || latest.question_type === 'MULTIPLE_RESPONSE') {
+                const rawChoices = latest.options?.choices || [];
+                optionsData = Array.isArray(rawChoices) ? rawChoices.map((choice, index) => ({
+                    ...choice,
+                    id: choice.id || String.fromCharCode(65 + index),
+                    text: choice.text || '',
+                    is_correct: choice.is_correct ?? false,
+                    weight: choice.weight ?? 1.0,
+                })) : [];
+            } else {
+                optionsData = {
+                    min_words: latest.options?.min_words ?? 50,
+                    max_words: latest.options?.max_words ?? 500,
+                };
+            }
+
+            // Copy metadata but drop review feedback — it belongs to the source.
+            const metadataTags = { ...(latest.metadata_tags || {}) };
+            delete (metadataTags as Record<string, unknown>).review_feedback;
+
+            // Empty baseline so the seeded content is "unsaved changes".
+            const emptyBaseline: DraftSnapshot = {
+                questionType: latest.question_type,
+                courseId: null,
+                tiptapJson: { type: 'doc', content: [] },
+                options: latest.question_type === 'ESSAY' ? { min_words: 0, max_words: 0 } : [],
+                metadataTags: {},
+            };
+
+            set({
+                learningObjectId: null,
+                itemId: null,
+                versionNumber: 0,
+                isNewDraft: true,
+                questionType: latest.question_type,
+                courseId,
+                tiptapJson: structuredClone(content),
+                options: structuredClone(optionsData),
+                metadataTags,
+                serverSnapshot: emptyBaseline,
+                isDirty: true,
+                saveStatus: 'IDLE',
+            });
+        } catch (error) {
+            console.error('Failed to seed from source:', error);
+            set({ saveStatus: 'ERROR' });
         }
     },
 

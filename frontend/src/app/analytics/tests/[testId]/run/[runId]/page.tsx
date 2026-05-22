@@ -45,18 +45,21 @@ export default function TestAnalyticsDashboardPage() {
     const [cutScore, setCutScore] = useState(55);
     const [sections, setSections] = useState<SectionAnalytics[]>([]);
     const [activeSection, setActiveSection] = useState<number | null>(null);
+    const [includeUnpublished, setIncludeUnpublished] = useState(false);
 
     useEffect(() => {
         fetchBlueprints();
         fetchItems();
         if (testId) {
-            void loadTestAnalytics(testId, runId);
+            // Force a refetch whenever the preview flag flips so the cached
+            // published-only bundle isn't reused.
+            void loadTestAnalytics(testId, runId, includeUnpublished, includeUnpublished);
             void loadAnalyticsRuns(testId);
             setLastTestId(testId);
         }
     }, [
         fetchBlueprints, fetchItems, loadTestAnalytics, loadAnalyticsRuns,
-        testId, runId, setLastTestId,
+        testId, runId, setLastTestId, includeUnpublished,
     ]);
 
     // Fetch per-section aggregates (Epoch 8.4 Stage 9).
@@ -66,7 +69,9 @@ export default function TestAnalyticsDashboardPage() {
         (async () => {
             try {
                 const { api: apiInstance } = await import('@/lib/api');
-                const params = runId ? { run_id: runId } : undefined;
+                const params: Record<string, string> = {};
+                if (runId) params.run_id = runId;
+                if (includeUnpublished) params.include_unpublished = 'true';
                 const res = await apiInstance.get<{ sections: SectionAnalytics[] }>(
                     `analytics/tests/${testId}/sections`,
                     { params },
@@ -77,7 +82,7 @@ export default function TestAnalyticsDashboardPage() {
             }
         })();
         return () => { cancelled = true; };
-    }, [testId, runId]);
+    }, [testId, runId, includeUnpublished]);
 
     const cacheKey = testId ? bundleKey(testId, runId) : '';
     const bundle = bundles[cacheKey];
@@ -118,7 +123,9 @@ export default function TestAnalyticsDashboardPage() {
 
     const handleDownloadPdf = async () => {
         const { api: apiInstance } = await import('@/lib/api');
-        const params = runId ? { run_id: runId } : undefined;
+        const params: Record<string, string> = {};
+        if (runId) params.run_id = runId;
+        if (includeUnpublished) params.include_unpublished = 'true';
         const res = await apiInstance.get(`analytics/tests/${testId}/export.pdf`, {
             responseType: 'blob',
             params,
@@ -126,7 +133,9 @@ export default function TestAnalyticsDashboardPage() {
         const url = URL.createObjectURL(new Blob([res.data as BlobPart], { type: 'application/pdf' }));
         const a = document.createElement('a');
         a.href = url;
-        a.download = `analytics_${testId}${runId ? `_run_${runId}` : ''}.pdf`;
+        const slug = testTitle.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'analytics';
+        const date = new Date().toISOString().slice(0, 10);
+        a.download = `${slug}_analytics${runId ? `_run-${runId.slice(0, 8)}` : ''}_${date}.pdf`;
         a.click();
         URL.revokeObjectURL(url);
     };
@@ -153,13 +162,21 @@ export default function TestAnalyticsDashboardPage() {
                                 <h1 className="mt-2 text-3xl font-bold text-foreground">{testTitle}</h1>
                                 <p className="mt-2 text-sm text-shell-muted">
                                     {bundle
-                                        ? `${bundle.test.total_sessions} published sessions · computed ${
+                                        ? `${bundle.test.total_sessions} ${includeUnpublished ? 'graded' : 'published'} sessions · computed ${
                                             bundle.test.computed_at ? formatRelativeTime(bundle.test.computed_at) : 'recently'
                                         }`
                                         : 'Loading analytics snapshot...'}
                                 </p>
                             </div>
                             <div className="flex items-center gap-3">
+                                <Button
+                                    variant={includeUnpublished ? 'primary' : 'secondary'}
+                                    size="sm"
+                                    onClick={() => setIncludeUnpublished((v) => !v)}
+                                    title="Preview analytics including grades not yet released to students"
+                                >
+                                    {includeUnpublished ? 'Previewing unpublished' : 'Include unpublished'}
+                                </Button>
                                 <Button
                                     variant="secondary"
                                     size="sm"
@@ -185,6 +202,12 @@ export default function TestAnalyticsDashboardPage() {
                         <div className="mb-6 flex items-start justify-between gap-4 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-danger">
                             <span>{error}</span>
                             <button onClick={clearError} className="text-danger hover:text-foreground">Close</button>
+                        </div>
+                    ) : null}
+
+                    {includeUnpublished ? (
+                        <div className="mb-6 rounded-xl border border-[var(--color-info-border)] bg-[var(--color-info-bg)] px-4 py-3 text-sm text-[var(--color-info-fg)]">
+                            Preview mode: this includes graded results that have <strong>not</strong> been published to students yet.
                         </div>
                     ) : null}
 

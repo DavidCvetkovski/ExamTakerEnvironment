@@ -248,7 +248,7 @@ async def test_pdf_export_ownership_gate(ac, monkeypatch, analytics_ids):
 @pytest.mark.anyio
 async def test_pdf_export_returns_pdf_bytes(ac, monkeypatch, analytics_ids):
     """Happy path: CONSTRUCTOR receives a non-empty PDF response."""
-    async def fake_render_pdf(test_definition_id: str, run_id=None) -> bytes:
+    async def fake_render_pdf(test_definition_id: str, run_id=None, include_unpublished=False) -> bytes:
         # Minimal valid PDF stub. Signature matches the real render_pdf,
         # which gained `run_id` in Epoch 8.6 Stage 2 for per-run exports.
         return b"%PDF-1.4 stub content for testing"

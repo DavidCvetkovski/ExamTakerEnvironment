@@ -356,6 +356,47 @@ async def submit_manual_grade(
 # Publication
 # ─────────────────────────────────────────────
 
+async def set_test_cut_score(test_definition_id: str, cut_score: float) -> Dict[str, Any]:
+    """Persist the pass cut score for a test and re-derive pass/fail.
+
+    Stores ``pass_percentage`` and a Pass/Fail boundary at ``cut_score`` on the
+    test's ``scoring_config``, then recomputes every existing session_result's
+    ``passed``/``letter_grade`` as ``percentage >= cut_score``.
+    """
+    if cut_score < 0 or cut_score > 100:
+        raise HTTPException(status_code=400, detail="Cut score must be between 0 and 100.")
+
+    test_definition = await prisma.test_definitions.find_unique(where={"id": test_definition_id})
+    if not test_definition:
+        raise HTTPException(status_code=404, detail="Test definition not found.")
+
+    from prisma import Json
+    raw = test_definition.scoring_config
+    config = (json.loads(raw) if isinstance(raw, str) else raw) or {}
+    if not isinstance(config, dict):
+        config = {}
+    config["pass_percentage"] = cut_score
+    config["grade_boundaries"] = [
+        {"min_percentage": float(cut_score), "grade": "Pass"},
+        {"min_percentage": 0.0, "grade": "Fail"},
+    ]
+    await prisma.test_definitions.update(
+        where={"id": test_definition_id},
+        data={"scoring_config": Json(config)},
+    )
+
+    now = datetime.now(timezone.utc)
+    passed_count = await prisma.session_results.update_many(
+        where={"test_definition_id": test_definition_id, "percentage": {"gte": cut_score}},
+        data={"passed": True, "letter_grade": "Pass", "updated_at": now},
+    )
+    failed_count = await prisma.session_results.update_many(
+        where={"test_definition_id": test_definition_id, "percentage": {"lt": cut_score}},
+        data={"passed": False, "letter_grade": "Fail", "updated_at": now},
+    )
+    return {"cut_score": cut_score, "passed": passed_count, "failed": failed_count}
+
+
 async def publish_results(
     test_definition_id: str, publisher_id: str, details_visible: bool = True
 ) -> Dict[str, Any]:

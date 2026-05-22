@@ -23,6 +23,7 @@ import {
     TR,
     cn,
     XIcon,
+    useToast,
 } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
 import { formatAbsolute, formatRelativeTime } from '@/lib/relativeTime';
@@ -83,19 +84,39 @@ export default function TestGradingDashboard() {
         blindMode, publishStatus, error,
         setSelectedTestId, setSelectedRunId,
         fetchGradingOverview, fetchGradingRuns,
-        publishResults, unpublishResults,
+        publishResults, unpublishResults, setCutScore,
         exportCsv, toggleBlindMode, clearError,
     } = useGradingStore();
     const { blueprints, fetchBlueprints } = useBlueprintStore();
+    const { toast } = useToast();
 
     const [filterStatus, setFilterStatus] = useState<GradingStatus | 'ALL'>('ALL');
     const [sortKey, setSortKey] = useState<'student' | 'status' | 'percentage' | 'submitted'>('student');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
     const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+    const [cutScoreInput, setCutScoreInput] = useState('');
+    const [cutScoreBusy, setCutScoreBusy] = useState(false);
 
     const handlePublish = (detailsVisible: boolean) => {
         setPublishDialogOpen(false);
         if (testId) void publishResults(testId, detailsVisible);
+    };
+
+    const handleSaveCutScore = async () => {
+        const value = Math.round(Number(cutScoreInput));
+        if (!testId || cutScoreInput === '' || Number.isNaN(value) || value < 0 || value > 100) {
+            toast({ tone: 'danger', title: 'Invalid cut score', description: 'Enter a whole number 0–100.' });
+            return;
+        }
+        setCutScoreBusy(true);
+        try {
+            await setCutScore(testId, value);
+            toast({ tone: 'success', title: 'Cut score saved', description: `Pass mark set to ${value}%.` });
+        } catch {
+            toast({ tone: 'danger', title: 'Could not save cut score' });
+        } finally {
+            setCutScoreBusy(false);
+        }
     };
 
     // Keep the store in sync with the URL — single source of truth is the route param.
@@ -225,6 +246,25 @@ export default function TestGradingDashboard() {
                     </div>
 
                     <div className="flex-1" />
+
+                    {isAdmin && (
+                        <div className="flex items-center gap-2">
+                            <label className="text-meta text-shell-muted-dim" htmlFor="cut-score">Cut score %</label>
+                            <input
+                                id="cut-score"
+                                type="number"
+                                min={0}
+                                max={100}
+                                value={cutScoreInput}
+                                onChange={(e) => setCutScoreInput(e.target.value)}
+                                placeholder="55"
+                                className="w-16 rounded-md border border-shell-border bg-shell-input px-2 py-1 text-sm text-foreground outline-none focus:border-brand"
+                            />
+                            <Button variant="secondary" size="sm" onClick={handleSaveCutScore} loading={cutScoreBusy}>
+                                Set
+                            </Button>
+                        </div>
+                    )}
 
                     <Button
                         variant={blindMode ? 'primary' : 'secondary'}

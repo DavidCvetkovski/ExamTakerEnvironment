@@ -48,8 +48,10 @@ The project is structured into distinct "Epochs," each representing a major mile
 - `app/models/`: SQLAlchemy database models.
 - `app/schemas/`: Pydantic models for data validation (DTOs).
 - `app/core/`: Security (JWT), Database config, and dependencies.
-- `alembic/`: Database migration scripts for schema versioning.
 - `tests/`: Pytest suite (Unit, Integration, RBAC).
+
+> Schema is owned by `prisma/schema.prisma` and applied with `prisma db push`
+> (see `dev-up.sh`). There is no Alembic — it was removed in Epoch 8.9.1.
 
 ### 📂 `frontend/` (Next.js / TypeScript)
 - `src/app/`: App Router pages (login, author, blueprint, exam, items).
@@ -91,9 +93,10 @@ docker-compose up -d
    ```bash
    pip install -r requirements.txt
    ```
-4. Run migrations (to create the DB tables):
+4. Apply the schema (creates/updates DB tables from `prisma/schema.prisma`):
    ```bash
-   alembic upgrade head
+   npx prisma@5.17.0 generate --schema=../prisma/schema.prisma
+   npx prisma@5.17.0 db push --schema=../prisma/schema.prisma --accept-data-loss
    ```
 5. Start the server:
    ```bash

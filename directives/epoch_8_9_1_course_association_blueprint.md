@@ -38,39 +38,44 @@ point: `NULL` = *Unassigned*, mirroring `learning_objects.course_id` exactly so
 the two domains stay consistent (CLAUDE.md §2 single-source-of-truth for the
 "course association" concept).
 
-### 3.1 Alembic migration (`add_course_to_test_definitions`)
+### 3.1 Schema change (Prisma — single source of truth)
 
-Model it on `7d3f1b8a9c2e_add_course_to_learning_objects.py`:
+> **No Alembic.** Per the Epoch 4.6 decision and CLAUDE.md Tech Stack, the schema
+> is owned by `prisma/schema.prisma` and applied with `prisma db push`. Alembic
+> was removed in Epoch 8.9.1 (it had drifted out of sync and was redundant).
 
-```python
-down_revision = "7d3f1b8a9c2e"  # current head
+In `prisma/schema.prisma`, add to `model test_definitions`:
 
-def upgrade():
-    op.add_column("test_definitions", sa.Column("course_id", sa.UUID(), nullable=True))
-    op.create_index("ix_test_definitions_course_id", "test_definitions", ["course_id"])
-    op.create_foreign_key(
-        "fk_test_definitions_course_id_courses",
-        "test_definitions", "courses", ["course_id"], ["id"],
-    )
+```prisma
+course_id String?  @db.Uuid
+courses   courses? @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-def downgrade():
-    op.drop_constraint("fk_test_definitions_course_id_courses", "test_definitions", type_="foreignkey")
-    op.drop_index("ix_test_definitions_course_id", table_name="test_definitions")
-    op.drop_column("test_definitions", "course_id")
+@@index([course_id], map: "ix_test_definitions_course_id")
 ```
 
-- Index on the FK column per CLAUDE.md §4 (every FK indexed; read-heavy filters).
-- **DB reconciliation note:** the dev DB's `alembic_version` is behind the real
-  schema (reads `eb86591258e8` while the schema already has
-  `learning_objects.course_id`). Before applying, `alembic stamp head` if the
-  column-adds it would replay are already present, then apply only the new
-  revision. Verify with a guarded check (column existence) rather than blind
-  `upgrade head`.
+And add the back-relation on `model courses`:
 
-### 3.2 ORM + Prisma
+```prisma
+test_definitions test_definitions[]
+```
+
+Apply it (mirrors `dev-up.sh`):
+
+```bash
+npx prisma@5.17.0 generate --schema=prisma/schema.prisma
+npx prisma@5.17.0 db push --schema=prisma/schema.prisma --accept-data-loss
+```
+
+- `course_id` is **nullable** → additive, no data-loss risk on `db push`.
+- Index on the FK column per CLAUDE.md §4 (every FK indexed; read-heavy filter).
+
+### 3.2 SQLAlchemy model (kept for enums/types only)
 
 - `models/test_definition.py`: add `course_id = Column(UUID(as_uuid=True), ForeignKey("courses.id"), nullable=True)` and a `course` relationship.
-- `prisma/schema.prisma`: add `course_id String? @db.Uuid`, the `courses` relation, and the `@@index`. Mirror the back-relation field on `courses` (`test_definitions test_definitions[]`). Regenerate the Prisma client (`prisma generate`).
+- The SQLAlchemy models are **not** the schema mechanism (Prisma `db push` is).
+  They're retained because services import enums/types from `models/` (e.g.
+  `UserRole`, `BlueprintStatus`, `CourseSessionStatus`) and `verify_stage1.py`
+  uses them. Keeping the column on the model keeps `models/` an honest mirror.
 
 ## 4. Backend
 
@@ -225,14 +230,14 @@ by targeted unit tests on the pure filter/derivation helpers.)
 
 ### 7.3 Definition of done
 
-- `alembic upgrade head` applies cleanly; `prisma generate` succeeds.
+- `prisma db push` applies cleanly; `prisma generate` succeeds.
 - All new + existing backend tests green (`pytest`).
 - Frontend type-checks/builds; design-token audit grep (CLAUDE.md §7.1) empty.
 - Manual smoke of all four surfaces in at least the default theme.
 
 ## 8. Execution order
 
-1. Migration + ORM + Prisma schema + `prisma generate` + DB reconcile.
+1. Prisma schema (`course_id` + relation + index) → `prisma db push` + `prisma generate`; mirror the column on the SQLAlchemy model.
 2. Backend schemas → service (validation + list filter) → endpoints → scheduling guard → import persister/template.
 3. Backend tests (7.1) — write and run; iterate to green.
 4. Frontend store types + blueprint editor (F1) → list filter (F2) → session gate (F3) → library topic filter (F4).

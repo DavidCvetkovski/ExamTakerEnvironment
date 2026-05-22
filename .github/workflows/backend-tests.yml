@@ -40,20 +40,34 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
-          
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install flake8 pytest pytest-asyncio httpx
           if [ -f backend/requirements.txt ]; then pip install -r backend/requirements.txt; fi
-          
+
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
           flake8 backend/ --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 backend/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-          
+
+      - name: Apply database schema (Prisma)
+        # Prisma is the single source of truth for the schema (see CLAUDE.md
+        # Tech Stack note). This mirrors dev-up.sh — no Alembic.
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/openvision
+        run: |
+          npx prisma@5.17.0 generate --schema=prisma/schema.prisma
+          npx prisma@5.17.0 db push --schema=prisma/schema.prisma --accept-data-loss
+
       - name: Run Schema Verification
         env:
           POSTGRES_USER: postgres
@@ -63,5 +77,4 @@ jobs:
           POSTGRES_PORT: 5432
         run: |
           cd backend
-          alembic upgrade head
           python verify_stage1.py

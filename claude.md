@@ -270,8 +270,9 @@ Toggle via the global `ThemeToggle` in the header. New surfaces must look right 
 | Styling     | Tailwind CSS                   | Utility-first, design tokens in `globals.css` |
 | Themes      | `data-theme` on `<html>`       | `dark` / `warm` / `light-blue`; scoped overrides via `data-theme-scope` |
 | Backend     | FastAPI                        | Python 3.14, async endpoints      |
-| ORM         | SQLAlchemy + Prisma Client     | SQLAlchemy for models, Prisma for queries |
+| ORM         | SQLAlchemy + Prisma Client     | SQLAlchemy for models/enums/types only; Prisma for queries |
 | Database    | PostgreSQL                     | JSONB for flexible data           |
+| Schema/Migrations | Prisma (`prisma db push`) | **Single source of truth = `prisma/schema.prisma`.** Dev (`dev-up.sh`) and CI both apply it via `prisma db push`. **There is no Alembic** — it was removed in Epoch 8.9.1 (it had drifted out of sync). Do not reintroduce it. |
 | Auth        | JWT (access + refresh tokens)  | bcrypt password hashing           |
 | Testing     | Pytest (backend), Playwright (E2E) |                              |
 | DevOps      | Docker Compose                 | Local dev environment             |

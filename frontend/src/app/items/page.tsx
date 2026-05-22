@@ -219,9 +219,27 @@ function ItemsLibraryPageInner() {
         ).entries()
     ).sort((left, right) => left[1].localeCompare(right[1]));
 
-    const uniqueTopics = Array.from(
-        new Set(items.map((item) => getMetadataString(item.metadata_tags?.topic)).filter((v): v is string => v !== null))
-    ).sort((left, right) => left.localeCompare(right));
+    // F4 (Epoch 8.9.1): when a course is selected, only surface topics that
+    // actually have items under that course — no empty topic options.
+    const uniqueTopics = useMemo(() => {
+        const scoped = items.filter((item) =>
+            courseFilter === 'all'
+                ? true
+                : courseFilter === 'unassigned'
+                    ? !item.course_id
+                    : item.course_id === courseFilter
+        );
+        return Array.from(
+            new Set(scoped.map((item) => getMetadataString(item.metadata_tags?.topic)).filter((v): v is string => v !== null))
+        ).sort((left, right) => left.localeCompare(right));
+    }, [items, courseFilter]);
+
+    // If the active topic no longer exists under the selected course, clear it.
+    useEffect(() => {
+        if (topicFilter !== 'all' && !uniqueTopics.includes(topicFilter)) {
+            setTopicFilter('all');
+        }
+    }, [uniqueTopics, topicFilter]);
 
     const handleColumnSort = (key: SortKey) => {
         if (sortKey === key) {

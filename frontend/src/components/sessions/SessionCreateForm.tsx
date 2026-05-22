@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import type { TestDefinition } from '@/stores/useBlueprintStore';
 import type { Course } from '@/stores/useCourseStore';
@@ -50,6 +50,20 @@ export default function SessionCreateForm({
     useEffect(() => {
         setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
     }, []);
+
+    // F3 (Epoch 8.9.1): a blueprint is selectable for a course only when it is
+    // assigned to that course or unassigned. Backend enforces this too.
+    const availableBlueprints = useMemo(() => {
+        if (!courseId) return [];
+        return blueprints.filter((bp) => !bp.course_id || bp.course_id === courseId);
+    }, [blueprints, courseId]);
+
+    // Reset a now-invalid blueprint selection when the course changes.
+    useEffect(() => {
+        if (testDefinitionId && !availableBlueprints.some((bp) => bp.id === testDefinitionId)) {
+            setTestDefinitionId('');
+        }
+    }, [availableBlueprints, testDefinitionId]);
 
     const handleCreateCourse = async (event: React.FormEvent) => {
         event.preventDefault();
@@ -119,13 +133,14 @@ export default function SessionCreateForm({
                             aria-label="Blueprint"
                             value={testDefinitionId}
                             onChange={(event) => setTestDefinitionId(event.target.value)}
-                            className="w-full rounded-2xl border border-shell-border bg-shell-input px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand"
+                            disabled={!courseId}
+                            className="w-full rounded-2xl border border-shell-border bg-shell-input px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand disabled:cursor-not-allowed disabled:opacity-50"
                             required
                         >
-                            <option value="">Select a blueprint</option>
-                            {blueprints.map((blueprint) => (
+                            <option value="">{courseId ? 'Select a blueprint' : 'Select a course first'}</option>
+                            {availableBlueprints.map((blueprint) => (
                                 <option key={blueprint.id} value={blueprint.id}>
-                                    {blueprint.title}
+                                    {blueprint.title}{!blueprint.course_id ? ' (Unassigned)' : ''}
                                 </option>
                             ))}
                         </select>

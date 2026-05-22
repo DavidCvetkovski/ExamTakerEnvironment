@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import { DEFAULT_SCORING_CONFIG, useBlueprintStore, SelectionRule, TestDefinition, type BlueprintStatusFilter } from '@/stores/useBlueprintStore';
+import { useCourseStore } from '@/stores/useCourseStore';
 import { useExamStore } from '@/stores/useExamStore';
 import { useImportStore } from '@/stores/useImportStore';
 import { useNavGuardStore } from '@/stores/useNavGuardStore';
@@ -39,6 +40,8 @@ function BlueprintPageInner() {
         usageMap,
         statusFilter,
         setStatusFilter,
+        courseFilter,
+        setCourseFilter,
         fetchBlueprints,
         fetchBlueprint,
         fetchAvailableItems,
@@ -52,6 +55,7 @@ function BlueprintPageInner() {
         setViewMode,
     } = useBlueprintStore();
 
+    const { courses, fetchCourses } = useCourseStore();
     const { instantiateSession } = useExamStore();
     const { rawText: importDraft, commitStatus: importCommitStatus } = useImportStore();
     const router = useRouter();
@@ -75,6 +79,7 @@ function BlueprintPageInner() {
 
     useEffect(() => {
         fetchAvailableItems();
+        fetchCourses();
         if (idFromUrl) {
             setLastEditingId(idFromUrl);
             fetchBlueprint(idFromUrl);
@@ -179,13 +184,18 @@ function BlueprintPageInner() {
         if (statusFilter !== 'ALL') {
             list = list.filter((bp) => (usageMap[bp.id]?.status ?? 'NEW') === statusFilter);
         }
+        if (courseFilter !== 'all') {
+            list = list.filter((bp) =>
+                courseFilter === 'unassigned' ? !bp.course_id : bp.course_id === courseFilter
+            );
+        }
         if (sortKey === 'created_desc') list = [...list].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         if (sortKey === 'created_asc')  list = [...list].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         if (sortKey === 'updated_desc') list = [...list].sort((a, b) => new Date(b.updated_at ?? b.created_at).getTime() - new Date(a.updated_at ?? a.created_at).getTime());
         if (sortKey === 'duration_asc') list = [...list].sort((a, b) => a.duration_minutes - b.duration_minutes);
         if (sortKey === 'duration_desc') list = [...list].sort((a, b) => b.duration_minutes - a.duration_minutes);
         return list;
-    }, [blueprints, usageMap, statusFilter, search, sortKey]);
+    }, [blueprints, usageMap, statusFilter, courseFilter, search, sortKey]);
 
     const handleAddBlock = () => {
         if (!currentBlueprint) return;
@@ -397,6 +407,20 @@ function BlueprintPageInner() {
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                             />
+                        </div>
+                        <div className="min-w-[200px]">
+                            <Select
+                                inputSize="md"
+                                aria-label="Filter by course"
+                                value={courseFilter}
+                                onChange={(e) => setCourseFilter(e.target.value)}
+                            >
+                                <option value="all">All courses</option>
+                                <option value="unassigned">Unassigned</option>
+                                {courses.map((course) => (
+                                    <option key={course.id} value={course.id}>{course.title}</option>
+                                ))}
+                            </Select>
                         </div>
                         <div className="min-w-[200px]">
                             <Select
@@ -673,6 +697,21 @@ function BlueprintPageInner() {
 
                                 {/* Config Bar */}
                                 <div className="flex flex-wrap items-center gap-6 p-6 bg-shell-input/40 rounded-2xl mb-12">
+                                    <div className="flex-1 min-w-[180px]">
+                                        <label className="mb-2 block text-eyebrow-sm font-bold uppercase tracking-widest text-brand">Course</label>
+                                        <Select
+                                            inputSize="md"
+                                            aria-label="Course"
+                                            value={currentBlueprint?.course_id ?? ''}
+                                            disabled={inspectMode}
+                                            onChange={(e) => saveState({ course_id: e.target.value === '' ? null : e.target.value })}
+                                        >
+                                            <option value="">Unassigned</option>
+                                            {courses.map((course) => (
+                                                <option key={course.id} value={course.id}>{course.title}</option>
+                                            ))}
+                                        </Select>
+                                    </div>
                                     <div className="flex-1 min-w-[150px]">
                                         <label className="mb-2 block text-eyebrow-sm font-bold uppercase tracking-widest text-brand">Duration (minutes)</label>
                                         <div className="flex items-center">

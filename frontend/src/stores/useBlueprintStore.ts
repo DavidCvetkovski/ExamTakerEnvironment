@@ -53,6 +53,8 @@ export interface TestDefinition {
     id: string;
     title: string;
     description?: string;
+    /** Optional course association (Epoch 8.9.1). null/undefined == Unassigned. */
+    course_id?: string | null;
     blocks: TestBlock[];
     duration_minutes: number;
     shuffle_questions: boolean;
@@ -92,6 +94,8 @@ export interface BlueprintUsage {
 }
 
 export type BlueprintStatusFilter = 'ALL' | BlueprintStatus;
+/** Course filter (Epoch 8.9.1): 'all', 'unassigned', or a course id. */
+export type BlueprintCourseFilter = 'all' | 'unassigned' | string;
 
 interface BlueprintState {
     blueprints: TestDefinition[];
@@ -105,6 +109,7 @@ interface BlueprintState {
     viewMode: 'list' | 'editor';
     usageMap: Record<string, BlueprintUsage>;
     statusFilter: BlueprintStatusFilter;
+    courseFilter: BlueprintCourseFilter;
 
     fetchBlueprints: () => Promise<void>;
     fetchBlueprint: (id: string) => Promise<void>;
@@ -117,6 +122,7 @@ interface BlueprintState {
     setLastEditingId: (id: string | null) => void;
     setViewMode: (mode: 'list' | 'editor') => void;
     setStatusFilter: (filter: BlueprintStatusFilter) => void;
+    setCourseFilter: (filter: BlueprintCourseFilter) => void;
 }
 
 /** Question IDs that are locked because they're referenced by an ONGOING or PASSED blueprint. */
@@ -158,6 +164,7 @@ export const useBlueprintStore = create<BlueprintState>()(persist((set, get) => 
     viewMode: 'list',
     usageMap: {},
     statusFilter: 'ALL',
+    courseFilter: 'all',
 
     fetchAvailableItems: async () => {
         set({ isLoading: true, error: null });
@@ -255,8 +262,9 @@ export const useBlueprintStore = create<BlueprintState>()(persist((set, get) => 
     setLastEditingId: (id) => set({ lastEditingId: id }),
     setViewMode: (mode) => set({ viewMode: mode }),
     setStatusFilter: (filter) => set({ statusFilter: filter }),
+    setCourseFilter: (filter) => set({ courseFilter: filter }),
 }), {
     name: 'blueprint-store',
     storage: createJSONStorage(() => sessionStorage),
-    partialize: (state) => ({ statusFilter: state.statusFilter, lastEditingId: state.lastEditingId }),
+    partialize: (state) => ({ statusFilter: state.statusFilter, courseFilter: state.courseFilter, lastEditingId: state.lastEditingId }),
 }));

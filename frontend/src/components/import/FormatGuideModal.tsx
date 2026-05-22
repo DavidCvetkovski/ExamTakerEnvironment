@@ -7,7 +7,7 @@ const QUICK_REFERENCE = [
     { token: '// comment', required: false, description: 'Comment line — stripped before parsing.' },
     { token: '#BLUEPRINT', required: true, description: 'Opens the blueprint header block.' },
     { token: 'Title:', required: true, description: 'Blueprint display name. Required.' },
-    { token: 'Course:', required: false, description: 'Course code stored in blueprint metadata.' },
+    { token: 'Course:', required: false, description: 'Course code. Assigns both the imported questions and the generated blueprint to that course. Unknown/blank code leaves them Unassigned.' },
     { token: 'Duration:', required: false, description: 'Exam duration in minutes (integer ≥ 1).' },
     { token: 'Description:', required: false, description: 'Blueprint description.' },
     { token: '#BLOCK <name>', required: false, description: 'Section separator. Questions after this belong to this block.' },

@@ -37,11 +37,13 @@ export async function loginAs(page: Page, role: TestRole): Promise<void> {
     const account = credentials[role];
 
     await page.goto('/login');
-    await expect(page.getByRole('heading', { name: 'OpenVision SSO' })).toBeVisible();
+    // Wait for the sign-in form rather than a specific marketing heading
+    // (the hero copy changes; the form is the stable contract).
+    await expect(page.getByLabel('Email address')).toBeVisible();
 
-    await page.getByLabel('Email Address').fill(account.email);
+    await page.getByLabel('Email address').fill(account.email);
     await page.getByLabel('Password').fill(account.password);
-    await page.getByRole('button', { name: 'Sign In' }).click();
+    await page.getByRole('button', { name: /^Sign in$/i }).click();
 
     await expect(page).toHaveURL(
         new RegExp(`${escapeForRegExp(account.homePath)}(?:\\?.*)?$`),

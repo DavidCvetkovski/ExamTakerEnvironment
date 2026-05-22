@@ -2170,12 +2170,30 @@ def seed():
 
         blueprint_specs.extend(build_curriculum_blueprint_specs(learning_objects))
 
+        # Epoch 8.9.1 — derive each blueprint's course from its questions.
+        # A blueprint is assigned to the single course shared by all its FIXED
+        # questions; cross-course or question-less blueprints stay Unassigned.
+        # This marks single-course blueprints correctly while leaving genuinely
+        # mixed ones (e.g. "Programming Foundations - Intro Midterm") unassigned.
+        lo_by_id = {str(lo.id): lo for lo in learning_objects.values()}
+
+        def _derive_course_id(spec_blocks):
+            course_ids = set()
+            for block in spec_blocks:
+                for rule in block.get("rules", []):
+                    if rule.get("rule_type") == "FIXED":
+                        lo = lo_by_id.get(str(rule.get("learning_object_id")))
+                        if lo is not None and lo.course_id:
+                            course_ids.add(str(lo.course_id))
+            return next(iter(course_ids)) if len(course_ids) == 1 else None
+
         blueprints = {}
         for spec in blueprint_specs:
             blueprint = TestDefinition(
                 title=spec["title"],
                 description=spec["description"],
                 created_by=constructor.id,
+                course_id=_derive_course_id(spec["blocks"]),
                 blocks=spec["blocks"],
                 duration_minutes=spec["duration_minutes"],
                 shuffle_questions=spec["shuffle_questions"],

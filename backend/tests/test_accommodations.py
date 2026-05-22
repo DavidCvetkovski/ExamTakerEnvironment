@@ -125,11 +125,16 @@ async def test_time_multiplier_application(ac: AsyncClient, setup_accommodations
 
 
 @pytest.mark.anyio
-async def test_auto_expiration_on_retrieval(ac: AsyncClient, setup_accommodations_data):
+async def test_auto_submit_on_timeout_retrieval(ac: AsyncClient, setup_accommodations_data):
     """
-    A session whose expires_at has passed is auto-marked EXPIRED on retrieval.
-    Uses the join flow (students cannot create ad-hoc sessions since the enforcement
-    of scheduled-session-only join was introduced).
+    A STARTED session whose expires_at has passed is auto-SUBMITTED (and graded)
+    on retrieval — not silently EXPIRED. This is the Epoch 8.9 behavior: running
+    out of time counts as an automatic submission so the student still gets a
+    result and the attempt counts like any other submission
+    (see exam_sessions_service.finalize_timed_out_session).
+
+    Uses the join flow (students cannot create ad-hoc sessions since the
+    enforcement of scheduled-session-only join was introduced).
     """
     scheduled_id = setup_accommodations_data["scheduled_session_id"]
     token = await login(ac, STANDARD_STUDENT, STANDARD_PASS)
@@ -147,4 +152,7 @@ async def test_auto_expiration_on_retrieval(ac: AsyncClient, setup_accommodation
 
     get_resp = await ac.get(f"/api/sessions/{session_id}", headers=headers)
     assert get_resp.status_code == 200
-    assert get_resp.json()["status"] == "EXPIRED"
+    # Timed-out attempts are finalized as SUBMITTED with a submitted_at stamp.
+    body = get_resp.json()
+    assert body["status"] == "SUBMITTED"
+    assert body.get("submitted_at") is not None

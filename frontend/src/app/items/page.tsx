@@ -356,6 +356,7 @@ function ItemsLibraryPageInner() {
                         <div className="min-w-filter">
                             <Select
                                 inputSize="md"
+                                aria-label="Filter by course"
                                 value={courseFilter}
                                 onChange={(e) => setCourseFilter(e.target.value)}
                             >
@@ -369,6 +370,7 @@ function ItemsLibraryPageInner() {
                         <div className="min-w-filter">
                             <Select
                                 inputSize="md"
+                                aria-label="Filter by topic"
                                 value={topicFilter}
                                 onChange={(e) => setTopicFilter(e.target.value)}
                             >

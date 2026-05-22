@@ -2,9 +2,10 @@
 Pydantic schemas for authentication and user management.
 """
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
-from typing import Literal, Optional
+from typing import Optional
 from uuid import UUID
 from app.models.user import UserRole
+from app.schemas.preferences import ThemeName
 
 
 # --- Requests ---
@@ -30,7 +31,7 @@ class UserPublic(BaseModel):
     role: UserRole
     vunet_id: Optional[str] = None
     is_active: bool = True
-    theme_preference: Literal["dark", "warm", "light-blue"] | None = None
+    theme_preference: ThemeName | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

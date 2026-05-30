@@ -52,6 +52,10 @@ export default function GlobalHeader() {
                   { name: 'Sessions', href: '/sessions' },
                   { name: 'Grading', href: '/grading' },
                   { name: 'Analytics', href: '/analytics' },
+                  // Accommodations is admin-only (backend enforces 403 regardless).
+                  ...(user?.role === 'ADMIN'
+                      ? [{ name: 'Accommodations', href: '/admin/accommodations' }]
+                      : []),
               ];
 
     const navLinkClass = (active: boolean) =>

@@ -21,6 +21,7 @@ async def initialize_prisma():
 async def cleanup_database():
     """Wipes all tables in the correct order to avoid FK violations."""
     # Order: Children first
+    await prisma_client.accommodation_audit_log.delete_many()
     await prisma_client.interaction_events.delete_many()
     await prisma_client.question_grades.delete_many()
     await prisma_client.session_results.delete_many()

@@ -27,4 +27,10 @@ class User(Base):
     # Monotonic counter bumped on password change / sign-out-everywhere /
     # deactivation. Every JWT carries it; a mismatch invalidates the token.
     token_version = Column(Integer, default=0, nullable=False)
+    # Self-service visual accessibility profile (orthogonal to theme_preference).
+    a11y_high_contrast = Column(Boolean, default=False, nullable=False)
+    a11y_dyslexia_font = Column(Boolean, default=False, nullable=False)
+    a11y_text_scale = Column(String, nullable=True, default=None)  # 'md'|'lg'|'xl'
+    # Administrator-granted accommodation (distinct from a self-chosen preference).
+    accommodation_enlarged_display = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)

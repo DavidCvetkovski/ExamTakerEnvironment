@@ -172,7 +172,12 @@ model users {
   provision_time_multiplier Float                     @default(1.0)
   theme_preference          String?                   @db.VarChar
   token_version             Int                       @default(0)
+  a11y_high_contrast        Boolean                   @default(false)
+  a11y_dyslexia_font        Boolean                   @default(false)
+  a11y_text_scale           String?                   @db.VarChar
+  accommodation_enlarged_display Boolean              @default(false)
   created_at                DateTime?                 @default(now()) @db.Timestamp(6)
+  accommodation_audit_log   accommodation_audit_log[]
   course_enrollments        course_enrollments[]
   courses                   courses[]
   exam_sessions             exam_sessions[]
@@ -185,6 +190,21 @@ model users {
   published_results         session_results[]         @relation("PublishedResults")
   student_results           session_results[]         @relation("StudentResults")
   test_definitions          test_definitions[]
+}
+
+model accommodation_audit_log {
+  id         String   @id @default(uuid()) @db.Uuid
+  student_id String   @db.Uuid
+  changed_by String   @db.Uuid
+  field      String   @db.VarChar
+  old_value  String   @db.VarChar
+  new_value  String   @db.VarChar
+  source     String   @db.VarChar
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  student    users    @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([student_id], map: "ix_accommodation_audit_student_id")
+  @@index([created_at], map: "ix_accommodation_audit_created_at")
 }
 
 model interaction_events {

@@ -38,6 +38,24 @@ def set_refresh_cookie(response: Response, refresh_token: str):
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
     )
 
+
+def issue_session(user, response: Response) -> TokenResponse:
+    """Mint an access+refresh pair for ``user``, set the refresh cookie, and
+    shape the standard ``TokenResponse``.
+
+    The single tail shared by register, login, refresh, password change, and
+    sign-out-everywhere — so the token shape, expiry, and cookie policy live in
+    exactly one place (CLAUDE.md §2). The user object must already carry the
+    current ``token_version`` (i.e. be freshly loaded after any bump).
+    """
+    token_data = build_token_payload(user)
+    set_refresh_cookie(response, create_refresh_token(token_data))
+    return TokenResponse(
+        access_token=create_access_token(token_data),
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        user=UserPublic.model_validate(user),
+    )
+
 async def register_user(payload: RegisterRequest, response: Response) -> TokenResponse:
     # Check for duplicate email
     existing = await prisma.users.find_unique(where={"email": payload.email})
@@ -67,16 +85,7 @@ async def register_user(payload: RegisterRequest, response: Response) -> TokenRe
         }
     )
 
-    token_data = build_token_payload(user)
-    access_token = create_access_token(token_data)
-    refresh_token = create_refresh_token(token_data)
-    set_refresh_cookie(response, refresh_token)
-
-    return TokenResponse(
-        access_token=access_token,
-        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        user=UserPublic.model_validate(user),
-    )
+    return issue_session(user, response)
 
 async def authenticate_user(payload: LoginRequest, response: Response) -> TokenResponse:
     user = await prisma.users.find_unique(where={"email": payload.email})
@@ -92,16 +101,7 @@ async def authenticate_user(payload: LoginRequest, response: Response) -> TokenR
             detail="This account has been deactivated.",
         )
 
-    token_data = build_token_payload(user)
-    access_token = create_access_token(token_data)
-    refresh_token = create_refresh_token(token_data)
-    set_refresh_cookie(response, refresh_token)
-
-    return TokenResponse(
-        access_token=access_token,
-        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        user=UserPublic.model_validate(user),
-    )
+    return issue_session(user, response)
 
 async def refresh_tokens(payload: dict, response: Response) -> TokenResponse:
     """Mint a new token pair from a validated refresh-token payload.
@@ -119,13 +119,100 @@ async def refresh_tokens(payload: dict, response: Response) -> TokenResponse:
 
     assert_token_version(payload, user)
 
-    token_data = build_token_payload(user)
-    new_access = create_access_token(token_data)
-    new_refresh = create_refresh_token(token_data)
-    set_refresh_cookie(response, new_refresh)
+    return issue_session(user, response)
 
-    return TokenResponse(
-        access_token=new_access,
-        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        user=UserPublic.model_validate(user),
+
+async def change_password(
+    user_id: str,
+    current_password: str,
+    new_password: str,
+    response: Response,
+) -> TokenResponse:
+    """Rotate a user's password and invalidate every other session.
+
+    Verifies the current password, rejects a no-op change, then writes the new
+    bcrypt hash **and** bumps ``token_version`` in a single atomic update — so a
+    changed credential can never coexist with still-valid pre-change tokens. The
+    caller's own token is now stale too, so we re-mint this session's tokens and
+    return them (the active tab stays signed in; all other devices are dead).
+    """
+    user = await prisma.users.find_unique(where={"id": user_id})
+    if not user:
+        # Authenticated dependency guarantees existence; defensive 404.
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+
+    if not verify_password(current_password, user.hashed_password):
+        # 400, not 401: the session is valid, the *input* is wrong. Generic message.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect.",
+        )
+
+    if verify_password(new_password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be different from the current one.",
+        )
+
+    updated = await prisma.users.update(
+        where={"id": user_id},
+        data={
+            "hashed_password": hash_password(new_password),
+            "token_version": {"increment": 1},
+        },
     )
+    return issue_session(updated, response)
+
+
+async def sign_out_everywhere(
+    user_id: str,
+    current_password: str,
+    response: Response,
+) -> TokenResponse:
+    """Invalidate all sessions by bumping ``token_version``, keeping the current
+    tab alive via freshly minted tokens. Re-verifies the password as defense in
+    depth for a destructive action."""
+    user = await prisma.users.find_unique(where={"id": user_id})
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+
+    if not verify_password(current_password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password is incorrect.",
+        )
+
+    updated = await prisma.users.update(
+        where={"id": user_id},
+        data={"token_version": {"increment": 1}},
+    )
+    return issue_session(updated, response)
+
+
+async def deactivate_self(
+    user,
+    current_password: str,
+    response: Response,
+) -> None:
+    """Self-deactivate the account (reversible by an admin; never a hard delete,
+    to preserve referential integrity across authored questions, results, and
+    grades). Bumps ``token_version`` to kill sessions immediately and clears the
+    refresh cookie. Admins are barred to prevent locking the platform out of its
+    last administrator."""
+    if user.role == "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admins cannot deactivate their own account.",
+        )
+
+    if not verify_password(current_password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password is incorrect.",
+        )
+
+    await prisma.users.update(
+        where={"id": str(user.id)},
+        data={"is_active": False, "token_version": {"increment": 1}},
+    )
+    response.delete_cookie("refresh_token")

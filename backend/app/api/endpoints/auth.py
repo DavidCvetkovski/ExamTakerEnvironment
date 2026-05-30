@@ -5,9 +5,17 @@ from typing import Optional
 from jose import JWTError
 
 from app.core.database import get_db
+from app.core.dependencies import get_current_user
 from app.core.security import decode_token
 from app.models.user import User
-from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, UserPublic
+from app.schemas.auth import (
+    RegisterRequest,
+    LoginRequest,
+    TokenResponse,
+    UserPublic,
+    ChangePasswordRequest,
+    ConfirmPasswordRequest,
+)
 from app.services import users_service as svc
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -53,21 +61,44 @@ async def logout(response: Response):
     response.delete_cookie("refresh_token")
     return {"detail": "Logged out successfully."}
 
-@router.get("/me", response_model=UserPublic)
-async def get_me(
-    token: str = Depends(oauth2_scheme),
+@router.post("/change-password", response_model=TokenResponse)
+async def change_password(
+    payload: ChangePasswordRequest,
+    response: Response,
+    current_user: User = Depends(get_current_user),
 ):
-    """Return the current user's profile."""
-    try:
-        payload = decode_token(token)
-    except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired access token.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    """Change the authenticated user's password.
 
-    user = await prisma.users.find_unique(where={"id": payload["sub"]})
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-    return user
+    Verifies the current password, enforces the strength rule, and invalidates
+    all other sessions. Returns a fresh token pair so the current tab stays
+    signed in.
+    """
+    return await svc.change_password(
+        user_id=str(current_user.id),
+        current_password=payload.current_password,
+        new_password=payload.new_password,
+        response=response,
+    )
+
+@router.post("/logout-all", response_model=TokenResponse)
+async def logout_all(
+    payload: ConfirmPasswordRequest,
+    response: Response,
+    current_user: User = Depends(get_current_user),
+):
+    """Sign out of all other devices (re-verifies the current password)."""
+    return await svc.sign_out_everywhere(
+        user_id=str(current_user.id),
+        current_password=payload.password,
+        response=response,
+    )
+
+@router.get("/me", response_model=UserPublic)
+async def get_me(current_user: User = Depends(get_current_user)):
+    """Return the current user's profile.
+
+    Routes through ``get_current_user`` so the token_version and is_active
+    checks apply here too — a single source of "who is this request" rather than
+    a second, weaker inline decode.
+    """
+    return current_user

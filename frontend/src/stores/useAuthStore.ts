@@ -29,6 +29,16 @@ interface AuthState {
     fetchMe: () => Promise<void>;
     initialize: () => Promise<void>;
     setThemePreference: (theme: ThemePreference | null) => Promise<void>;
+    changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+    logoutEverywhere: (password: string) => Promise<void>;
+    deactivateAccount: (password: string) => Promise<void>;
+}
+
+/** The token-bearing payload returned by login, register, refresh, change-password
+ *  and logout-all — the single session shape the store hydrates from. */
+interface SessionResponse {
+    access_token: string;
+    user: UserPublic;
 }
 
 export function getHomePathForRole(role?: UserPublic['role'] | null): string {
@@ -51,6 +61,20 @@ function syncStoredTheme(theme: ThemePreference | null): void {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
 }
 
+/** Hydrate the store from a token-bearing session response. Single source for
+ *  the "we now hold a session" transition — shared by login, register, refresh,
+ *  change-password and logout-all so the token/user/theme wiring lives once. */
+function hydrateSession(set: (partial: Partial<AuthState>) => void, data: SessionResponse): void {
+    syncStoredTheme(data.user.theme_preference ?? null);
+    set({
+        accessToken: data.access_token,
+        user: data.user,
+        isAuthenticated: true,
+        isLoading: false,
+        themePreference: data.user.theme_preference ?? null,
+    });
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
     user: null,
     accessToken: null,
@@ -62,15 +86,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
             set({ isLoading: true });
             const resp = await api.post('auth/login', { email, password });
-            const { access_token, user } = resp.data;
-            syncStoredTheme(user.theme_preference ?? null);
-            set({
-                accessToken: access_token,
-                user,
-                isAuthenticated: true,
-                isLoading: false,
-                themePreference: user.theme_preference ?? null,
-            });
+            hydrateSession(set, resp.data);
         } catch (error) {
             set({ isLoading: false });
             throw error;
@@ -81,15 +97,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
             set({ isLoading: true });
             const resp = await api.post('auth/register', { email, password, role });
-            const { access_token, user } = resp.data;
-            syncStoredTheme(user.theme_preference ?? null);
-            set({
-                accessToken: access_token,
-                user,
-                isAuthenticated: true,
-                isLoading: false,
-                themePreference: user.theme_preference ?? null,
-            });
+            hydrateSession(set, resp.data);
         } catch (error) {
             set({ isLoading: false });
             throw error;
@@ -111,14 +119,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     refreshToken: async () => {
         const resp = await api.post('auth/refresh');
-        const { access_token, user } = resp.data;
-        syncStoredTheme(user.theme_preference ?? null);
-        set({
-            accessToken: access_token,
-            user,
-            isAuthenticated: true,
-            themePreference: user.theme_preference ?? null,
-        });
+        hydrateSession(set, resp.data);
     },
 
     fetchMe: async () => {
@@ -173,5 +174,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             });
             throw error;
         }
+    },
+
+    changePassword: async (currentPassword, newPassword) => {
+        // Server invalidates every other session and returns a fresh token pair
+        // for this tab — hydrate from it so the current session stays alive.
+        const resp = await api.post('auth/change-password', {
+            current_password: currentPassword,
+            new_password: newPassword,
+        });
+        hydrateSession(set, resp.data);
+    },
+
+    logoutEverywhere: async (password) => {
+        const resp = await api.post('auth/logout-all', { password });
+        hydrateSession(set, resp.data);
+    },
+
+    deactivateAccount: async (password) => {
+        await api.post('users/me/deactivate', { password });
+        // Account is gone for this session — drop local state and let the UI
+        // route to /login.
+        get().logout();
     },
 }));

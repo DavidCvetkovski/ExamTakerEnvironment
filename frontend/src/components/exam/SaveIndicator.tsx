@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+
 import { useExamStore, SaveStatus } from '@/stores/useExamStore';
-import { Spinner } from '@/components/ui';
+import { Spinner, useAnnounce } from '@/components/ui';
 
 /**
  * Small persistent badge showing heartbeat save status.
@@ -28,6 +30,20 @@ function XIcon() {
 
 export default function SaveIndicator() {
     const saveStatus = useExamStore((s) => s.saveStatus);
+    const announce = useAnnounce();
+    const lastAnnounced = useRef<SaveStatus>('idle');
+
+    // Voice save outcomes to screen-reader users (the badge is visual-only).
+    useEffect(() => {
+        if (saveStatus === lastAnnounced.current) return;
+        lastAnnounced.current = saveStatus;
+        if (saveStatus === 'saved') {
+            announce('Answer saved');
+        } else if (saveStatus === 'error') {
+            announce('Save failed, retrying', 'assertive');
+        }
+    }, [saveStatus, announce]);
+
     if (saveStatus === 'idle') return null;
 
     const config: Record<SaveStatus, { text: string; color: string; icon: React.ReactNode }> = {

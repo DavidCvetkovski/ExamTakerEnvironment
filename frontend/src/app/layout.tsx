@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import GlobalHeader from "@/components/layout/GlobalHeader";
 import ThemeProvider from "@/components/layout/ThemeProvider";
-import { ToastProvider } from "@/components/ui";
+import { ToastProvider, LiveRegion, SkipLink } from "@/components/ui";
 import AuthBootstrap from "@/components/auth/AuthBootstrap";
 
 const geistSans = Geist({
@@ -33,11 +33,13 @@ export default function RootLayout({
       >
         <AuthBootstrap />
         <ThemeProvider />
+        <SkipLink />
         <GlobalHeader />
-        <main className="flex-1 overflow-y-auto flex flex-col">
+        <main id="main-content" className="flex-1 overflow-y-auto flex flex-col">
           {children}
         </main>
         <ToastProvider />
+        <LiveRegion />
       </body>
     </html>
   );

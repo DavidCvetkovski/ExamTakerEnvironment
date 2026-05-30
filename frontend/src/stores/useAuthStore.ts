@@ -5,6 +5,30 @@ export type ThemePreference = 'dark' | 'warm' | 'light-blue' | 'auto';
 /** A concrete theme the page actually renders under (no `auto`). */
 export type EffectiveTheme = 'dark' | 'warm' | 'light-blue';
 const THEME_STORAGE_KEY = 'theme';
+const A11Y_STORAGE_KEY = 'a11y';
+
+export type TextScale = 'md' | 'lg' | 'xl';
+
+/** Visual accessibility profile — orthogonal to the colour theme. */
+export interface AccessibilityPreferences {
+    high_contrast: boolean;
+    dyslexia_font: boolean;
+    text_scale: TextScale | null;
+}
+
+/** A partial update; omitted fields are left unchanged. `text_scale: 'default'`
+ *  clears the scale override back to the default size. */
+export interface AccessibilityPatch {
+    high_contrast?: boolean;
+    dyslexia_font?: boolean;
+    text_scale?: TextScale | 'default';
+}
+
+export const DEFAULT_ACCESSIBILITY: AccessibilityPreferences = {
+    high_contrast: false,
+    dyslexia_font: false,
+    text_scale: null,
+};
 
 export interface UserPublic {
     id: string;
@@ -13,6 +37,7 @@ export interface UserPublic {
     vunet_id: string | null;
     is_active: boolean;
     theme_preference?: ThemePreference | null;
+    accessibility?: AccessibilityPreferences;
 }
 
 interface AuthState {
@@ -21,6 +46,7 @@ interface AuthState {
     isAuthenticated: boolean;
     isLoading: boolean;
     themePreference: ThemePreference | null;
+    accessibility: AccessibilityPreferences;
 
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, password: string, role: string) => Promise<void>;
@@ -29,6 +55,7 @@ interface AuthState {
     fetchMe: () => Promise<void>;
     initialize: () => Promise<void>;
     setThemePreference: (theme: ThemePreference | null) => Promise<void>;
+    setAccessibilityPreference: (patch: AccessibilityPatch) => Promise<void>;
     changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
     logoutEverywhere: (password: string) => Promise<void>;
     deactivateAccount: (password: string) => Promise<void>;
@@ -61,17 +88,29 @@ function syncStoredTheme(theme: ThemePreference | null): void {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
 }
 
+/** Persist the a11y profile so it applies on reload before auth re-hydrates
+ *  (prevents a flash of the default profile), mirroring the theme key. */
+function syncStoredA11y(prefs: AccessibilityPreferences): void {
+    if (typeof window === 'undefined') {
+        return;
+    }
+    window.localStorage.setItem(A11Y_STORAGE_KEY, JSON.stringify(prefs));
+}
+
 /** Hydrate the store from a token-bearing session response. Single source for
  *  the "we now hold a session" transition — shared by login, register, refresh,
- *  change-password and logout-all so the token/user/theme wiring lives once. */
+ *  change-password and logout-all so the token/user/theme/a11y wiring lives once. */
 function hydrateSession(set: (partial: Partial<AuthState>) => void, data: SessionResponse): void {
+    const accessibility = data.user.accessibility ?? DEFAULT_ACCESSIBILITY;
     syncStoredTheme(data.user.theme_preference ?? null);
+    syncStoredA11y(accessibility);
     set({
         accessToken: data.access_token,
         user: data.user,
         isAuthenticated: true,
         isLoading: false,
         themePreference: data.user.theme_preference ?? null,
+        accessibility,
     });
 }
 
@@ -81,6 +120,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     isAuthenticated: false,
     isLoading: true,
     themePreference: null,
+    accessibility: DEFAULT_ACCESSIBILITY,
 
     login: async (email, password) => {
         try {
@@ -106,12 +146,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     logout: () => {
         // Clear local state immediately — no waiting on network
+        if (typeof window !== 'undefined') {
+            window.localStorage.removeItem(A11Y_STORAGE_KEY);
+        }
         set({
             user: null,
             accessToken: null,
             isAuthenticated: false,
             isLoading: false,
             themePreference: null,
+            accessibility: DEFAULT_ACCESSIBILITY,
         });
         // Fire-and-forget: tell the backend to invalidate the refresh token cookie
         api.post('auth/logout').catch(() => { /* already cleared locally */ });
@@ -125,11 +169,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     fetchMe: async () => {
         try {
             const resp = await api.get('auth/me');
+            const accessibility = resp.data.accessibility ?? DEFAULT_ACCESSIBILITY;
             syncStoredTheme(resp.data.theme_preference ?? null);
+            syncStoredA11y(accessibility);
             set({
                 user: resp.data,
                 isAuthenticated: true,
                 themePreference: resp.data.theme_preference ?? null,
+                accessibility,
             });
         } catch {
             // If /me fails, let the interceptor handle it or log out
@@ -172,6 +219,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 themePreference: previousTheme,
                 user: previousUser,
             });
+            throw error;
+        }
+    },
+
+    setAccessibilityPreference: async (patch) => {
+        const previous = get().accessibility;
+
+        // Optimistic: fold the patch into local state immediately.
+        const next: AccessibilityPreferences = {
+            high_contrast: patch.high_contrast ?? previous.high_contrast,
+            dyslexia_font: patch.dyslexia_font ?? previous.dyslexia_font,
+            text_scale:
+                patch.text_scale === undefined
+                    ? previous.text_scale
+                    : patch.text_scale === 'default'
+                      ? null
+                      : patch.text_scale,
+        };
+        syncStoredA11y(next);
+        set({ accessibility: next });
+
+        try {
+            const resp = await api.patch('users/me/preferences/accessibility', patch);
+            // Trust the server's resolved profile.
+            syncStoredA11y(resp.data);
+            set({ accessibility: resp.data });
+        } catch (error) {
+            syncStoredA11y(previous);
+            set({ accessibility: previous });
             throw error;
         }
     },

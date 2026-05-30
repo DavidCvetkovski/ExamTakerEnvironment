@@ -6,6 +6,7 @@ import { BackButton, PageHeader } from '@/components/ui';
 import { useAuthStore } from '@/stores/useAuthStore';
 import ProfileCard from '@/components/account/ProfileCard';
 import AppearanceSection from '@/components/account/AppearanceSection';
+import AccessibilitySection from '@/components/account/AccessibilitySection';
 import SecuritySection from '@/components/account/SecuritySection';
 import DangerZone from '@/components/account/DangerZone';
 
@@ -21,6 +22,7 @@ export default function AccountPage() {
 
                     {user && <ProfileCard user={user} />}
                     <AppearanceSection />
+                    <AccessibilitySection />
                     <SecuritySection />
                     <DangerZone />
                 </div>

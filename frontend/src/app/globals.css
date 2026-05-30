@@ -608,3 +608,72 @@ body {
     background-position: 50% 50%;
   }
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   Epoch 10 — Accessibility axis (orthogonal to the colour theme)
+
+   These blocks compose with ANY [data-theme] via token overrides only — no
+   component branching (CLAUDE.md §7.1). They are defined last in the file so
+   that, on the shared <html> element, they win over the theme blocks for the
+   handful of tokens they touch. Applied by ThemeProvider as data-a11y-* attrs.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Dyslexia-friendly: distinct letterforms + generous spacing/line-height.
+   The OpenDyslexic webfont binary is vendored separately (see TODO-016); until
+   then the stack falls back to widely-available high-legibility faces, and the
+   spacing/line-height boosts — which deliver most of the readability benefit —
+   apply regardless. */
+[data-a11y-font="dyslexic"] {
+  --font-body: "OpenDyslexic", "Comic Sans MS", "Verdana", sans-serif;
+  --font-display: "OpenDyslexic", "Comic Sans MS", "Verdana", sans-serif;
+}
+[data-a11y-font="dyslexic"] body {
+  letter-spacing: 0.04em;
+  word-spacing: 0.08em;
+  line-height: 1.7;
+}
+
+/* Text scale: enlarge the entire interface uniformly. `zoom` is the single
+   lever that scales the px-based token ramp (most --font-size-*/line-heights
+   are px), reflowing layout the way browser zoom does — the WCAG gold standard
+   for magnification. md (default) sets no attribute. */
+[data-a11y-scale="lg"] {
+  zoom: 1.15;
+}
+[data-a11y-scale="xl"] {
+  zoom: 1.3;
+}
+
+/* High contrast — dark themes (default `dark` base): pure white on near-black,
+   maximally bright borders. Targets WCAG AAA (≥ 7:1) for body text. */
+[data-a11y-contrast="high"] {
+  --color-shell-bg: #000000;
+  --color-shell-surface: #0a0a0a;
+  --color-shell-surface-deep: #000000;
+  --color-shell-input: #0a0a0a;
+  --color-shell-input-alt: #141414;
+  --color-shell-border: #ffffff;
+  --color-shell-border-deep: #ffffff;
+  --color-shell-muted: #ffffff;
+  --color-shell-muted-dim: #e6e6e6;
+  --color-foreground: #ffffff;
+  --color-brand: #7cc0ff;
+}
+
+/* High contrast — light themes (`warm`, `light-blue`): black on white, dark
+   borders. Scoped more specifically than the dark block so it wins under those
+   themes. */
+[data-theme="warm"][data-a11y-contrast="high"],
+[data-theme="light-blue"][data-a11y-contrast="high"] {
+  --color-shell-bg: #ffffff;
+  --color-shell-surface: #ffffff;
+  --color-shell-surface-deep: #f2f2f2;
+  --color-shell-input: #ffffff;
+  --color-shell-input-alt: #f2f2f2;
+  --color-shell-border: #000000;
+  --color-shell-border-deep: #000000;
+  --color-shell-muted: #000000;
+  --color-shell-muted-dim: #1a1a1a;
+  --color-foreground: #000000;
+  --color-brand: #0a4ea8;
+}

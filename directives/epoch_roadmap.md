@@ -763,9 +763,11 @@
 
 ---
 
-## Epoch 10 — Accessibility & Inclusive Design
+## Epoch 10 — Accessibility & Inclusive Design 🔵 In progress
 
 **Goal:** Ensure the platform meets WCAG 2.1 AA standards and provides the accommodations required for high-stakes university exams.
+
+> **In progress** — detailed plan in `directives/epoch_10_accessibility_blueprint.md`. Note: the per-student **extra-time multiplier** (10.3) was already built and verified in Epoch 5 (`exam_sessions_service` applies `duration × provision_time_multiplier`; `test_accommodations.py` proves 1.25× → 75 min). This epoch builds the surfaces around it (admin UI to *set* it, audit log, CSV import) plus the visual accessibility profile and keyboard/screen-reader support.
 
 ### 10.1 — Visual Accessibility
 

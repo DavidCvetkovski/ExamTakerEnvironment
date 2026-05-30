@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, String, DateTime, Boolean, Enum, Float
+from sqlalchemy import Column, String, DateTime, Boolean, Enum, Float, Integer
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from datetime import datetime
@@ -24,4 +24,7 @@ class User(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     provision_time_multiplier = Column(Float, default=1.0, nullable=False)
     theme_preference = Column(String, nullable=True, default=None)
+    # Monotonic counter bumped on password change / sign-out-everywhere /
+    # deactivation. Every JWT carries it; a mismatch invalidates the token.
+    token_version = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)

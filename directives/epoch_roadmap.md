@@ -733,43 +733,33 @@
 
 ---
 
-## Epoch 9 — Media Management & Resource Library
+## Epoch 9 — Account & Settings
 
-**Goal:** Enable rich media uploads, build a reusable resource library, and support CDN-backed delivery for scalable media serving.
+**Goal:** Ship a complete, secure self-service account surface so the product reads as finished — secure password change, full session invalidation, and a built-out `/account` page.
 
-### 9.1 — Upload Pipeline
+> **Scope change:** This slot originally held *Media Management & Resource Library*. Media upload is **deferred to the backlog** (the detailed engineering plan survives in `directives/epoch_9_media_library_blueprint.md` for a future epoch) in favour of finishing the account-settings surface, which closes a real security gap (no way to rotate a credential) rather than adding a new feature axis. Detailed blueprint: `directives/epoch_9_account_settings_blueprint.md`.
 
-**Deliverables:**
-- File upload endpoint (`POST /media/upload`) with multipart form data.
-- Accepted formats: JPEG, PNG, GIF, SVG, MP4, WebM, PDF.
-- File size limits enforced server-side (configurable, e.g., 50MB for video).
-- Virus scanning / file type validation (magic bytes, not just extension).
-- S3-compatible storage backend (MinIO for local dev, AWS S3 for production).
-- Unique filename generation with original name preserved in metadata.
-
-### 9.2 — Resource Library UI
+### 9.1 — Secure Password Change & Session Invalidation
 
 **Deliverables:**
-- Searchable, filterable media library accessible from the TipTap editor.
-- Grid/List view toggle with thumbnails.
-- Drag-and-drop upload directly into the library.
-- Media reuse: a single image can be referenced by multiple questions across different item banks.
-- Usage tracking: show which questions reference a given media asset.
+- `POST /api/auth/change-password` — verifies the current password, enforces strength, re-hashes with bcrypt.
+- A monotonic `token_version` claim embedded in every JWT, re-checked on every authenticated request and on refresh.
+- Changing a password (or "sign out everywhere") bumps `token_version`, instantly invalidating all other outstanding sessions while keeping the current tab alive via re-minted tokens.
 
-**TestVision Parity:** *"Instead of storing BLOBs directly in the item record, the system utilizes a resource library. This allows a single asset to be referenced by multiple questions, optimizing storage."*
-
-### 9.3 — TipTap Media Integration
+### 9.2 — Account Page Build-out
 
 **Deliverables:**
-- "Insert Image" button in TipTap toolbar opening the resource library modal.
-- "Insert Video" support with inline playback.
-- Image resizing and alignment controls within the editor.
-- Alt-text field (required) for accessibility compliance.
+- Profile card (read-only: email, role, VUnetID — admin-managed identity).
+- Appearance section surfacing the existing theme-preference plumbing on the page.
+- Security section: change-password form + "sign out of all other devices".
+- Danger zone: password-confirmed self-deactivation (reversible by an admin; no hard delete).
 
 **Exit Criteria:**
-- An image uploaded once can be inserted into 3 different questions.
-- Deleting a question does not delete the shared media asset.
-- Media loads via CDN URL, not direct database fetch.
+- A changed password invalidates every other device's session immediately; the active tab stays signed in.
+- Every sensitive action re-verifies the current password (backend-authoritative).
+- The `/account` page renders correctly under all three themes with zero code branching.
+
+> **Backlogged (was Epoch 9):** rich media uploads, reusable resource library, CDN-backed delivery, and TipTap media integration. See `directives/epoch_9_media_library_blueprint.md`.
 
 ---
 
@@ -987,7 +977,8 @@ This matrix maps every major TestVision capability to its corresponding Epoch, e
 | Code Snippet Embedding | 2 | ✅ Done |
 | LaTeX Math Rendering | Backlog | ⬜ Planned |
 | Bulk Import / Paste Parser | 8 | ⬜ Planned |
-| Multimedia Resource Library | 9 | ⬜ Planned |
+| Account & Settings (secure password change, session invalidation) | 9 | ⬜ Planned |
+| Multimedia Resource Library | Backlog | ⬜ Deferred |
 | Metadata Taxonomy (Bloom's, tags) | 4 | ⬜ Planned |
 | Test Matrix / Blueprint | 4 | ⬜ Planned |
 | Random Item Selection | 4 | ⬜ Planned |
@@ -1014,7 +1005,7 @@ This matrix maps every major TestVision capability to its corresponding Epoch, e
 | Accessibility (WCAG 2.1 AA) | 10 | ⬜ Planned |
 | Dyslexia Mode | 10 | ⬜ Planned |
 | Extra Time Accommodations | 10 | ⬜ Planned |
-| CDN Media Delivery | 9 | ⬜ Planned |
+| CDN Media Delivery | Backlog | ⬜ Deferred |
 | Thundering Herd Handling | 13 | ⬜ Planned |
 | Docker Deployment | 13 | ⬜ Planned |
 | CI/CD Pipeline | 13 | ⬜ Planned |

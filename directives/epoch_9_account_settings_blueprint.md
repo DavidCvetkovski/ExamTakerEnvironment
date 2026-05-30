@@ -299,11 +299,11 @@ Following `directives/e2e_seed_naming_conventions.md`. New `account-settings.spe
 
 ## 8. Follow-ups (to `directives/todo.md`)
 
-- **TODO-009 — Email-based password reset.** Self-service "I forgot my password"
+- **TODO-011 — Email-based password reset.** Self-service "I forgot my password"
   needs an email transport (SMTP/provider) we don't currently run. Out of scope here
   (this epoch covers *authenticated* password change). Promote when an email
   service is provisioned.
-- **TODO-010 — Password strength hardening.** Currently `min_length=8` only. A shared
+- **TODO-012 — Password strength hardening.** Currently `min_length=8` only. A shared
   Pydantic validator (digit + letter + length) reused by register + change would
   raise the floor without duplicating rules. Additive; deferred to keep this epoch
   focused.

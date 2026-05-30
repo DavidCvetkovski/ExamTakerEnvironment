@@ -309,6 +309,60 @@ Right now the button does the latter (calls `startPracticeSession(testDefinition
 
 ---
 
+## TODO-011 — Email-based Password Reset
+
+**Status:** Awaiting infrastructure (email transport).
+**Surfaced in:** Epoch 9 (Account & Settings).
+
+### 👤 For David
+
+Epoch 9 ships *authenticated* password change — a logged-in user rotating their own
+credential. It does **not** cover the "I forgot my password and can't log in" flow,
+because that requires sending an email with a time-limited reset token, and we don't
+run an email service (SMTP or a provider like Postmark/SES) yet.
+
+**Decision needed:** Which email transport do we adopt, and when? Until then, a
+locked-out user must be reset by an admin.
+
+### 🤖 For the AI (execute after decision)
+
+- Add an email transport abstraction (`services/email_service.py`) with a provider
+  driver behind an interface; config in `.env`.
+- `POST /api/auth/forgot-password` (always `204`, no user enumeration) → mint a
+  single-use, short-TTL reset token (store a hash, not the token).
+- `POST /api/auth/reset-password` → verify token, set new hash, bump `token_version`
+  (reuse the Epoch 9 session-invalidation spine).
+- Rate-limit both endpoints.
+
+---
+
+## TODO-012 — Password Strength Hardening
+
+**Status:** Deferred (additive, low risk).
+**Surfaced in:** Epoch 9 (Account & Settings).
+
+### 👤 For David
+
+Right now the only password rule is `min_length=8` (shared by register and the new
+change-password flow). That's a low floor. We could require a mix of letter + digit
+(and optionally a symbol) without much friction.
+
+**Decision needed:** What's the policy? (e.g. ≥8 chars + at least one letter + one
+digit.) Kept out of Epoch 9 so that epoch stays additive and doesn't retroactively
+invalidate existing weak passwords on next login.
+
+### 🤖 For the AI (execute after decision)
+
+- Add a shared Pydantic field validator (`schemas/password.py`) encoding the policy.
+- Reuse it in both `RegisterRequest` and `ChangePasswordRequest` (§2 single source —
+  one rule, two consumers).
+- Update frontend advisory client-side checks to mirror it (backend stays
+  authoritative).
+- Decide migration stance: enforce only on *new* passwords (recommended) vs. force a
+  reset for non-compliant users.
+
+---
+
 ## How to maintain this file
 
 - **Adding an item:** Always include both 👤 and 🤖 sections. The 👤 section should be readable by someone who hasn't seen the code; the 🤖 section should be specific enough that an AI can execute it without re-research.

@@ -15,12 +15,30 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 from app.core.prisma_db import get_prisma, prisma
 
+
+def assert_token_version(payload: dict, user) -> None:
+    """Reject tokens minted before the user's current ``token_version``.
+
+    The single derivation of "is this token still valid against the account's
+    session generation." A password change, sign-out-everywhere, or
+    deactivation bumps ``user.token_version``; any token carrying an older
+    ``tv`` claim is now stale. Both ``get_current_user`` and the ``/auth/refresh``
+    route call this — no consumer re-implements the comparison.
+    """
+    if payload.get("tv", 0) != user.token_version:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired. Please sign in again.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
 ) -> User:
     """
     Decodes the JWT access token, validates expiry, fetches the User from the DB using Prisma.
-    Raises 401 if token is invalid/expired/user not found.
+    Raises 401 if token is invalid/expired/user not found/superseded by a newer token version.
     Raises 403 if the user account is deactivated.
     """
     credentials_exception = HTTPException(
@@ -40,7 +58,10 @@ async def get_current_user(
     user = await prisma.users.find_unique(where={"id": user_id})
     if user is None:
         raise credentials_exception
-    
+
+    # Reject sessions invalidated by a later password change / sign-out-everywhere.
+    assert_token_version(payload, user)
+
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

@@ -45,7 +45,7 @@ async def refresh(
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token.")
 
-    return await svc.refresh_tokens(user_id=payload["sub"], response=response)
+    return await svc.refresh_tokens(payload=payload, response=response)
 
 @router.post("/logout")
 async def logout(response: Response):

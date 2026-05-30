@@ -8,11 +8,25 @@ from app.core.security import (
     create_refresh_token,
 )
 from app.core.config import settings
+from app.core.dependencies import assert_token_version
 from app.core.prisma_db import prisma
 from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, UserPublic
 
 def build_token_payload(user) -> dict:
-    return {"sub": str(user.id), "email": user.email, "role": user.role}
+    """Assemble the JWT claim set for a user.
+
+    The ``tv`` (token version) claim is the spine of session invalidation:
+    every token carries the user's current ``token_version`` and every
+    authenticated read re-checks it (see ``dependencies._assert_token_version``).
+    This is the single place the claim shape is defined — token factories stay
+    generic and encode whatever dict they're handed.
+    """
+    return {
+        "sub": str(user.id),
+        "email": user.email,
+        "role": user.role,
+        "tv": user.token_version,
+    }
 
 def set_refresh_cookie(response: Response, refresh_token: str):
     response.set_cookie(
@@ -89,13 +103,21 @@ async def authenticate_user(payload: LoginRequest, response: Response) -> TokenR
         user=UserPublic.model_validate(user),
     )
 
-async def refresh_tokens(user_id: str, response: Response) -> TokenResponse:
-    user = await prisma.users.find_unique(where={"id": user_id})
+async def refresh_tokens(payload: dict, response: Response) -> TokenResponse:
+    """Mint a new token pair from a validated refresh-token payload.
+
+    Re-checks the ``tv`` claim against the live user so a stale refresh cookie
+    (issued before a password change / sign-out-everywhere) cannot mint a fresh
+    access token — the same invalidation rule enforced on every read.
+    """
+    user = await prisma.users.find_unique(where={"id": payload["sub"]})
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or deactivated.",
         )
+
+    assert_token_version(payload, user)
 
     token_data = build_token_payload(user)
     new_access = create_access_token(token_data)

@@ -634,9 +634,9 @@ body {
 }
 
 /* Text scale: enlarge the entire interface uniformly. `zoom` is the single
-   lever that scales the px-based token ramp (most --font-size-*/line-heights
-   are px), reflowing layout the way browser zoom does — the WCAG gold standard
-   for magnification. md (default) sets no attribute. */
+   lever that scales the px-based token ramp (most font-size / line-height
+   tokens are px), reflowing layout the way browser zoom does — the WCAG gold
+   standard for magnification. md (default) sets no attribute. */
 [data-a11y-scale="lg"] {
   zoom: 1.15;
 }

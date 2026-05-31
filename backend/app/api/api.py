@@ -12,6 +12,7 @@ from app.api.endpoints import (
     preferences,
     scheduled_sessions,
     sessions,
+    sis,
     student_sessions,
     tests,
     users,
@@ -33,3 +34,4 @@ api_router.include_router(analytics.router, prefix="/analytics", tags=["analytic
 api_router.include_router(import_endpoints.router, prefix="/import", tags=["import"])
 api_router.include_router(accommodations.router)
 api_router.include_router(lti.router)
+api_router.include_router(sis.router)

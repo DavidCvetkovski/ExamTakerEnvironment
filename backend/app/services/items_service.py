@@ -12,6 +12,18 @@ from app.models.item_version import ItemStatus, QuestionType
 from app.schemas.item_version import ItemVersionCreate
 from app.schemas.learning_object import LearningObjectListResponse, LearningObjectUpdate
 
+async def _invalidate_exam_item_pools() -> None:
+    """Clear cached blueprint candidate pools after an item-version write.
+
+    Selection draws from item versions by tag/status, so any item change can
+    affect an arbitrary set of blueprints. Imported lazily to avoid an
+    import-time cycle with ``exam_sessions_service``.
+    """
+    from app.services.exam_sessions_service import invalidate_all_test_definition_pools
+
+    await invalidate_all_test_definition_pools()
+
+
 # Maps (current_status, new_status) → set of roles allowed to make that move
 STATUS_TRANSITIONS = {
     (ItemStatus.DRAFT, ItemStatus.READY_FOR_REVIEW): {UserRole.CONSTRUCTOR, UserRole.ADMIN},
@@ -231,7 +243,7 @@ async def create_new_revision(lo_id: UUID, payload: ItemVersionCreate, current_u
 
     if latest and latest.status == ItemStatus.DRAFT.value:
         # Overwrite in place — same ID and version_number.
-        return await prisma.item_versions.update(
+        result = await prisma.item_versions.update(
             where={"id": latest.id},
             data={
                 "created_by": current_user_id,
@@ -241,21 +253,24 @@ async def create_new_revision(lo_id: UUID, payload: ItemVersionCreate, current_u
                 "metadata_tags": Json(metadata_obj) if metadata_obj else Json(None),
             }
         )
+    else:
+        # Latest version has been advanced (READY_FOR_REVIEW, APPROVED, etc.) — create next version.
+        next_v = (latest.version_number + 1) if latest else 1
+        result = await prisma.item_versions.create(
+            data={
+                "learning_object_id": str(lo_id),
+                "created_by": current_user_id,
+                "version_number": next_v,
+                "status": ItemStatus.DRAFT.value,
+                "question_type": payload.question_type.value,
+                "content": Json(content_obj),
+                "options": Json(options_obj),
+                "metadata_tags": Json(metadata_obj) if metadata_obj else Json(None),
+            }
+        )
 
-    # Latest version has been advanced (READY_FOR_REVIEW, APPROVED, etc.) — create next version.
-    next_v = (latest.version_number + 1) if latest else 1
-    return await prisma.item_versions.create(
-        data={
-            "learning_object_id": str(lo_id),
-            "created_by": current_user_id,
-            "version_number": next_v,
-            "status": ItemStatus.DRAFT.value,
-            "question_type": payload.question_type.value,
-            "content": Json(content_obj),
-            "options": Json(options_obj),
-            "metadata_tags": Json(metadata_obj) if metadata_obj else Json(None),
-        }
-    )
+    await _invalidate_exam_item_pools()
+    return result
 
 async def transition_item_status(
     lo_id: UUID, 
@@ -309,6 +324,7 @@ async def transition_item_status(
         where={"id": version.id},
         data=data
     )
+    await _invalidate_exam_item_pools()
     return updated
 
 async def duplicate_learning_object(lo_id: UUID, current_user_id: str) -> dict:
@@ -355,6 +371,7 @@ async def duplicate_learning_object(lo_id: UUID, current_user_id: str) -> dict:
         }
     )
 
+    await _invalidate_exam_item_pools()
     return {"status": "duplicated", "learning_object_id": str(new_lo.id)}
 
 async def delete_learning_object(lo_id: UUID) -> dict:
@@ -368,4 +385,5 @@ async def delete_learning_object(lo_id: UUID) -> dict:
         data={"status": ItemStatus.RETIRED.value}
     )
 
+    await _invalidate_exam_item_pools()
     return {"status": "soft_deleted", "learning_object_id": str(lo_id)}

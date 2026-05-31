@@ -20,7 +20,7 @@ OpenVision routes visual decisions through tokens in [frontend/src/app/globals.c
 
 ## Toggle
 
-- The header-mounted theme toggle lets any authenticated user choose `Dark`, `Warm`, or `Light Blue`.
+- The header-mounted theme toggle lets any authenticated user choose `Dark`, `Warm`, or `Cool Blue`.
 - The selection is stored immediately in local storage under `theme` to reduce reload flash.
 - The selection is also persisted on the user record through `PATCH /api/users/me/preferences/theme`.
 - Logging out removes the active document theme. Logging back in restores the saved user preference.

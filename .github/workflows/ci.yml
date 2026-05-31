@@ -1,0 +1,163 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'epoch-**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # 1 + 3 + 6(pip): backend lint, schema apply, tests with coverage, pip-audit
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: openvision
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      ENVIRONMENT: test
+      SECRET_KEY: ci-secret-key-not-the-dev-default
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: openvision
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: '5432'
+      REDIS_HOST: localhost
+      REDIS_PORT: '6379'
+      DATABASE_URL: postgresql://postgres:password@localhost:5432/openvision
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest-cov pip-audit
+          pip install -r backend/requirements.txt
+
+      - name: Lint with flake8
+        run: |
+          flake8 backend/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 backend/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Generate Prisma clients & apply schema
+        # Prisma is the single source of truth (CLAUDE.md). The pip-installed
+        # prisma-client-py generator is invoked by `prisma generate` alongside
+        # the JS client; this mirrors dev-up.sh — no Alembic.
+        run: |
+          npx prisma@5.17.0 generate --schema=prisma/schema.prisma
+          npx prisma@5.17.0 db push --schema=prisma/schema.prisma --accept-data-loss
+
+      - name: Run backend tests with coverage
+        run: |
+          cd backend
+          PYTHONPATH=. pytest --cov=app --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+        if: always()
+
+      - name: Dependency audit (pip-audit)
+        # Non-blocking for now (§12.4): surfaces advisories without failing the
+        # build on unfixable transitive constraints. Review in the PR.
+        run: pip-audit -r backend/requirements.txt || true
+
+  # 2 + 6(npm): frontend lint, typecheck, build, npm audit
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+        run: npm run build
+
+      - name: Dependency audit (npm)
+        run: npm audit --audit-level=high || true
+
+  # 5: build the production images to catch Dockerfile/build-context regressions
+  # (no push). The backend image uses a repo-root context so `prisma generate`
+  # can read the single-source prisma/schema.prisma; the frontend keeps its own
+  # ./frontend context.
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: false
+          tags: openvision-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: frontend/Dockerfile
+          push: false
+          tags: openvision-frontend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

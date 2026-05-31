@@ -324,7 +324,7 @@ Following `directives/e2e_seed_naming_conventions.md`:
 - [ ] CSV upload: size cap, content-type + header validation, parse errors never
       5xx; no row applied unless it validates.
 - [ ] Audit log is append-only (no update/delete routes).
-- [ ] Aikido scan: zero Critical/High before merge to `main`.
+- [ ] Manual security review of the diff against §1 before merge to `main` (Aikido SAST retired — subscription lapsed).
 
 ## 7. Stage plan (stage-gate commits per `epoch_git_strategy.md`)
 
@@ -337,7 +337,7 @@ Following `directives/e2e_seed_naming_conventions.md`:
 | 4 | Keyboard/SR: announcer, skip links, focus-trap audit, ARIA, exam keyboard nav + shortcuts dialog | axe-core clean; `exam-keyboard.spec.ts` green | `feat(10): keyboard and screen-reader support` |
 | 5 | Accommodation admin module (BE) + `/admin/accommodations` (FE) + CSV import | `test_accommodations_admin.py` + admin E2E green | `feat(10): accommodation administration and audit log` |
 | 6 | Lighthouse + axe CI wiring; full E2E; manual SR pass | §6 checklist satisfied | `test(10): accessibility verification suite` |
-| 7 | Security checklist §6 + Aikido | Zero Critical/High | merge gate |
+| 7 | Security checklist §6 + manual security review | No unresolved high-severity findings | merge gate |
 
 ## 8. Follow-ups (to `directives/todo.md`)
 

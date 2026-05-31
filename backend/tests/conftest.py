@@ -21,6 +21,19 @@ async def initialize_prisma():
 async def cleanup_database():
     """Wipes all tables in the correct order to avoid FK violations."""
     # Order: Children first
+    await prisma_client.integration_audit_logs.delete_many()
+    await prisma_client.lti_grade_passbacks.delete_many()
+    await prisma_client.qti_jobs.delete_many()
+    await prisma_client.sis_import_job_rows.delete_many()
+    await prisma_client.sis_import_jobs.delete_many()
+    await prisma_client.lti_resource_links.delete_many()
+    await prisma_client.lti_context_links.delete_many()
+    await prisma_client.lti_user_links.delete_many()
+    await prisma_client.lti_launch_audits.delete_many()
+    await prisma_client.lti_deployments.delete_many()
+    await prisma_client.lti_platforms.delete_many()
+    await prisma_client.lti_tool_keys.delete_many()
+    await prisma_client.lti_oidc_states.delete_many()
     await prisma_client.accommodation_audit_log.delete_many()
     await prisma_client.interaction_events.delete_many()
     await prisma_client.question_grades.delete_many()

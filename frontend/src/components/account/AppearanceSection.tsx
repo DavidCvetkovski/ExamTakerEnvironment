@@ -9,7 +9,7 @@ const THEMES: Array<{ label: string; value: ThemePreference; hint: string }> = [
     { label: 'Auto', value: 'auto', hint: 'Follows time of day' },
     { label: 'Dark', value: 'dark', hint: 'Default' },
     { label: 'Warm', value: 'warm', hint: 'Softer, low-contrast' },
-    { label: 'Light blue', value: 'light-blue', hint: 'Bright' },
+    { label: 'Cool blue', value: 'light-blue', hint: 'Bright' },
 ];
 
 function roleDefaultTheme(role: UserPublic['role'] | undefined): ThemePreference {
@@ -19,10 +19,11 @@ function roleDefaultTheme(role: UserPublic['role'] | undefined): ThemePreference
 /** Theme picker on the account page. Reuses the existing, fully-wired
  *  `setThemePreference` plumbing (optimistic + persisted) — no new endpoint. */
 export default function AppearanceSection() {
-    const { user, themePreference, setThemePreference } = useAuthStore();
+    const { user, themePreference, setThemePreference, accessibility } = useAuthStore();
     const { toast } = useToast();
     const [saving, setSaving] = useState<ThemePreference | null>(null);
 
+    const isHighContrast = accessibility?.high_contrast ?? false;
     const active = themePreference ?? roleDefaultTheme(user?.role);
 
     const choose = async (value: ThemePreference) => {
@@ -58,12 +59,16 @@ export default function AppearanceSection() {
                                 'flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 text-left transition-colors',
                                 'disabled:opacity-60 disabled:cursor-not-allowed',
                                 isActive
-                                    ? 'border-brand bg-brand/10 text-foreground'
-                                    : 'border-shell-border bg-shell-input text-foreground hover:border-shell-border-deep',
+                                    ? isHighContrast
+                                        ? 'bg-foreground text-background border-foreground font-semibold'
+                                        : 'border-brand bg-brand/10 text-foreground font-semibold'
+                                    : isHighContrast
+                                        ? 'border-shell-border bg-shell-input text-foreground hover:bg-foreground hover:text-background'
+                                        : 'border-shell-border bg-shell-input text-foreground hover:border-shell-border-deep hover:bg-shell-border/20',
                             ].join(' ')}
                         >
                             <span className="text-body font-medium">{theme.label}</span>
-                            <span className="text-eyebrow text-shell-muted-dim">{theme.hint}</span>
+                            <span className={`text-eyebrow ${isActive ? 'text-inherit opacity-80' : 'text-shell-muted-dim'}`}>{theme.hint}</span>
                         </button>
                     );
                 })}

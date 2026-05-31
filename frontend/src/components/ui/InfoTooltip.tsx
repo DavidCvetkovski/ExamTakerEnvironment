@@ -2,6 +2,7 @@
 
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useHydrated } from '@/hooks/useHydrated';
 import { cn } from './cn';
 
 interface InfoTooltipProps {
@@ -18,12 +19,10 @@ export default function InfoTooltip({
     align = 'left',
 }: InfoTooltipProps) {
     const [open, setOpen] = useState(false);
-    const [mounted, setMounted] = useState(false);
+    const mounted = useHydrated();
     const [coords, setCoords] = useState({ top: 0, left: 0 });
     const triggerRef = useRef<HTMLButtonElement>(null);
     const containerRef = useRef<HTMLSpanElement>(null);
-
-    useEffect(() => { setMounted(true); }, []);
 
     useEffect(() => {
         if (!open) return;

@@ -38,6 +38,9 @@ export interface UserPublic {
     is_active: boolean;
     theme_preference?: ThemePreference | null;
     accessibility?: AccessibilityPreferences;
+    /** Administrator-granted accommodation — forces a minimum enlarged layout on
+     *  the exam screen (distinct from the self-chosen `accessibility` profile). */
+    accommodation_enlarged_display?: boolean;
 }
 
 interface AuthState {

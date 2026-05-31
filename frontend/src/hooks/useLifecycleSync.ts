@@ -32,8 +32,11 @@ export function useLifecycleSync(
     refetch: () => void | Promise<void>,
 ): void {
     // Stable ref so the effect can read the latest refetch without re-subscribing.
+    // Updated in an effect (after commit) rather than during render.
     const refetchRef = useRef(refetch);
-    refetchRef.current = refetch;
+    useEffect(() => {
+        refetchRef.current = refetch;
+    });
 
     useEffect(() => {
         let lastCallAt = 0;

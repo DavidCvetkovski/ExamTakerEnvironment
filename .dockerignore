@@ -1,0 +1,41 @@
+# Build context is the repo root (see backend/Dockerfile). Keep it lean — only
+# backend/ and prisma/ are actually copied into the backend image, but the whole
+# root is sent to the daemon, so exclude everything heavy/irrelevant.
+
+# VCS & tooling
+.git
+.github
+.claude
+.vscode
+.idea
+
+# Python
+**/__pycache__
+**/*.pyc
+backend/.venv
+backend/.pytest_cache
+backend/.mypy_cache
+backend/htmlcov
+backend/coverage.xml
+backend/.coverage
+
+# Node / frontend (frontend has its own image with context ./frontend)
+frontend/node_modules
+frontend/.next
+frontend/test-results
+frontend/playwright-report
+node_modules
+
+# Load tests, docs, deploy assets not needed in the backend image
+load-tests
+docs
+deploy
+directives
+
+# Secrets & local env
+.env
+**/.env
+*.local
+
+# OS noise
+.DS_Store

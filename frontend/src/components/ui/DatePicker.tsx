@@ -58,13 +58,15 @@ export function DatePicker({ value, onChange, min, max }: DatePickerProps) {
         return () => document.removeEventListener('keydown', handler);
     }, [isOpen]);
 
-    // Sync view when value changes externally
-    useEffect(() => {
-        if (value) {
-            setViewYear(value.getFullYear());
-            setViewMonth(value.getMonth());
-        }
-    }, [value]);
+    // Sync the visible month/year when `value` changes externally. React's
+    // "adjust state during render" pattern (guarded by the previous value)
+    // rather than a setState-in-effect cascade.
+    const [prevValue, setPrevValue] = useState(value);
+    if (value && value !== prevValue) {
+        setPrevValue(value);
+        setViewYear(value.getFullYear());
+        setViewMonth(value.getMonth());
+    }
 
     const monthName = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date(viewYear, viewMonth));
 

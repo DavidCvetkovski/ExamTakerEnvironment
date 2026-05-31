@@ -2,7 +2,11 @@ import { useEffect, useRef, RefObject } from 'react';
 
 export function useClickOutside(ref: RefObject<HTMLElement | null>, callback: () => void): void {
     const callbackRef = useRef(callback);
-    callbackRef.current = callback;
+    // Keep the ref pointed at the latest callback without re-subscribing the
+    // listener. Updated in an effect (after commit) rather than during render.
+    useEffect(() => {
+        callbackRef.current = callback;
+    });
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {

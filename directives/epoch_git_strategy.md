@@ -24,16 +24,18 @@ The repository will adhere to the following structure:
 1.  **Start of Epoch:** When the user approves an Epoch Blueprint, the AI will immediately check out a new branch from `main`:
     `git checkout -b feature/epoch-2-authoring`
 2.  **During the Epoch:** The AI and user work collaboratively. All commits happen within this branch.
-3.  **End of Epoch — Security Gate (MANDATORY before every merge to `main`):**
-    Before merging any feature branch into `main`, a security check **must** be performed using **Aikido**:
-    1. Run Aikido's security scan against the current branch (`aikido scan` or via the Aikido CI integration).
-    2. Review all findings — fix any **Critical** or **High** severity issues immediately before proceeding.
-    3. Document Medium/Low findings as Linear issues for follow-up (do not block the merge for these unless they are exploitable in the current context).
-    4. Only once the security scan passes (zero Critical/High unresolved issues) may the merge proceed:
+3.  **End of Epoch — Security Review (MANDATORY before every merge to `main`):**
+    Before merging any feature branch into `main`, a manual security review **must** be performed:
+    1. Review the branch diff against the security principles in `CLAUDE.md` §1 (authz on every endpoint, input validation, parameterized queries, secrets handling, least privilege). The `/security-review` skill is the convenient way to do this.
+    2. Fix any **high-severity** findings immediately before proceeding.
+    3. Document lower-severity findings as Linear issues for follow-up (do not block the merge for these unless they are exploitable in the current context).
+    4. Only once the review is clean of unresolved high-severity findings may the merge proceed:
     - `git checkout main`
     - `git merge feature/epoch-X`
     - `git push origin main`
-    This gate applies to **every** merge to `main`, not just Epoch boundaries — including hotfixes, bug fixes, and refactors.
+    This review applies to **every** merge to `main`, not just Epoch boundaries — including hotfixes, bug fixes, and refactors.
+
+    > **Note:** This was previously an automated **Aikido** SAST gate. The Aikido subscription has lapsed, so there is no automated scan — the security review is now a human responsibility.
 
 ---
 

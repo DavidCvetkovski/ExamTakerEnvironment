@@ -16,6 +16,11 @@ from app.schemas.auth import (
     ChangePasswordRequest,
     ConfirmPasswordRequest,
 )
+from app.core.rate_limit import (
+    rate_limit_login,
+    rate_limit_register,
+    rate_limit_refresh,
+)
 from app.services import users_service as svc
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -24,17 +29,22 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 from app.core.prisma_db import get_prisma, prisma
 from prisma import Prisma
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register",
+    response_model=TokenResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limit_register)],
+)
 async def register(payload: RegisterRequest, response: Response):
     """Create a new user account."""
     return await svc.register_user(payload=payload, response=response)
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=TokenResponse, dependencies=[Depends(rate_limit_login)])
 async def login(payload: LoginRequest, response: Response):
     """Authenticate with email + password."""
     return await svc.authenticate_user(payload=payload, response=response)
 
-@router.post("/refresh", response_model=TokenResponse)
+@router.post("/refresh", response_model=TokenResponse, dependencies=[Depends(rate_limit_refresh)])
 async def refresh(
     response: Response,
     refresh_token: Optional[str] = Cookie(None),

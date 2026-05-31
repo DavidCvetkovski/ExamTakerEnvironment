@@ -282,7 +282,7 @@ Following `directives/e2e_seed_naming_conventions.md`. New `account-settings.spe
 - [ ] Admin cannot self-deactivate (fail-safe against lockout).
 - [ ] Deactivate is reversible (no hard delete; referential integrity intact).
 - [ ] `grep` §7.1 color audit returns empty for new files.
-- [ ] Aikido scan: zero Critical/High before merge to `main`.
+- [ ] Manual security review of the diff against §1 before merge to `main` (Aikido SAST retired — subscription lapsed).
 
 ## 7. Stage plan (stage-gate commits per `epoch_git_strategy.md`)
 
@@ -295,7 +295,7 @@ Following `directives/e2e_seed_naming_conventions.md`. New `account-settings.spe
 | 4 | logout-all + self-deactivate endpoints/services | Tests F4 green | `feat(9): sign-out-everywhere and self-deactivation` |
 | 5 | Account page sections + store refactor (`applySession`) | App renders all 3 themes; manual click-through | `feat(9): account settings page (profile, appearance, security, danger zone)` |
 | 6 | Playwright `account-settings.spec.ts` | E2E green | `test(9): account settings E2E` |
-| 7 | Security checklist §6 + Aikido | Zero Critical/High | merge gate |
+| 7 | Security checklist §6 + manual security review | No unresolved high-severity findings | merge gate |
 
 ## 8. Follow-ups (to `directives/todo.md`)
 

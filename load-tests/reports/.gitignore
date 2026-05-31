@@ -1,0 +1,3 @@
+# Load-test run outputs are not committed; keep the directory present.
+*
+!.gitignore

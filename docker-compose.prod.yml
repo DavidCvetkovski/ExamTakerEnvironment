@@ -1,0 +1,179 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OpenVision — Production Docker Compose
+#
+# Usage:
+#   cp .env.example .env  # fill in real secrets
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# IMPORTANT: Never commit a populated .env file.
+# ─────────────────────────────────────────────────────────────────────────────
+
+x-backend-env: &backend-env
+  ENVIRONMENT: ${ENVIRONMENT:-production}
+  APP_VERSION: ${APP_VERSION:-0.1.0}
+  SECRET_KEY: ${SECRET_KEY}
+  DATABASE_URL: ${DATABASE_URL:-postgresql://openvision:${POSTGRES_PASSWORD}@pgbouncer:5432/openvision}
+  REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+  CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+  SENTRY_DSN: ${SENTRY_DSN:-}
+  HEARTBEAT_STREAM_NAME: openvision:heartbeat:v1
+  HEARTBEAT_CONSUMER_GROUP: heartbeat-workers
+  HEARTBEAT_WORKER_BATCH_SIZE: 500
+  HEARTBEAT_WORKER_BLOCK_MS: 2500
+  HEARTBEAT_MAX_RETRIES: 5
+  RATE_LIMIT_ENABLED: "true"
+
+services:
+  # ── Nginx reverse proxy ─────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./deploy/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      backend-api:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    networks:
+      - public
+      - internal
+
+  # ── Next.js frontend ────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-https://api.openvision.example.com}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - internal
+
+  # ── FastAPI backend API ─────────────────────────────────────────────────
+  backend-api:
+    build:
+      # Repo-root context so the image sees both backend/ and the single-source
+      # prisma/schema.prisma (needed for `prisma generate` at build time).
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - internal
+
+  # ── Heartbeat worker ────────────────────────────────────────────────────
+  heartbeat-worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    command: ["python", "-m", "app.workers.heartbeat_worker"]
+    environment:
+      <<: *backend-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+
+  # ── PostgreSQL ───────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-openvision}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-openvision}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-openvision}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  # ── PgBouncer connection pooler ─────────────────────────────────────────
+  pgbouncer:
+    image: edoburu/pgbouncer:1.22.1
+    restart: unless-stopped
+    environment:
+      DB_USER: ${POSTGRES_USER:-openvision}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_HOST: postgres
+      DB_NAME: ${POSTGRES_DB:-openvision}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 500
+      DEFAULT_POOL_SIZE: 20
+      SERVER_RESET_QUERY: DISCARD ALL
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+  # ── Redis ────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - internal
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  public:
+    driver: bridge
+  internal:
+    driver: bridge
+    internal: true

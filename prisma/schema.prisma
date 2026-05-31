@@ -49,6 +49,7 @@ model courses {
   updated_at              DateTime?                 @db.Timestamp(6)
   course_enrollments      course_enrollments[]
   learning_objects        learning_objects[]
+  lti_context_links       lti_context_links[]
   users                   users?                    @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   scheduled_exam_sessions scheduled_exam_sessions[]
   test_definitions        test_definitions[]
@@ -82,6 +83,7 @@ model scheduled_exam_sessions {
   created_at                DateTime            @default(now()) @db.Timestamp(6)
   updated_at                DateTime?           @db.Timestamp(6)
   exam_sessions             exam_sessions[]
+  lti_resource_links        lti_resource_links[]
   courses                   courses             @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   users                     users?              @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   test_definitions          test_definitions    @relation(fields: [test_definition_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -154,6 +156,7 @@ model test_definitions {
   updated_at              DateTime?                 @db.Timestamp(6)
   scoring_config          Json?
   exam_sessions           exam_sessions[]
+  lti_resource_links      lti_resource_links[]
   scheduled_exam_sessions scheduled_exam_sessions[]
   session_results         session_results[]
   courses                 courses?                  @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -184,9 +187,15 @@ model users {
   item_banks                item_banks[]
   item_versions             item_versions[]
   learning_objects          learning_objects[]
+  lti_grade_passbacks       lti_grade_passbacks[]
+  lti_launch_audits         lti_launch_audits[]
+  lti_user_links            lti_user_links[]
+  integration_audit_logs    integration_audit_logs[]
   media_assets              media_assets[]
   question_grades           question_grades[]
+  qti_jobs                  qti_jobs[]
   scheduled_exam_sessions   scheduled_exam_sessions[]
+  sis_import_jobs           sis_import_jobs[]
   published_results         session_results[]         @relation("PublishedResults")
   student_results           session_results[]         @relation("StudentResults")
   test_definitions          test_definitions[]
@@ -207,17 +216,274 @@ model accommodation_audit_log {
   @@index([created_at], map: "ix_accommodation_audit_created_at")
 }
 
+model lti_platforms {
+  id              String    @id @default(uuid()) @db.Uuid
+  name            String    @db.VarChar
+  issuer          String    @db.VarChar
+  client_id       String    @db.VarChar
+  auth_login_url  String    @db.VarChar
+  auth_token_url  String    @db.VarChar
+  auth_jwks_url   String    @db.VarChar
+  deployment_ids  Json
+  canvas_base_url String?   @db.VarChar
+  is_active       Boolean   @default(true)
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+  updated_at      DateTime? @db.Timestamp(6)
+  created_by      String?   @db.Uuid
+
+  context_links   lti_context_links[]
+  deployments     lti_deployments[]
+  launch_audits   lti_launch_audits[]
+  resource_links  lti_resource_links[]
+  user_links      lti_user_links[]
+
+  @@unique([issuer, client_id], map: "uq_lti_platform_issuer_client")
+  @@index([issuer], map: "ix_lti_platforms_issuer")
+  @@index([is_active], map: "ix_lti_platforms_is_active")
+}
+
+model lti_oidc_states {
+  state           String    @id @db.VarChar
+  nonce           String    @db.VarChar
+  issuer          String    @db.VarChar
+  client_id       String    @db.VarChar
+  target_link_uri String    @db.VarChar
+  message_hint    String?   @db.Text
+  expires_at      DateTime  @db.Timestamp(6)
+  consumed_at     DateTime? @db.Timestamp(6)
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+
+  @@index([expires_at], map: "ix_lti_oidc_states_expires_at")
+}
+
+
+model lti_deployments {
+  id            String    @id @default(uuid()) @db.Uuid
+  platform_id   String    @db.Uuid
+  deployment_id String    @db.VarChar
+  label         String?   @db.VarChar
+  is_active     Boolean   @default(true)
+  created_at    DateTime  @default(now()) @db.Timestamp(6)
+  platform      lti_platforms @relation(fields: [platform_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  context_links  lti_context_links[]
+  resource_links lti_resource_links[]
+
+  @@unique([platform_id, deployment_id], map: "uq_lti_deployment_platform_deployment")
+  @@index([deployment_id], map: "ix_lti_deployments_deployment_id")
+}
+
+model lti_tool_keys {
+  id                    String    @id @default(uuid()) @db.Uuid
+  kid                   String    @unique @db.VarChar
+  public_jwk            Json
+  encrypted_private_jwk String    @db.Text
+  algorithm             String    @default("RS256") @db.VarChar
+  is_active             Boolean   @default(true)
+  created_at            DateTime  @default(now()) @db.Timestamp(6)
+  rotated_at            DateTime? @db.Timestamp(6)
+
+  @@index([is_active], map: "ix_lti_tool_keys_is_active")
+}
+
+model lti_user_links {
+  id             String    @id @default(uuid()) @db.Uuid
+  platform_id    String    @db.Uuid
+  issuer         String    @db.VarChar
+  subject        String    @db.VarChar
+  user_id        String    @db.Uuid
+  email          String?   @db.VarChar
+  name           String?   @db.VarChar
+  last_roles     Json?
+  last_launch_at DateTime? @db.Timestamp(6)
+  created_at     DateTime  @default(now()) @db.Timestamp(6)
+  platform       lti_platforms @relation(fields: [platform_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user           users @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([issuer, subject], map: "uq_lti_user_links_issuer_subject")
+  @@index([user_id], map: "ix_lti_user_links_user_id")
+  @@index([platform_id], map: "ix_lti_user_links_platform_id")
+}
+
+model lti_context_links {
+  id            String    @id @default(uuid()) @db.Uuid
+  platform_id   String    @db.Uuid
+  deployment_id String    @db.Uuid
+  context_id    String    @db.VarChar
+  context_label String?   @db.VarChar
+  context_title String?   @db.VarChar
+  course_id     String?   @db.Uuid
+  created_at    DateTime  @default(now()) @db.Timestamp(6)
+  updated_at    DateTime? @db.Timestamp(6)
+  platform      lti_platforms @relation(fields: [platform_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  deployment    lti_deployments @relation(fields: [deployment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  course        courses? @relation(fields: [course_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  resource_links lti_resource_links[]
+
+  @@unique([platform_id, deployment_id, context_id], map: "uq_lti_context_platform_deployment_context")
+  @@index([course_id], map: "ix_lti_context_links_course_id")
+}
+
+model lti_resource_links {
+  id                   String    @id @default(uuid()) @db.Uuid
+  platform_id          String    @db.Uuid
+  deployment_id        String    @db.Uuid
+  context_link_id      String?   @db.Uuid
+  resource_link_id     String    @db.VarChar
+  resource_title       String?   @db.VarChar
+  test_definition_id   String?   @db.Uuid
+  scheduled_session_id String?   @db.Uuid
+  line_item_url        String?   @db.VarChar
+  line_item_id         String?   @db.VarChar
+  score_maximum        Float?
+  created_at           DateTime  @default(now()) @db.Timestamp(6)
+  updated_at           DateTime? @db.Timestamp(6)
+  platform             lti_platforms @relation(fields: [platform_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  deployment           lti_deployments @relation(fields: [deployment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  context_link         lti_context_links? @relation(fields: [context_link_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  test_definition      test_definitions? @relation(fields: [test_definition_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  scheduled_session    scheduled_exam_sessions? @relation(fields: [scheduled_session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  grade_passbacks      lti_grade_passbacks[]
+
+  @@unique([platform_id, deployment_id, resource_link_id], map: "uq_lti_resource_platform_deployment_resource")
+  @@index([test_definition_id], map: "ix_lti_resource_links_test_definition_id")
+  @@index([scheduled_session_id], map: "ix_lti_resource_links_scheduled_session_id")
+}
+
+model lti_launch_audits {
+  id               String    @id @default(uuid()) @db.Uuid
+  platform_id      String?   @db.Uuid
+  issuer           String    @db.VarChar
+  subject          String?   @db.VarChar
+  user_id          String?   @db.Uuid
+  deployment_id    String?   @db.VarChar
+  context_id       String?   @db.VarChar
+  resource_link_id String?   @db.VarChar
+  message_type     String?   @db.VarChar
+  status           String    @db.VarChar
+  failure_reason   String?   @db.VarChar
+  request_id       String?   @db.VarChar
+  created_at       DateTime  @default(now()) @db.Timestamp(6)
+  platform         lti_platforms? @relation(fields: [platform_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user             users? @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([issuer], map: "ix_lti_launch_audits_issuer")
+  @@index([user_id], map: "ix_lti_launch_audits_user_id")
+  @@index([created_at], map: "ix_lti_launch_audits_created_at")
+  @@index([status], map: "ix_lti_launch_audits_status")
+}
+
+model lti_grade_passbacks {
+  id                String    @id @default(uuid()) @db.Uuid
+  resource_link_id  String    @db.Uuid
+  session_result_id String    @db.Uuid
+  student_user_id   String    @db.Uuid
+  platform_user_sub String    @db.VarChar
+  line_item_url     String    @db.VarChar
+  score_given       Float
+  score_maximum     Float
+  activity_progress String    @db.VarChar
+  grading_progress  String    @db.VarChar
+  status            String    @db.VarChar
+  attempts          Int       @default(0)
+  last_error        String?   @db.Text
+  last_attempt_at   DateTime? @db.Timestamp(6)
+  pushed_at         DateTime? @db.Timestamp(6)
+  created_at        DateTime  @default(now()) @db.Timestamp(6)
+  resource_link     lti_resource_links @relation(fields: [resource_link_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  session_result    session_results @relation(fields: [session_result_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  student           users @relation(fields: [student_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([resource_link_id, session_result_id], map: "uq_lti_grade_passback_resource_result")
+  @@index([status], map: "ix_lti_grade_passbacks_status")
+  @@index([student_user_id], map: "ix_lti_grade_passbacks_student_user_id")
+}
+
+model sis_import_jobs {
+  id           String    @id @default(uuid()) @db.Uuid
+  import_type  String    @db.VarChar
+  filename     String    @db.VarChar
+  status       String    @db.VarChar
+  total_rows   Int       @default(0)
+  success_rows Int       @default(0)
+  error_rows   Int       @default(0)
+  created_by   String    @db.Uuid
+  created_at   DateTime  @default(now()) @db.Timestamp(6)
+  completed_at DateTime? @db.Timestamp(6)
+  rows         sis_import_job_rows[]
+  user         users @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_by], map: "ix_sis_import_jobs_created_by")
+  @@index([created_at], map: "ix_sis_import_jobs_created_at")
+}
+
+model sis_import_job_rows {
+  id         String   @id @default(uuid()) @db.Uuid
+  job_id     String   @db.Uuid
+  row_number Int
+  status     String   @db.VarChar
+  message    String?  @db.Text
+  raw_data   Json
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  job        sis_import_jobs @relation(fields: [job_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([job_id], map: "ix_sis_import_job_rows_job_id")
+  @@index([status], map: "ix_sis_import_job_rows_status")
+}
+
+model qti_jobs {
+  id            String    @id @default(uuid()) @db.Uuid
+  job_type      String    @db.VarChar
+  filename      String?   @db.VarChar
+  status        String    @db.VarChar
+  total_items   Int       @default(0)
+  success_items Int       @default(0)
+  error_items   Int       @default(0)
+  report        Json?
+  created_by    String    @db.Uuid
+  created_at    DateTime  @default(now()) @db.Timestamp(6)
+  completed_at  DateTime? @db.Timestamp(6)
+  user          users @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_by], map: "ix_qti_jobs_created_by")
+  @@index([created_at], map: "ix_qti_jobs_created_at")
+}
+
+model integration_audit_logs {
+  id            String   @id @default(uuid()) @db.Uuid
+  actor_user_id String?  @db.Uuid
+  integration   String   @db.VarChar
+  action        String   @db.VarChar
+  resource_type String?  @db.VarChar
+  resource_id   String?  @db.VarChar
+  status        String   @db.VarChar
+  metadata      Json?
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+  actor         users? @relation(fields: [actor_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([actor_user_id], map: "ix_integration_audit_actor_user_id")
+  @@index([integration], map: "ix_integration_audit_integration")
+  @@index([action], map: "ix_integration_audit_action")
+  @@index([created_at], map: "ix_integration_audit_created_at")
+}
+
 model interaction_events {
   id                 String               @id @default(uuid()) @db.Uuid
   session_id         String               @db.Uuid
+  client_event_id    String?              @db.Uuid
   learning_object_id String?              @db.Uuid
   item_version_id    String?              @db.Uuid
   event_type         interactioneventtype
   payload            Json
   created_at         DateTime             @default(now()) @db.Timestamp(6)
+  received_at        DateTime             @default(now()) @db.Timestamp(6)
   exam_sessions      exam_sessions        @relation(fields: [session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([session_id], map: "ix_interaction_events_session_id")
+  @@index([session_id, created_at], map: "ix_interaction_events_session_created_at")
+  @@unique([session_id, client_event_id], map: "uq_interaction_events_session_client_event")
 }
 
 model question_grades {
@@ -263,6 +529,7 @@ model session_results {
   updated_at         DateTime?        @db.Timestamp(6)
   publishers         users?           @relation("PublishedResults", fields: [published_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   exam_sessions      exam_sessions    @relation(fields: [session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  lti_grade_passbacks lti_grade_passbacks[]
   students           users            @relation("StudentResults", fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   test_definitions   test_definitions @relation(fields: [test_definition_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 

@@ -9,10 +9,12 @@ from app.models.interaction_event import InteractionEventType
 
 class InteractionEventCreate(BaseModel):
     """Schema for a single interaction event within a heartbeat batch."""
+    client_event_id: UUID
     learning_object_id: Optional[UUID] = None
     item_version_id: Optional[UUID] = None
     event_type: InteractionEventType
     payload: Dict[str, Any]
+    client_created_at: Optional[datetime] = None
 
 
 class InteractionEventBulkCreate(BaseModel):
@@ -33,6 +35,7 @@ class InteractionEventResponse(BaseModel):
     """Schema for returning a single persisted interaction event."""
     id: UUID
     session_id: UUID
+    client_event_id: Optional[UUID] = None
     learning_object_id: Optional[UUID] = None
     item_version_id: Optional[UUID] = None
     event_type: InteractionEventType
@@ -45,6 +48,8 @@ class InteractionEventResponse(BaseModel):
 class HeartbeatResponse(BaseModel):
     """Response returned after a successful heartbeat flush."""
     saved: int
+    accepted: int
+    queued: int
     server_timestamp: datetime
 
 

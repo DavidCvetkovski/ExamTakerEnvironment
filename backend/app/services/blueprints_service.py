@@ -100,4 +100,9 @@ async def update_test_definition(
             "updated_at": datetime.utcnow(),
         }
     )
+    # The blocks (and therefore the resolved item pool) may have changed, so
+    # drop the cached snapshot for this blueprint.
+    from app.services.exam_sessions_service import invalidate_test_definition_cache
+
+    await invalidate_test_definition_cache(str(test_id))
     return updated

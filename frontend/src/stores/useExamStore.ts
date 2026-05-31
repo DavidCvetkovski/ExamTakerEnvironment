@@ -34,11 +34,33 @@ export interface ExamSession {
 }
 
 export interface InteractionEvent {
+    client_event_id: string;
     learning_object_id: string | null;
     item_version_id: string | null;
     event_type: 'ANSWER_CHANGE' | 'FLAG_TOGGLE' | 'NAVIGATION';
     payload: Record<string, unknown>;
+    client_created_at: string;
 }
+
+function createClientEventId(): string {
+    const cryptoObj = typeof crypto !== 'undefined' ? crypto : undefined;
+    if (cryptoObj && typeof cryptoObj.randomUUID === 'function') {
+        return cryptoObj.randomUUID();
+    }
+    const bytes = new Uint8Array(16);
+    if (cryptoObj && typeof cryptoObj.getRandomValues === 'function') {
+        cryptoObj.getRandomValues(bytes);
+    } else {
+        for (let i = 0; i < 16; i++) {
+            bytes[i] = Math.floor(Math.random() * 256);
+        }
+    }
+    bytes[6] = (bytes[6] & 0x0f) | 0x40; // Version 4
+    bytes[8] = (bytes[8] & 0x3f) | 0x80; // Variant 10xxxxxx
+    const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -157,10 +179,12 @@ export const useExamStore = create<ExamState>((set, get) => ({
 
     setAnswer: (loId, ivId, _questionType, payload) => {
         const event: InteractionEvent = {
+            client_event_id: createClientEventId(),
             learning_object_id: loId,
             item_version_id: ivId,
             event_type: 'ANSWER_CHANGE',
             payload,
+            client_created_at: new Date().toISOString(),
         };
         set((state) => ({
             answers: { ...state.answers, [loId]: payload },
@@ -172,10 +196,12 @@ export const useExamStore = create<ExamState>((set, get) => ({
         const currentlyFlagged = get().flags[loId] || false;
         const newFlagged = !currentlyFlagged;
         const event: InteractionEvent = {
+            client_event_id: createClientEventId(),
             learning_object_id: loId,
             item_version_id: ivId,
             event_type: 'FLAG_TOGGLE',
             payload: { flagged: newFlagged },
+            client_created_at: new Date().toISOString(),
         };
         set((state) => ({
             flags: { ...state.flags, [loId]: newFlagged },
@@ -192,10 +218,12 @@ export const useExamStore = create<ExamState>((set, get) => ({
         if (index < 0 || index >= session.items.length || index === fromIndex) return;
 
         const event: InteractionEvent = {
+            client_event_id: createClientEventId(),
             learning_object_id: null,
             item_version_id: null,
             event_type: 'NAVIGATION',
             payload: { from_index: fromIndex, to_index: index },
+            client_created_at: new Date().toISOString(),
         };
         set((s) => ({
             currentQuestionIndex: index,

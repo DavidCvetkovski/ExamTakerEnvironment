@@ -16,6 +16,7 @@ class InteractionEvent(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     session_id = Column(UUID(as_uuid=True), ForeignKey("exam_sessions.id"), nullable=False, index=True)
+    client_event_id = Column(UUID(as_uuid=True), nullable=True)
     
     # Optional: track specific LO/Version if the event is tied to a question
     learning_object_id = Column(UUID(as_uuid=True), nullable=True)
@@ -25,6 +26,7 @@ class InteractionEvent(Base):
     payload = Column(JSONB, nullable=False, default=dict)
     
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    received_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Relationship
     session = relationship("ExamSession", backref="interaction_events")

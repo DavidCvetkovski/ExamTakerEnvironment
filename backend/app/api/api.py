@@ -8,6 +8,7 @@ from app.api.endpoints import (
     import_endpoints,
     interactions,
     items,
+    lti,
     preferences,
     scheduled_sessions,
     sessions,
@@ -31,3 +32,4 @@ api_router.include_router(grading.router, prefix="/grading", tags=["grading"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 api_router.include_router(import_endpoints.router, prefix="/import", tags=["import"])
 api_router.include_router(accommodations.router)
+api_router.include_router(lti.router)

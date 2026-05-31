@@ -73,6 +73,7 @@ export default function AccessibilitySection() {
                 <div className="grid grid-cols-3 gap-3" role="group" aria-label="Text size">
                     {SCALES.map((scale) => {
                         const isActive = activeScale === scale.value;
+                        const isHighContrast = accessibility.high_contrast;
                         return (
                             <button
                                 key={scale.value}
@@ -84,12 +85,16 @@ export default function AccessibilitySection() {
                                     'flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2.5 text-left transition-colors',
                                     'disabled:opacity-60 disabled:cursor-not-allowed',
                                     isActive
-                                        ? 'border-brand bg-brand/10 text-foreground'
-                                        : 'border-shell-border bg-shell-input text-foreground hover:border-shell-border-deep',
+                                        ? isHighContrast
+                                            ? 'bg-foreground text-background border-foreground font-semibold'
+                                            : 'border-brand bg-brand/10 text-foreground font-semibold'
+                                        : isHighContrast
+                                            ? 'border-shell-border bg-shell-input text-foreground hover:bg-foreground hover:text-background'
+                                            : 'border-shell-border bg-shell-input text-foreground hover:border-shell-border-deep hover:bg-shell-border/20',
                                 ].join(' ')}
                             >
                                 <span className="text-body font-medium">{scale.label}</span>
-                                <span className="text-eyebrow text-shell-muted-dim">{scale.hint}</span>
+                                <span className={`text-eyebrow ${isActive ? 'text-inherit opacity-80' : 'text-shell-muted-dim'}`}>{scale.hint}</span>
                             </button>
                         );
                     })}
@@ -129,8 +134,8 @@ function Toggle({
         >
             <span
                 className={[
-                    'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                    checked ? 'translate-x-6' : 'translate-x-1',
+                    'inline-block h-4 w-4 transform rounded-full transition-all duration-200 transition-transform',
+                    checked ? 'bg-white translate-x-6' : 'bg-shell-muted-dim translate-x-1',
                 ].join(' ')}
             />
         </button>

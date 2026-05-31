@@ -30,7 +30,7 @@ You operate within a 3-layer architecture that separates concerns to maximize re
 - Enforce authorization checks on **every** endpoint: verify the authenticated user has the role *and* ownership to access the resource.
 - Store secrets in `.env` only. Never hardcode API keys, database credentials, or JWT secrets.
 - Hash passwords with `bcrypt` or `argon2`. Never store plaintext passwords.
-- Run the Aikido security gate before every merge to `main` (see `directives/epoch_git_strategy.md`).
+- Perform a manual security review of the diff before every merge to `main` (see `directives/epoch_git_strategy.md`). _(The Aikido SAST gate was retired when the subscription lapsed.)_
 - Apply the principle of least privilege: each role should only have access to the endpoints and data it needs.
 
 **2. Maintainability & Clean Code**

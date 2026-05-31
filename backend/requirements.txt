@@ -57,3 +57,7 @@ websockets==16.0
 prisma==0.15.0
 reportlab>=4.0
 matplotlib>=3.8
+pydantic-settings==2.14.1
+prometheus-client==0.25.0
+slowapi==0.1.9
+sentry-sdk[fastapi]==2.61.0

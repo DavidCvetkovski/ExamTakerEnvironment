@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState, ReactNode } from 'react';
+import { useEffect, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useToastStore, ToastItem, ToastTone } from './useToast';
+import { useHydrated } from '@/hooks/useHydrated';
 import { CheckIcon, XIcon } from './icons';
 
 const TONE_STYLES: Record<ToastTone, string> = {
@@ -57,13 +58,10 @@ function Toast({ toast }: { toast: ToastItem }) {
 
 export function ToastProvider() {
     const toasts = useToastStore((s) => s.toasts);
-    const [mounted, setMounted] = useState(false);
 
     // Defer the portal until after hydration so SSR HTML and the first client
     // render both produce nothing for this slot — eliminating the mismatch.
-    useEffect(() => {
-        setMounted(true);
-    }, []);
+    const mounted = useHydrated();
 
     if (!mounted) return null;
 

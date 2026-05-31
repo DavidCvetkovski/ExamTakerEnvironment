@@ -4,14 +4,19 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { useExamStore } from '@/stores/useExamStore';
 import { useHeartbeat } from '@/hooks/useHeartbeat';
+import { resolveExamTextScale } from '@/lib/accessibility';
 import QuestionRenderer from '@/components/exam/QuestionRenderer';
 import ExamFooter from '@/components/exam/ExamFooter';
 import SaveIndicator from '@/components/exam/SaveIndicator';
 import ReviewSummary from '@/components/exam/ReviewSummary';
 import SubmissionConfirmation from '@/components/exam/SubmissionConfirmation';
 import { Button, Spinner } from '@/components/ui';
+import { useAnnounce } from '@/components/ui/useAnnouncer';
+import A11yQuickAdjust from '@/components/exam/A11yQuickAdjust';
+import KeyboardShortcutsDialog from '@/components/exam/KeyboardShortcutsDialog';
 
 export default function ExamPage() {
     const params = useParams();
@@ -21,14 +26,31 @@ export default function ExamPage() {
         isLoading,
         error,
         currentQuestionIndex,
+        flags,
         fetchSession,
         loadSavedAnswers,
         navigateTo,
+        toggleFlag,
         submitExam,
     } = useExamStore();
+    const announce = useAnnounce();
+
+    const accessibility = useAuthStore((s) => s.accessibility);
+    const enlargedDisplay = useAuthStore((s) => s.user?.accommodation_enlarged_display ?? false);
 
     const [timeLeft, setTimeLeft] = useState<string>('');
     const [showReview, setShowReview] = useState(false);
+    const [showShortcuts, setShowShortcuts] = useState(false);
+
+    // Effective exam text scale: an administrator-granted enlarged-display
+    // accommodation raises the floor to 'lg'. We only set the attribute when the
+    // grant lifts the scale ABOVE the student's own preference — otherwise the
+    // preference is already applied on <html> and re-applying here would compound
+    // the `zoom` (CSS `zoom` multiplies through nested ancestors). See
+    // lib/accessibility.ts:resolveExamTextScale.
+    const preferenceScale = accessibility.text_scale ?? 'md';
+    const effectiveScale = resolveExamTextScale(preferenceScale, enlargedDisplay);
+    const examScaleOverride = effectiveScale !== preferenceScale ? effectiveScale : undefined;
 
     // Initialize heartbeat auto-save
     useHeartbeat(sessionId);
@@ -81,11 +103,18 @@ export default function ExamPage() {
         return () => clearInterval(interval);
     }, [currentSession, sessionId, submitExam]);
 
-    // Keyboard navigation
+    // Keyboard navigation & shortcuts (documented in KeyboardShortcutsDialog)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (!currentSession) return;
-            if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return;
+            // Never hijack typing inside a field or rich-text editor.
+            if (
+                e.target instanceof HTMLTextAreaElement ||
+                e.target instanceof HTMLInputElement ||
+                (e.target instanceof HTMLElement && e.target.isContentEditable)
+            ) {
+                return;
+            }
 
             if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
                 e.preventDefault();
@@ -93,12 +122,26 @@ export default function ExamPage() {
             } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
                 e.preventDefault();
                 navigateTo(currentQuestionIndex - 1);
+            } else if (e.key === 'f' || e.key === 'F') {
+                const item = currentSession.items[currentQuestionIndex];
+                if (!item) return;
+                e.preventDefault();
+                const willFlag = !flags[item.learning_object_id];
+                toggleFlag(item.learning_object_id, item.item_version_id);
+                announce(
+                    willFlag
+                        ? `Question ${currentQuestionIndex + 1} flagged`
+                        : `Question ${currentQuestionIndex + 1} unflagged`,
+                );
+            } else if (e.key === '?') {
+                e.preventDefault();
+                setShowShortcuts(true);
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [currentSession, currentQuestionIndex, navigateTo]);
+    }, [currentSession, currentQuestionIndex, navigateTo, flags, toggleFlag, announce]);
 
     // Handle submission
     const handleSubmit = async () => {
@@ -151,7 +194,10 @@ export default function ExamPage() {
 
     return (
         <ProtectedRoute allowedRoles={['STUDENT', 'CONSTRUCTOR', 'ADMIN']}>
-            <div className="min-h-screen bg-shell-surface text-foreground flex flex-col pb-28">
+            <div
+                className="min-h-screen bg-shell-surface text-foreground flex flex-col pb-28"
+                data-a11y-scale={examScaleOverride}
+            >
                 {/* Header / Timer Bar */}
                 <header className="sticky top-0 z-10 bg-shell-surface border-b border-shell-border px-6 py-4 flex justify-between items-center shadow-[var(--shadow-card)]">
                     <div className="flex items-center gap-4">
@@ -177,6 +223,19 @@ export default function ExamPage() {
                                 {timeLeft}
                             </p>
                         </div>
+                        <A11yQuickAdjust />
+                        <button
+                            type="button"
+                            onClick={() => setShowShortcuts(true)}
+                            aria-label="Keyboard shortcuts"
+                            title="Keyboard shortcuts (?)"
+                            className="flex h-9 w-9 items-center justify-center rounded-md border border-shell-border text-shell-muted transition-colors hover:bg-shell-input hover:text-foreground focus-ring"
+                        >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                <rect x="2" y="6" width="20" height="12" rx="2" />
+                                <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" />
+                            </svg>
+                        </button>
                         <Button
                             variant="primary"
                             size="md"
@@ -222,6 +281,11 @@ export default function ExamPage() {
                         onCancel={() => setShowReview(false)}
                     />
                 )}
+
+                <KeyboardShortcutsDialog
+                    isOpen={showShortcuts}
+                    onClose={() => setShowShortcuts(false)}
+                />
             </div>
         </ProtectedRoute>
     );

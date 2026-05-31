@@ -12,7 +12,7 @@
 - **Secrets management.** All credentials live in `.env`. Never hardcode tokens, passwords, or connection strings. `.env` is in `.gitignore`.
 - **Password hashing.** Use `bcrypt` or `argon2`. Never store or log plaintext passwords.
 - **JWT best practices.** Short-lived access tokens. Refresh tokens with rotation. Tokens must be validated on every protected request.
-- **Security gate.** Run Aikido scan before every merge to `main`. Zero Critical/High issues before merge proceeds.
+- **Security review.** Perform a manual security review of the diff before every merge to `main` (e.g. the `/security-review` skill, or a deliberate read of the changed surface against §1). Resolve any high-severity findings before merge proceeds. _(The Aikido SAST gate was retired once the subscription lapsed — there is no automated scan; the review is a human responsibility now.)_
 - **Least privilege.** Students cannot access authoring endpoints. Constructors cannot approve items. Enforce at the middleware/dependency level.
 - **Frontend disables are advisory; backend `403` is authoritative.** Never rely on a disabled button to prevent mutation — assert the rule in the service layer.
 
@@ -61,7 +61,7 @@
   - 1 error/edge-case test
   - Integration test for cross-module flows
 - **Environment configuration.** Use `.env` with fallback defaults. Never rely on hardcoded config values.
-- **Git workflow.** Feature branches per Epoch. Stage-gate commits. Security scan before merge. See `directives/epoch_git_strategy.md`.
+- **Git workflow.** Feature branches per Epoch. Stage-gate commits. Manual security review before merge. See `directives/epoch_git_strategy.md`.
 
 ## 6. Plan Before You Code
 
@@ -276,6 +276,6 @@ Toggle via the global `ThemeToggle` in the header. New surfaces must look right 
 | Auth        | JWT (access + refresh tokens)  | bcrypt password hashing           |
 | Testing     | Pytest (backend), Playwright (E2E) |                              |
 | DevOps      | Docker Compose                 | Local dev environment             |
-| Security    | Aikido                         | SAST scanning before merge        |
+| Security    | Manual review                  | Diff reviewed against §1 before merge (no automated SAST) |
 | VCS         | Git + GitHub                   | Conventional Commits              |
 | Planning    | Linear                         | Issue tracking, milestones        |

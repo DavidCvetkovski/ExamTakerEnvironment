@@ -44,6 +44,10 @@ class UserPublic(BaseModel):
     is_active: bool = True
     theme_preference: ThemeName | None = None
     accessibility: AccessibilityPreferences = AccessibilityPreferences()
+    # Administrator-granted accommodation (distinct from the self-chosen
+    # accessibility preferences above). Forces a minimum enlarged layout on the
+    # exam screen; resolved client-side via resolveExamTextScale(). See Epoch 10.
+    accommodation_enlarged_display: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -67,6 +71,9 @@ class UserPublic(BaseModel):
                 "dyslexia_font": getattr(data, "a11y_dyslexia_font", False),
                 "text_scale": getattr(data, "a11y_text_scale", None),
             },
+            "accommodation_enlarged_display": getattr(
+                data, "accommodation_enlarged_display", False
+            ),
         }
 
 

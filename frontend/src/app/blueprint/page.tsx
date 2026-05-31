@@ -565,28 +565,24 @@ function BlueprintPageInner() {
                                         >
                                             Inspect
                                         </Button>
-                                        {!canEdit && (
-                                            <>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    loading={isStarting && idFromUrl === bp.id}
-                                                    onClick={async () => {
-                                                        setIsStarting(true);
-                                                        try {
-                                                            const sessionId = await instantiateSession(bp.id);
-                                                            router.push(`/exam/${sessionId}`);
-                                                        } catch (err) {
-                                                            toast({ tone: 'danger', title: 'Practice failed', description: err instanceof Error ? err.message : 'Try again.' });
-                                                        } finally {
-                                                            setIsStarting(false);
-                                                        }
-                                                    }}
-                                                >
-                                                    Practice
-                                                </Button>
-                                            </>
-                                        )}
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            loading={isStarting && idFromUrl === bp.id}
+                                            onClick={async () => {
+                                                setIsStarting(true);
+                                                try {
+                                                    const sessionId = await instantiateSession(bp.id);
+                                                    router.push(`/exam/${sessionId}`);
+                                                } catch (err) {
+                                                    toast({ tone: 'danger', title: 'Practice failed', description: err instanceof Error ? err.message : 'Try again.' });
+                                                } finally {
+                                                    setIsStarting(false);
+                                                }
+                                            }}
+                                        >
+                                            Practice
+                                        </Button>
                                         <Button
                                             variant="ghost"
                                             size="sm"

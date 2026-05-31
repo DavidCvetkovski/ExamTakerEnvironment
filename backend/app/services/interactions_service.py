@@ -1,15 +1,22 @@
-"""Service layer for interaction event persistence and answer reconstruction."""
+"""Service layer for interaction event acceptance, queuing, and answer reconstruction.
+
+Ownership validation and session-status checks live here.  The actual database
+write path has been moved to the heartbeat_ingestion worker; this service only
+validates and enqueues.
+"""
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from fastapi import HTTPException, status
 from prisma import Json
 
 from app.core.prisma_db import prisma
+from app.core.redis import get_redis
 from app.models.exam_session import SessionStatus
 from app.models.interaction_event import InteractionEventType
 from app.services.exam_sessions_service import finalize_timed_out_session, serialize_exam_session
+from app.services.heartbeat_ingestion.queue import enqueue_events
 
 
 async def _get_session_with_ownership_check(
@@ -50,21 +57,27 @@ async def _get_session_with_ownership_check(
     return session
 
 
-async def save_interaction_events(
+async def accept_interaction_events(
     session_id: UUID,
     events: List[Dict[str, Any]],
     current_user,
+    request_id: str = "",
 ) -> Dict[str, Any]:
-    """
-    Validate session ownership and status, then bulk-insert interaction events.
+    """Validate session ownership and status, then enqueue events to Redis Stream.
+
+    The heavy database work is performed asynchronously by the heartbeat worker.
+    This function returns immediately after Redis accepts the batch, giving the
+    student's browser a fast acknowledgement.
 
     Args:
-        session_id: The exam session to attach events to.
-        events: List of event dicts from the Pydantic-validated payload.
+        session_id:   The exam session to attach events to.
+        events:       List of event dicts from the Pydantic-validated payload.
         current_user: The authenticated user making the request.
+        request_id:   Correlation ID propagated from the HTTP request.
 
     Returns:
-        { "saved": count, "server_timestamp": datetime }
+        {"saved": accepted, "accepted": accepted, "queued": accepted,
+         "server_timestamp": datetime, "queue_lag_estimate": int|None}
 
     Raises:
         404 if session not found.
@@ -79,26 +92,24 @@ async def save_interaction_events(
             detail=f"Session is {session.status}. Cannot accept new events.",
         )
 
-    # Bulk-create all events, slightly staggering timestamps to guarantee deterministic ordering
-    now = datetime.now(timezone.utc)
-    from datetime import timedelta
-    records = [
-        {
-            "session_id": str(session_id),
-            "learning_object_id": str(e["learning_object_id"]) if e.get("learning_object_id") else None,
-            "item_version_id": str(e["item_version_id"]) if e.get("item_version_id") else None,
-            "event_type": e["event_type"],
-            "payload": Json(e["payload"]),
-            "created_at": now + timedelta(milliseconds=i),
-        }
-        for i, e in enumerate(events)
-    ]
+    received_at = datetime.now(timezone.utc)
+    redis = get_redis()
 
-    saved_count = await prisma.interaction_events.create_many(data=records)
+    accepted, lag = await enqueue_events(
+        redis=redis,
+        request_id=request_id,
+        session_id=str(session_id),
+        student_id=str(current_user.id),
+        received_at=received_at,
+        raw_events=events,
+    )
 
     return {
-        "saved": saved_count,
-        "server_timestamp": now,
+        "saved": accepted,
+        "accepted": accepted,
+        "queued": accepted,
+        "server_timestamp": received_at,
+        "queue_lag_estimate": lag,
     }
 
 

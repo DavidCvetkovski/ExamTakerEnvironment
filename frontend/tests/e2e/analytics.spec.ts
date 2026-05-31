@@ -77,10 +77,6 @@ test.describe('Analytics Dashboard', () => {
         const slider = page.locator('input[type="range"]').first();
         await expect(slider).toBeVisible({ timeout: 10_000 });
 
-        // Read the initial pass-rate text
-        const passRateLocator = page.getByText(/pass rate|passing/i).first();
-        const initialText = await passRateLocator.textContent().catch(() => null);
-
         // Move the slider to a new position
         const sliderBox = await slider.boundingBox();
         if (sliderBox) {

@@ -27,7 +27,7 @@ test.describe('Theme Toggle', () => {
             .toBe('dark');
 
         await page.getByRole('button', { name: 'Switch theme' }).click();
-        await page.getByRole('button', { name: 'Light Blue' }).click();
+        await page.getByRole('button', { name: 'Cool blue' }).click();
 
         await expect
             .poll(() => page.evaluate(() => document.documentElement.dataset.theme ?? null))

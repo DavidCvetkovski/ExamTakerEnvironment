@@ -1,0 +1,47 @@
+name: Load Smoke
+
+# Manual, non-blocking smoke run of the heartbeat scenario at low volume.
+# Runs against an already-deployed/running stack (provide its URL); it does not
+# build images, so it is independent of the production Docker build.
+#
+# Seed the target first:  STUDENT_COUNT=50 PYTHONPATH=. python backend/seed_load.py
+# then take SCHEDULED_SESSION_ID from load-tests/seed-manifest.json.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Base URL of the running API (e.g. http://localhost:8000)'
+        required: true
+        type: string
+      scheduled_session_id:
+        description: 'SCHEDULED_SESSION_ID from the seed manifest'
+        required: true
+        type: string
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update && sudo apt-get install -y k6
+
+      - name: Heartbeat smoke (low volume)
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+          SCHEDULED_SESSION_ID: ${{ inputs.scheduled_session_id }}
+        run: |
+          # Override the heavy defaults with a short, low-VU smoke so the gate
+          # checks structural correctness, not capacity.
+          k6 run --vus 10 --duration 30s \
+            -e BASE_URL="$BASE_URL" \
+            -e SCHEDULED_SESSION_ID="$SCHEDULED_SESSION_ID" \
+            load-tests/k6/heartbeat-throughput.js

@@ -11,7 +11,7 @@ const THEMES: Array<{ label: string; value: ThemePreference; hint?: string }> = 
     { label: 'Auto', value: 'auto', hint: 'Follows time of day' },
     { label: 'Dark', value: 'dark' },
     { label: 'Warm', value: 'warm' },
-    { label: 'Light blue', value: 'light-blue' },
+    { label: 'Cool blue', value: 'light-blue' },
 ];
 
 function getRoleDefaultTheme(role: UserPublic['role'] | undefined): ThemePreference {
@@ -19,11 +19,13 @@ function getRoleDefaultTheme(role: UserPublic['role'] | undefined): ThemePrefere
 }
 
 export default function ThemeToggle() {
-    const { user, themePreference, setThemePreference } = useAuthStore();
+    const { user, themePreference, setThemePreference, accessibility } = useAuthStore();
     const [isOpen, setIsOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const popoverRef = useRef<HTMLDivElement>(null);
     const pathname = usePathname();
+
+    const isHighContrast = accessibility.high_contrast;
 
     const activeTheme = useMemo(
         () => themePreference ?? getRoleDefaultTheme(user?.role),
@@ -86,8 +88,12 @@ export default function ThemeToggle() {
                                 }}
                                 className={`flex w-full items-start justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                                     isActive
-                                        ? 'bg-shell-border-deep text-foreground'
-                                        : 'text-foreground hover:bg-shell-border/20'
+                                        ? isHighContrast
+                                            ? 'bg-foreground text-background font-semibold border border-foreground'
+                                            : 'bg-shell-border-deep text-foreground'
+                                        : isHighContrast
+                                            ? 'text-foreground hover:bg-foreground hover:text-background'
+                                            : 'text-foreground hover:bg-shell-border/20'
                                 }`}
                             >
                                 <span className="flex flex-col">

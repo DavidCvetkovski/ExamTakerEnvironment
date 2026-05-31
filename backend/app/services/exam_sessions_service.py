@@ -7,6 +7,13 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from prisma import Json
 
+from app.core.cache import (
+    TTL_TEST_DEFINITION,
+    cache_delete,
+    cache_get,
+    cache_set,
+    test_definition_key,
+)
 from app.core.prisma_db import prisma
 from app.models.exam_session import ExamSessionMode, SessionStatus
 from app.models.item_version import ItemStatus
@@ -15,6 +22,47 @@ from app.models.user import UserRole
 from app.services.scheduled_sessions_service import (
     ensure_scheduled_session_current,
 )
+
+
+def _try_get_redis() -> Optional[Any]:
+    """Return the Redis client, or ``None`` if it was never initialized.
+
+    Lets the cache-aware paths degrade gracefully (straight to Postgres) in
+    unit tests and any context where ``connect_redis`` did not run.
+    """
+    try:
+        from app.core.redis import get_redis
+
+        return get_redis()
+    except RuntimeError:
+        return None
+
+
+async def invalidate_test_definition_cache(test_definition_id: str) -> None:
+    """Drop the cached candidate pool for a test definition.
+
+    Call after any mutation that changes which item versions a blueprint would
+    resolve to: editing the test definition's blocks, or creating/updating/
+    reviewing item versions it can draw from.
+    """
+    redis = _try_get_redis()
+    if redis is not None:
+        await cache_delete(redis, test_definition_key(str(test_definition_id)))
+
+
+async def invalidate_all_test_definition_pools() -> None:
+    """Drop every cached candidate pool.
+
+    Item versions are selected by tag across the whole bank, so a change to any
+    item version can alter the pool of an arbitrary set of blueprints. Rather
+    than track that dynamic mapping, item-version writes clear all pools; the
+    set is small and writes are far rarer than exam-join reads.
+    """
+    from app.core.cache import cache_delete_pattern
+
+    redis = _try_get_redis()
+    if redis is not None:
+        await cache_delete_pattern(redis, "test_definition:*:snapshot:v1")
 
 
 def ensure_utc(value: datetime) -> datetime:
@@ -103,12 +151,28 @@ def maybe_shuffle_snapshot_options(snapshot: Dict[str, Any], shuffle_options: bo
     return snapshot
 
 
-async def select_items_for_test_definition(test_definition: Any) -> List[Dict[str, Any]]:
-    """Resolve blueprint rules into the frozen list of exam items."""
-    selected_items: List[Dict[str, Any]] = []
+_SELECTABLE_STATUSES = [
+    ItemStatus.APPROVED.value,
+    ItemStatus.READY_FOR_REVIEW.value,
+    ItemStatus.DRAFT.value,
+]
+
+
+async def _resolve_item_pool(test_definition: Any) -> List[Dict[str, Any]]:
+    """Resolve blueprint rules into a deterministic, cacheable candidate pool.
+
+    This performs the DB-heavy work (one query per rule) and returns one entry
+    per rule, each holding *unshuffled* item snapshots:
+
+    - ``{"kind": "fixed", "snapshot": {...}}``
+    - ``{"kind": "random", "count": N, "candidates": [{...}, ...]}``
+
+    Per-session randomness — ``random.sample`` for random rules and option
+    shuffling — is applied later by ``select_items_for_test_definition`` so this
+    structure is identical for every student and therefore safe to cache.
+    """
+    pool: List[Dict[str, Any]] = []
     blocks = parse_test_blocks(test_definition.blocks)
-    scoring_config = parse_json_field(getattr(test_definition, "scoring_config", None)) or {}
-    shuffle_options = bool(scoring_config.get("shuffle_options", False))
 
     for block in blocks:
         for rule in block["rules"]:
@@ -117,13 +181,7 @@ async def select_items_for_test_definition(test_definition: Any) -> List[Dict[st
                 latest_item = await prisma.item_versions.find_first(
                     where={
                         "learning_object_id": learning_object_id,
-                        "status": {
-                            "in": [
-                                ItemStatus.APPROVED.value,
-                                ItemStatus.READY_FOR_REVIEW.value,
-                                ItemStatus.DRAFT.value,
-                            ]
-                        },
+                        "status": {"in": _SELECTABLE_STATUSES},
                     },
                     order={"version_number": "desc"},
                 )
@@ -132,21 +190,13 @@ async def select_items_for_test_definition(test_definition: Any) -> List[Dict[st
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"Fixed rule failed: LO {learning_object_id} has no available version.",
                     )
-                selected_items.append(maybe_shuffle_snapshot_options(build_item_snapshot(latest_item), shuffle_options))
+                pool.append({"kind": "fixed", "snapshot": build_item_snapshot(latest_item)})
                 continue
 
             tags = rule.get("tags", [])
             count = rule.get("count", 1)
             candidates_all = await prisma.item_versions.find_many(
-                where={
-                    "status": {
-                        "in": [
-                            ItemStatus.APPROVED.value,
-                            ItemStatus.READY_FOR_REVIEW.value,
-                            ItemStatus.DRAFT.value,
-                        ]
-                    }
-                },
+                where={"status": {"in": _SELECTABLE_STATUSES}},
                 order={"version_number": "desc"},
             )
 
@@ -168,8 +218,64 @@ async def select_items_for_test_definition(test_definition: Any) -> List[Dict[st
                     ),
                 )
 
-            for chosen in random.sample(candidates, count):
-                selected_items.append(maybe_shuffle_snapshot_options(build_item_snapshot(chosen), shuffle_options))
+            pool.append(
+                {
+                    "kind": "random",
+                    "count": count,
+                    "candidates": [build_item_snapshot(c) for c in candidates],
+                }
+            )
+
+    return pool
+
+
+async def get_item_pool(test_definition: Any) -> List[Dict[str, Any]]:
+    """Return the resolved candidate pool, reading through a Redis cache.
+
+    Redis is never the source of truth: a miss (or any Redis error) falls back
+    to ``_resolve_item_pool`` against Postgres. The pool is invalidated when the
+    underlying test definition or its item versions change (see
+    ``invalidate_test_definition_cache``); a 5-minute TTL bounds staleness if an
+    invalidation is ever missed.
+    """
+    redis = _try_get_redis()
+    key = test_definition_key(str(test_definition.id))
+
+    if redis is not None:
+        cached = await cache_get(redis, key)
+        if cached is not None:
+            return cached
+
+    pool = await _resolve_item_pool(test_definition)
+
+    if redis is not None:
+        await cache_set(redis, key, pool, ttl=TTL_TEST_DEFINITION)
+
+    return pool
+
+
+async def select_items_for_test_definition(test_definition: Any) -> List[Dict[str, Any]]:
+    """Resolve blueprint rules into the frozen list of exam items for one attempt.
+
+    Reads the deterministic candidate pool (cached) then applies the per-session
+    random choices: sampling for random rules and option shuffling.
+    """
+    scoring_config = parse_json_field(getattr(test_definition, "scoring_config", None)) or {}
+    shuffle_options = bool(scoring_config.get("shuffle_options", False))
+
+    pool = await get_item_pool(test_definition)
+    selected_items: List[Dict[str, Any]] = []
+
+    for entry in pool:
+        if entry["kind"] == "fixed":
+            selected_items.append(
+                maybe_shuffle_snapshot_options(entry["snapshot"], shuffle_options)
+            )
+        else:
+            for chosen in random.sample(entry["candidates"], entry["count"]):
+                selected_items.append(
+                    maybe_shuffle_snapshot_options(chosen, shuffle_options)
+                )
 
     return selected_items
 

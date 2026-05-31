@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     )
     TRUSTED_HOSTS: List[str] = Field(default_factory=lambda: ["localhost", "127.0.0.1"])
 
+    # Base URL of the SPA, used to bounce LTI launches to the frontend resolver.
+    FRONTEND_BASE_URL: str = "http://localhost:3000"
+
     # Heartbeat Stream Pipeline (F2, F3)
     HEARTBEAT_STREAM_NAME: str = "openvision:heartbeat:v1"
     HEARTBEAT_CONSUMER_GROUP: str = "heartbeat-workers"

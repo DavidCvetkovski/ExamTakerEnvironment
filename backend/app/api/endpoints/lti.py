@@ -1,11 +1,14 @@
 """LTI 1.3 platform registration and public tool metadata endpoints."""
 
+from urllib.parse import urlencode
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Form, Query, Request, Response, status
 from fastapi.responses import RedirectResponse
 
+from app.core.config import settings
 from app.core.dependencies import require_role
+from app.core.security import create_refresh_token
 from app.models.user import User, UserRole
 from app.schemas.lti import (
     LtiJwksResponse,
@@ -16,6 +19,7 @@ from app.schemas.lti import (
     LtiToolKeyResponse,
 )
 from app.services.lti import jwks_service, launch_service, platform_service
+from app.services.users_service import build_token_payload, set_refresh_cookie
 
 router = APIRouter(prefix="/lti", tags=["lti"])
 
@@ -101,6 +105,29 @@ async def lti_login_get(
         redirect_uri=redirect_uri,
     )
     return RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
+
+
+@router.post("/launch")
+async def lti_launch(
+    request: Request,
+    state: str = Form(...),
+    id_token: str = Form(...),
+):
+    """Validate an LTI 1.3 launch and hand off to the SPA launch resolver.
+
+    On success a refresh cookie is set for the resolved OpenVision user and the
+    browser is redirected to the frontend resolver with the target route.
+    """
+    outcome = await launch_service.validate_launch(
+        state, id_token, request_id=request.headers.get("x-request-id")
+    )
+    target = (
+        f"{settings.FRONTEND_BASE_URL.rstrip('/')}/lti/launch"
+        f"?{urlencode({'next': outcome.redirect_path})}"
+    )
+    redirect = RedirectResponse(url=target, status_code=status.HTTP_302_FOUND)
+    set_refresh_cookie(redirect, create_refresh_token(build_token_payload(outcome.user)))
+    return redirect
 
 
 @router.post("/login")

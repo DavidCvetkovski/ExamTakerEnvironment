@@ -11,7 +11,13 @@
 > pending). **QTI**, the **frontend**, **security review**, and **docs** are
 > still not started.
 >
-> Overall Epoch 12 completion: **~55%** (backend ~75%; frontend 0%).
+> 2026-06-01 (later): **SIS, QTI, the integrations frontend, the security
+> review, and docs all landed.** Backend integration suite is green (54 tests:
+> LTI + SIS + QTI); the frontend typechecks clean with design-token discipline.
+>
+> Overall Epoch 12 completion: **~100%** (backend, frontend, security review,
+> docs). Residual follow-ups (production key secret, per-course constructor
+> scoping) are tracked in `epoch_12_security_review.md` for Epoch 13.
 
 ## Current Slice Summary
 
@@ -48,11 +54,11 @@ This is not a complete Epoch 12 implementation yet. OIDC launch, deep linking, A
 | Deep linking | Complete for current slice (backend) | `deep_link_service.py` + endpoints + `test_lti_deep_link.py` (15 tests passing): deep-link session captured at launch, instructor binds a resource link, server signs the `LtiDeepLinkingResponse` JWT with the tool private key (via the new sign helper), Canvas auto-post return form. Committed in 87e9fbe. | Frontend instructor picker page (`/integrations/lti/deep-link`). | `backend/app/services/lti/deep_link_service.py`, `backend/app/api/endpoints/lti.py`, `backend/tests/test_lti_deep_link.py` |
 | AGS grade passback | Complete for current slice (backend) | `grade_passback_service.py` + `platform_client.py` + endpoints + `test_lti_grade_passback.py` (5 tests passing): client-credentials token acquisition, score push to the line item, result validation, passback rows + list endpoint for manual retry. Committed in 94efad3. | Frontend retry/status surface. | `backend/app/services/lti/grade_passback_service.py`, `backend/app/services/lti/platform_client.py`, `backend/tests/test_lti_grade_passback.py` |
 | LTI sign helper | Complete | Private-JWK decrypt + RS256 sign helper added to `jwks_service.py`; unblocks deep linking and AGS JWT signing (previous gap now closed). | — | `backend/app/services/lti/jwks_service.py` |
-| SIS/Osiris | In progress (~60%) | Roster CSV importer, accommodation CSV importer (reuses `apply_update(..., source="sis_import")`), and shared job recorder scaffolded; `schemas/sis.py` added. **Uncommitted/untracked.** | Grade CSV export service, SIS router + endpoints, router wiring, tests, docs. | `backend/app/services/sis/`, `backend/app/schemas/sis.py` |
-| QTI | Not started | QTI job schema exists. | Implement safe XML/ZIP parser, export package generator, import dry-run/commit, sanitization, round-trip tests. | planned QTI router/services |
-| Frontend | Not started | None in this slice. | Add `/integrations`, LTI admin UI, launch/deep-link pages, SIS panels, QTI panels, store/types. | planned frontend files |
-| Security review | Not started | Directive checklist exists in plan only. | Create `directives/epoch_12_security_review.md` and complete before merge. | planned directive |
-| Docs | Not started | None. | Add Canvas setup, SIS CSV, and QTI docs. | planned `docs/integrations/*` |
+| SIS/Osiris | Complete | Roster + accommodation CSV importers (reuse `apply_update(..., source="sis_import")`), shared job recorder + job list/report, Osiris-compatible grade CSV export (filter-bounded, audited, grades-only), SIS router wired. 9 tests. | Per-course constructor scoping (deferred). | `backend/app/services/sis/`, `backend/app/api/endpoints/sis.py`, `backend/tests/test_sis.py` |
+| QTI | Complete | Allowlist HTML sanitizer (stdlib), choice/MR/essay mappers, IMS package builder, XXE-safe + zip-slip-safe reader, export bank/test, import dry-run→commit, per-item report. 8 tests incl. round-trip. | QTI 3.0 / extra interactions out of scope. | `backend/app/services/qti/`, `backend/app/api/endpoints/qti.py`, `backend/tests/test_qti.py` |
+| Frontend | Complete | `/integrations` (role-gated LTI admin + SIS + QTI), `/lti/launch` resolver, `/lti/deep-link` picker (server-signed JWT auto-post), integrations store, API types, blob download util, nav entry. Typechecks clean; token audit empty. | Richer ownership-scoped pickers (deferred). | `frontend/src/app/integrations/`, `frontend/src/app/lti/`, `frontend/src/components/integrations/` |
+| Security review | Complete | `epoch_12_security_review.md` against §1: input bounds, XXE/zip-slip, RBAC (403 tests), server-side signing, least-privilege provisioning, audit. No high-severity findings. | Two follow-ups tracked for Epoch 13. | `directives/epoch_12_security_review.md` |
+| Docs | Complete | Canvas setup, SIS CSV formats, QTI import/export docs. | — | `docs/integrations/*` |
 
 ## Files Added (across Epoch 12 slices)
 

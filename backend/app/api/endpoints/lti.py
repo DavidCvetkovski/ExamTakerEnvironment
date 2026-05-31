@@ -14,6 +14,9 @@ from app.schemas.lti import (
     LtiContextLinkPage,
     LtiContextLinkResponse,
     LtiContextMappingUpdate,
+    LtiDeepLinkResponsePayload,
+    LtiDeepLinkSelection,
+    LtiDeepLinkSessionResponse,
     LtiJwksResponse,
     LtiPlatformCreate,
     LtiPlatformPage,
@@ -25,6 +28,7 @@ from app.schemas.lti import (
     LtiToolKeyResponse,
 )
 from app.services.lti import (
+    deep_link_service,
     integration_admin_service,
     jwks_service,
     launch_service,
@@ -151,6 +155,39 @@ async def map_resource_link(
         test_definition_id=str(payload.test_definition_id) if payload.test_definition_id else None,
         actor_user_id=str(current_user.id),
     )
+
+
+@router.get("/deep-link/{deep_link_session_id}", response_model=LtiDeepLinkSessionResponse)
+async def get_deep_link_session(
+    deep_link_session_id: UUID,
+    current_user: User = Depends(_require_integration_manager),
+):
+    """Load context for the instructor deep-link picker (owner-checked)."""
+    return await deep_link_service.load_session(str(deep_link_session_id), str(current_user.id))
+
+
+@router.post("/deep-link/{deep_link_session_id}/respond", response_model=LtiDeepLinkResponsePayload)
+async def respond_deep_link(
+    deep_link_session_id: UUID,
+    payload: LtiDeepLinkSelection,
+    request: Request,
+    current_user: User = Depends(_require_integration_manager),
+):
+    """Sign a Deep Linking response for the instructor's chosen exam.
+
+    Returns the Canvas return URL and the signed JWT; the SPA auto-posts both
+    back to Canvas as the standard deep-link form.
+    """
+    tool_launch_url = str(request.base_url).rstrip("/") + "/api/lti/launch"
+    result = await deep_link_service.create_deep_link_response(
+        str(deep_link_session_id),
+        str(current_user.id),
+        scheduled_session_id=str(payload.scheduled_session_id) if payload.scheduled_session_id else None,
+        test_definition_id=str(payload.test_definition_id) if payload.test_definition_id else None,
+        title=payload.title,
+        tool_launch_url=tool_launch_url,
+    )
+    return LtiDeepLinkResponsePayload(return_url=result.return_url, jwt=result.jwt)
 
 
 @router.get("/login")

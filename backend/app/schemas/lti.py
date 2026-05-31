@@ -180,3 +180,28 @@ class LtiResourceMappingUpdate(BaseModel):
 
     scheduled_session_id: Optional[UUID] = None
     test_definition_id: Optional[UUID] = None
+
+
+class LtiDeepLinkSessionResponse(BaseModel):
+    """Context for the instructor deep-link picker."""
+
+    id: UUID
+    context_link_id: Optional[UUID] = None
+    expires_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LtiDeepLinkSelection(BaseModel):
+    """Instructor's chosen exam for a deep-link response."""
+
+    title: str = Field(min_length=1, max_length=255)
+    scheduled_session_id: Optional[UUID] = None
+    test_definition_id: Optional[UUID] = None
+
+
+class LtiDeepLinkResponsePayload(BaseModel):
+    """Signed Deep Linking response the browser auto-posts back to Canvas."""
+
+    return_url: str
+    jwt: str

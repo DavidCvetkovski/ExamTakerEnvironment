@@ -9,6 +9,8 @@ from typing import Any
 
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives.asymmetric import rsa
+from fastapi import HTTPException, status
+from jose import jwt
 from prisma import Json
 
 from app.core.config import settings
@@ -59,6 +61,38 @@ def _encrypt_private_jwk(private_jwk: dict[str, Any]) -> str:
     """Encrypt private key material before database storage."""
     plaintext = json.dumps(private_jwk, separators=(",", ":"), sort_keys=True).encode("utf-8")
     return _fernet().encrypt(plaintext).decode("ascii")
+
+
+def _decrypt_private_jwk(ciphertext: str) -> dict[str, Any]:
+    """Decrypt a stored private JWK back into its dict form."""
+    return json.loads(_fernet().decrypt(ciphertext.encode("ascii")))
+
+
+async def get_active_signing_key() -> tuple[str, dict[str, Any]]:
+    """Return ``(kid, private_jwk)`` for the newest active tool key.
+
+    Raises 500 when no key is configured — deep linking and AGS cannot sign
+    without one, and a rotation must be performed by an admin first.
+    """
+    key = await prisma.lti_tool_keys.find_first(
+        where={"is_active": True}, order={"created_at": "desc"}
+    )
+    if not key:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No active LTI tool signing key configured. Rotate one first.",
+        )
+    return key.kid, _decrypt_private_jwk(key.encrypted_private_jwk)
+
+
+async def sign_tool_jwt(claims: dict[str, Any]) -> str:
+    """Sign a JWT with the active tool private key (RS256, kid header set).
+
+    Used for the LTI Deep Linking response and AGS service-auth client
+    assertions. The private key never leaves the backend.
+    """
+    kid, private_jwk = await get_active_signing_key()
+    return jwt.encode(claims, private_jwk, algorithm="RS256", headers={"kid": kid})
 
 
 async def rotate_tool_key(actor_user_id: str) -> LtiToolKeyResponse:

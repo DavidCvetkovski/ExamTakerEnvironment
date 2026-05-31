@@ -56,6 +56,7 @@ async def cleanup_database():
     await prisma_client.lti_deployments.delete_many()
     await prisma_client.lti_platforms.delete_many()
     await prisma_client.lti_tool_keys.delete_many()
+    await prisma_client.lti_deep_link_sessions.delete_many()
     await prisma_client.lti_oidc_states.delete_many()
     await prisma_client.accommodation_audit_log.delete_many()
     await prisma_client.interaction_events.delete_many()

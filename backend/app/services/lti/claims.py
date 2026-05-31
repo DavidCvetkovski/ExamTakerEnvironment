@@ -26,6 +26,7 @@ class LtiLaunchClaims:
     email: Optional[str]
     target_link_uri: Optional[str]
     deep_link_return_url: Optional[str]
+    deep_link_data: Optional[str]
     ags_line_items_url: Optional[str]
     ags_line_item_url: Optional[str]
     ags_scope: List[str]
@@ -69,6 +70,7 @@ def parse_claims(payload: dict[str, Any]) -> LtiLaunchClaims:
     # Deep linking configuration
     dl_settings = payload.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings", {})
     deep_link_return_url = dl_settings.get("deep_link_return_url")
+    deep_link_data = dl_settings.get("data")
 
     # Assignment & Grade Services (AGS) endpoint
     ags_endpoint = payload.get("https://purl.imsglobal.org/spec/lti-ags/claim/endpoint", {})
@@ -95,6 +97,7 @@ def parse_claims(payload: dict[str, Any]) -> LtiLaunchClaims:
         email=email,
         target_link_uri=target_link_uri,
         deep_link_return_url=deep_link_return_url,
+        deep_link_data=deep_link_data,
         ags_line_items_url=ags_line_items_url,
         ags_line_item_url=ags_line_item_url,
         ags_scope=ags_scope,

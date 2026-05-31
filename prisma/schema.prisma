@@ -256,6 +256,22 @@ model lti_oidc_states {
   @@index([expires_at], map: "ix_lti_oidc_states_expires_at")
 }
 
+model lti_deep_link_sessions {
+  id              String    @id @default(uuid()) @db.Uuid
+  platform_id     String    @db.Uuid
+  deployment_id   String    @db.Uuid
+  user_id         String    @db.Uuid
+  context_link_id String?   @db.Uuid
+  return_url      String    @db.VarChar
+  data            String?   @db.Text
+  expires_at      DateTime  @db.Timestamp(6)
+  consumed_at     DateTime? @db.Timestamp(6)
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+
+  @@index([user_id], map: "ix_lti_deep_link_sessions_user_id")
+  @@index([expires_at], map: "ix_lti_deep_link_sessions_expires_at")
+}
+
 
 model lti_deployments {
   id            String    @id @default(uuid()) @db.Uuid

@@ -292,10 +292,26 @@ async def _resolve_student_target(claims, platform, deployment, context_link, us
     return f"/exam/join/{resource_link.scheduled_session_id}"
 
 
-async def _resolve_instructor_target(claims, platform, deployment, context_link):
+async def _resolve_instructor_target(claims, platform, deployment, context_link, user, request_id):
     """Map an instructor/deep-link launch to the relevant integration surface."""
     if claims.message_type == "LtiDeepLinkingRequest":
-        return "/integrations/lti/deep-link"
+        if not claims.deep_link_return_url:
+            await _fail(platform=platform, claims=claims,
+                        message="Deep linking launch is missing a return URL.", request_id=request_id)
+        # Stash the platform-controlled return URL + opaque data so the picker
+        # can later sign a response without trusting client-supplied values.
+        session = await prisma.lti_deep_link_sessions.create(
+            data={
+                "platform_id": str(platform.id),
+                "deployment_id": str(deployment.id),
+                "user_id": str(user.id),
+                "context_link_id": str(context_link.id) if context_link else None,
+                "return_url": claims.deep_link_return_url,
+                "data": claims.deep_link_data,
+                "expires_at": datetime.now(timezone.utc) + timedelta(hours=1),
+            }
+        )
+        return f"/integrations/lti/deep-link/{session.id}"
     resource_link = await mapping_service.resolve_lti_resource_link(
         claims, platform, deployment, context_link
     )
@@ -337,7 +353,9 @@ async def validate_launch(
     context_link = await mapping_service.resolve_lti_context(claims, platform, deployment)
 
     if mapping_service.is_instructor_launch(claims):
-        redirect_path = await _resolve_instructor_target(claims, platform, deployment, context_link)
+        redirect_path = await _resolve_instructor_target(
+            claims, platform, deployment, context_link, user, request_id
+        )
     else:
         redirect_path = await _resolve_student_target(
             claims, platform, deployment, context_link, user, request_id

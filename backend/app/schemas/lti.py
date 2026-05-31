@@ -205,3 +205,38 @@ class LtiDeepLinkResponsePayload(BaseModel):
 
     return_url: str
     jwt: str
+
+
+class LtiGradePassbackCreate(BaseModel):
+    """Request to push a published result's grade back to Canvas."""
+
+    session_result_id: UUID
+
+
+class LtiGradePassbackResponse(BaseModel):
+    """State of a single AGS grade passback attempt."""
+
+    id: UUID
+    resource_link_id: UUID
+    session_result_id: UUID
+    student_user_id: UUID
+    platform_user_sub: str
+    line_item_url: str
+    score_given: float
+    score_maximum: float
+    status: str
+    attempts: int
+    last_error: Optional[str] = None
+    pushed_at: Optional[datetime] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LtiGradePassbackPage(BaseModel):
+    """Paginated list of grade passbacks."""
+
+    items: List[LtiGradePassbackResponse]
+    total: int
+    skip: int
+    limit: int

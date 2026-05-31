@@ -17,6 +17,9 @@ from app.schemas.lti import (
     LtiDeepLinkResponsePayload,
     LtiDeepLinkSelection,
     LtiDeepLinkSessionResponse,
+    LtiGradePassbackCreate,
+    LtiGradePassbackPage,
+    LtiGradePassbackResponse,
     LtiJwksResponse,
     LtiPlatformCreate,
     LtiPlatformPage,
@@ -29,6 +32,7 @@ from app.schemas.lti import (
 )
 from app.services.lti import (
     deep_link_service,
+    grade_passback_service,
     integration_admin_service,
     jwks_service,
     launch_service,
@@ -188,6 +192,41 @@ async def respond_deep_link(
         tool_launch_url=tool_launch_url,
     )
     return LtiDeepLinkResponsePayload(return_url=result.return_url, jwt=result.jwt)
+
+
+# AGS grade passback is admin-only: it writes a grade into an external system.
+@router.get("/grade-passbacks", response_model=LtiGradePassbackPage)
+async def list_grade_passbacks(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    status_filter: str | None = Query(None, alias="status"),
+    _: User = Depends(require_role(UserRole.ADMIN)),
+):
+    """List grade passbacks, optionally filtered by state."""
+    return await grade_passback_service.list_passbacks(
+        skip=skip, limit=limit, status_filter=status_filter
+    )
+
+
+@router.post("/grade-passbacks", response_model=LtiGradePassbackResponse, status_code=status.HTTP_201_CREATED)
+async def create_grade_passback(
+    payload: LtiGradePassbackCreate,
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+):
+    """Create and immediately attempt a grade passback for a published result."""
+    passback = await grade_passback_service.create_passback_for_result(
+        str(payload.session_result_id), str(current_user.id)
+    )
+    return await grade_passback_service.push_passback(str(passback.id), str(current_user.id))
+
+
+@router.post("/grade-passbacks/{passback_id}/retry", response_model=LtiGradePassbackResponse)
+async def retry_grade_passback(
+    passback_id: UUID,
+    current_user: User = Depends(require_role(UserRole.ADMIN)),
+):
+    """Manually retry a pending or retryably-failed grade passback."""
+    return await grade_passback_service.retry_passback(str(passback_id), str(current_user.id))
 
 
 @router.get("/login")

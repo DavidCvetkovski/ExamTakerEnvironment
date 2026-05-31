@@ -15,6 +15,7 @@ Tests cover:
   10. Security: ownership enforcement on submit
   11. Security: unauthenticated requests
 """
+import uuid
 import pytest
 from httpx import AsyncClient
 from app.core.prisma_db import prisma
@@ -164,18 +165,21 @@ async def test_heartbeat_saves_events(ac: AsyncClient, heartbeat_data):
 
     events = [
         {
+            "client_event_id": str(uuid.uuid4()),
             "learning_object_id": d["lo_ids"][0],
             "item_version_id": d["iv_ids"][0],
             "event_type": "ANSWER_CHANGE",
             "payload": {"selected_option_index": 1},
         },
         {
+            "client_event_id": str(uuid.uuid4()),
             "learning_object_id": d["lo_ids"][1],
             "item_version_id": d["iv_ids"][1],
             "event_type": "ANSWER_CHANGE",
             "payload": {"selected_option_index": 0},
         },
         {
+            "client_event_id": str(uuid.uuid4()),
             "learning_object_id": d["lo_ids"][0],
             "item_version_id": d["iv_ids"][0],
             "event_type": "FLAG_TOGGLE",
@@ -225,6 +229,7 @@ async def test_heartbeat_rejects_oversized_batch(ac: AsyncClient, heartbeat_data
 
     events = [
         {
+            "client_event_id": str(uuid.uuid4()),
             "learning_object_id": d["lo_ids"][0],
             "item_version_id": d["iv_ids"][0],
             "event_type": "ANSWER_CHANGE",
@@ -254,18 +259,21 @@ async def test_answer_reconstruction_returns_latest(ac: AsyncClient, heartbeat_d
     # Send multiple answer changes for the same LO — last one wins
     events = [
         {
+            "client_event_id": str(uuid.uuid4()),
             "learning_object_id": d["lo_ids"][0],
             "item_version_id": d["iv_ids"][0],
             "event_type": "ANSWER_CHANGE",
             "payload": {"selected_option_index": 0},
         },
         {
+            "client_event_id": str(uuid.uuid4()),
             "learning_object_id": d["lo_ids"][0],
             "item_version_id": d["iv_ids"][0],
             "event_type": "ANSWER_CHANGE",
             "payload": {"selected_option_index": 2},
         },
         {
+            "client_event_id": str(uuid.uuid4()),
             "learning_object_id": d["lo_ids"][1],
             "item_version_id": d["iv_ids"][1],
             "event_type": "ANSWER_CHANGE",
@@ -306,18 +314,21 @@ async def test_flag_reconstruction(ac: AsyncClient, heartbeat_data):
 
     events = [
         {
+            "client_event_id": str(uuid.uuid4()),
             "learning_object_id": d["lo_ids"][0],
             "item_version_id": d["iv_ids"][0],
             "event_type": "FLAG_TOGGLE",
             "payload": {"flagged": True},
         },
         {
+            "client_event_id": str(uuid.uuid4()),
             "learning_object_id": d["lo_ids"][0],
             "item_version_id": d["iv_ids"][0],
             "event_type": "FLAG_TOGGLE",
             "payload": {"flagged": False},  # Unflagged after
         },
         {
+            "client_event_id": str(uuid.uuid4()),
             "learning_object_id": d["lo_ids"][1],
             "item_version_id": d["iv_ids"][1],
             "event_type": "FLAG_TOGGLE",
@@ -357,6 +368,7 @@ async def test_submit_session(ac: AsyncClient, heartbeat_data):
     await ac.post(
         f"/api/sessions/{d['session_id']}/heartbeat",
         json={"events": [{
+            "client_event_id": str(uuid.uuid4()),
             "learning_object_id": d["lo_ids"][0],
             "item_version_id": d["iv_ids"][0],
             "event_type": "ANSWER_CHANGE",
@@ -379,6 +391,7 @@ async def test_submit_session(ac: AsyncClient, heartbeat_data):
     resp2 = await ac.post(
         f"/api/sessions/{d['session_id']}/heartbeat",
         json={"events": [{
+            "client_event_id": str(uuid.uuid4()),
             "learning_object_id": d["lo_ids"][1],
             "item_version_id": d["iv_ids"][1],
             "event_type": "ANSWER_CHANGE",
@@ -436,6 +449,7 @@ async def test_heartbeat_rejects_expired_session(ac: AsyncClient, heartbeat_data
     resp = await ac.post(
         f"/api/sessions/{d['session_id']}/heartbeat",
         json={"events": [{
+            "client_event_id": str(uuid.uuid4()),
             "learning_object_id": d["lo_ids"][0],
             "item_version_id": d["iv_ids"][0],
             "event_type": "ANSWER_CHANGE",
@@ -489,6 +503,7 @@ async def test_heartbeat_rejects_non_owner(ac: AsyncClient, heartbeat_data):
     resp = await ac.post(
         f"/api/sessions/{d['session_id']}/heartbeat",
         json={"events": [{
+            "client_event_id": str(uuid.uuid4()),
             "learning_object_id": d["lo_ids"][0],
             "item_version_id": d["iv_ids"][0],
             "event_type": "ANSWER_CHANGE",
@@ -545,6 +560,7 @@ async def test_heartbeat_requires_auth(ac: AsyncClient, heartbeat_data):
     resp = await ac.post(
         f"/api/sessions/{d['session_id']}/heartbeat",
         json={"events": [{
+            "client_event_id": str(uuid.uuid4()),
             "learning_object_id": d["lo_ids"][0],
             "item_version_id": d["iv_ids"][0],
             "event_type": "ANSWER_CHANGE",

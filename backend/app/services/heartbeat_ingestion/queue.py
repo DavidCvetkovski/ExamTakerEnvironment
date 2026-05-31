@@ -5,7 +5,7 @@ This module is the *write side* of the pipeline: the API calls
 It publishes one Redis Stream entry per event and returns the total
 accepted count together with an estimate of current queue lag.
 """
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from redis.asyncio import Redis
@@ -45,7 +45,7 @@ async def enqueue_events(
     pipe = redis.pipeline(transaction=False)
     stream_name = settings.HEARTBEAT_STREAM_NAME
 
-    for event in raw_events:
+    for index, event in enumerate(raw_events):
         queue_event = HeartbeatQueueEvent(
             request_id=request_id,
             session_id=session_id,
@@ -60,7 +60,14 @@ async def enqueue_events(
             event_type=event["event_type"],
             payload=event["payload"],
             client_created_at=event.get("client_created_at"),
-            received_at=received_at,
+            # Offset each event's arrival time by its position so intra-batch
+            # order is preserved end-to-end. Reconstruction falls back to
+            # received_at when the client sends no client_created_at, and an
+            # identical timestamp for every event in a batch would otherwise
+            # make "latest answer wins" non-deterministic. The step is 1ms
+            # because Prisma stores DateTime at millisecond precision, so a
+            # sub-millisecond offset would be truncated away.
+            received_at=received_at + timedelta(milliseconds=index),
         )
         pipe.xadd(stream_name, {"event": queue_event.model_dump_json()})
 

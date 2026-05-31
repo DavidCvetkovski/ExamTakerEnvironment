@@ -3,6 +3,8 @@ from typing import AsyncGenerator
 from prisma import Prisma
 from app.main import app
 from app.core.prisma_db import connect_prisma, disconnect_prisma, prisma as prisma_client
+from app.core import redis as redis_module
+from app.core.redis import connect_redis, disconnect_redis
 from httpx import AsyncClient, ASGITransport
 import asyncio
 
@@ -17,9 +19,30 @@ async def initialize_prisma():
     yield
     await disconnect_prisma()
 
+@pytest.fixture(scope="session", autouse=True)
+async def initialize_redis():
+    """Connect the Redis client for the test session.
+
+    The ASGI test transport never runs the app's lifespan, so without this the
+    heartbeat path (which enqueues to a Redis Stream) hits an uninitialized
+    client. CI provides a Redis service; locally `docker compose` does.
+    """
+    await connect_redis()
+    yield
+    await disconnect_redis()
+
+
 @pytest.fixture(scope="function")
 async def cleanup_database():
-    """Wipes all tables in the correct order to avoid FK violations."""
+    """Wipes all tables in the correct order to avoid FK violations.
+
+    Also flushes Redis so each test starts with empty heartbeat streams (a
+    prior test's queued events can't be drained into a now-deleted session)
+    and reset rate-limit counters (repeated logins across tests never trip the
+    limiter now that Redis is connected for the heartbeat pipeline).
+    """
+    if redis_module.redis_client is not None:
+        await redis_module.redis_client.flushdb()
     # Order: Children first
     await prisma_client.integration_audit_logs.delete_many()
     await prisma_client.lti_grade_passbacks.delete_many()

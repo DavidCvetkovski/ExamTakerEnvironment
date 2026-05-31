@@ -19,12 +19,33 @@ import uuid
 import pytest
 from httpx import AsyncClient
 from app.core.prisma_db import prisma
+from app.core.redis import get_redis
+from app.core.config import settings
 from app.core.security import hash_password
 from app.models.user import UserRole
 from app.models.item_version import ItemStatus, QuestionType
 from app.models.exam_session import SessionStatus
+from app.services.heartbeat_ingestion.persistence import flush_events
+from app.services.heartbeat_ingestion.schemas import HeartbeatQueueEvent
 from datetime import datetime, timedelta, timezone
 import prisma as prisma_lib
+
+
+async def drain_heartbeats() -> int:
+    """Synchronously persist everything queued on the heartbeat stream.
+
+    Heartbeat ingestion is asynchronous in production (a worker drains the
+    Redis Stream into Postgres). Tests don't run that worker, so this reproduces
+    a single drain pass deterministically: read the stream in order and flush.
+    Returns the number of events persisted.
+    """
+    redis = get_redis()
+    entries = await redis.xrange(settings.HEARTBEAT_STREAM_NAME)
+    events = [HeartbeatQueueEvent.model_validate_json(fields["event"]) for _id, fields in entries]
+    if not events:
+        return 0
+    persisted, _duplicates = await flush_events(events)
+    return persisted
 
 
 # ---------------------------------------------------------------------------
@@ -197,6 +218,9 @@ async def test_heartbeat_saves_events(ac: AsyncClient, heartbeat_data):
     assert body["saved"] == 3
     assert "server_timestamp" in body
 
+    # Drain the async stream into Postgres before asserting durable state.
+    assert await drain_heartbeats() == 3
+
     # Verify DB has the records
     db_events = await prisma.interaction_events.find_many(
         where={"session_id": d["session_id"]}
@@ -287,6 +311,9 @@ async def test_answer_reconstruction_returns_latest(ac: AsyncClient, heartbeat_d
         headers=auth(token),
     )
 
+    # Drain the async stream into Postgres before reconstructing state.
+    await drain_heartbeats()
+
     resp = await ac.get(
         f"/api/sessions/{d['session_id']}/answers",
         headers=auth(token),
@@ -341,6 +368,9 @@ async def test_flag_reconstruction(ac: AsyncClient, heartbeat_data):
         json={"events": events},
         headers=auth(token),
     )
+
+    # Drain the async stream into Postgres before reconstructing state.
+    await drain_heartbeats()
 
     resp = await ac.get(
         f"/api/sessions/{d['session_id']}/answers",

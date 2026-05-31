@@ -3,11 +3,40 @@
 import uuid
 
 import pytest
+from httpx import AsyncClient
 from prisma import Json
 
 from app.core.prisma_db import prisma
+from app.core.security import hash_password
+from app.models.user import UserRole
 from app.services.qti import mappers, package
-from tests.conftest import auth_headers_for_role, make_user
+
+
+@pytest.fixture(autouse=True)
+async def use_cleanup(cleanup_database):
+    pass
+
+
+async def _make_user(email, role, password="pass1234"):
+    return await prisma.users.create(
+        data={"email": email, "hashed_password": hash_password(password),
+              "role": role.value, "is_active": True}
+    )
+
+
+async def _login(ac, email, password="pass1234"):
+    resp = await ac.post("/api/auth/login", json={"email": email, "password": password})
+    assert resp.status_code == 200
+    return resp.json()["access_token"]
+
+
+def _auth(token):
+    return {"Authorization": f"Bearer {token}"}
+
+
+def _tiptap(text):
+    return {"type": "doc", "content": [{"type": "paragraph",
+            "content": [{"type": "text", "text": text}]}]}
 
 
 async def _bank(name="QTI bank"):
@@ -16,16 +45,10 @@ async def _bank(name="QTI bank"):
 
 async def _make_item(bank_id, question_type, prompt, options):
     lo = await prisma.learning_objects.create(data={"bank_id": bank_id})
-    content = {"question": {"prompt": prompt}, "options": options}
     await prisma.item_versions.create(
-        data={
-            "learning_object_id": lo.id,
-            "version_number": 1,
-            "status": "APPROVED",
-            "question_type": question_type,
-            "content": Json(content),
-            "options": Json(options),
-        }
+        data={"learning_object_id": lo.id, "version_number": 1, "status": "APPROVED",
+              "question_type": question_type, "content": Json(_tiptap(prompt)),
+              "options": Json(options)}
     )
     return lo
 
@@ -33,23 +56,20 @@ async def _make_item(bank_id, question_type, prompt, options):
 # --- unit: mapper round-trip --------------------------------------------
 
 def test_mapper_round_trip_multiple_choice():
-    content = {
-        "question": {"prompt": "What is 2+2?"},
-        "options": [
-            {"id": "a", "text": "3", "is_correct": False},
-            {"id": "b", "text": "4", "is_correct": True},
-        ],
-    }
+    options = {"question_type": "MULTIPLE_CHOICE", "choices": [
+        {"id": "a", "text": "3", "is_correct": False, "weight": 1.0},
+        {"id": "b", "text": "4", "is_correct": True, "weight": 1.0},
+    ]}
     xml = mappers.item_to_xml(
         identifier="item-1", title="Q", question_type="MULTIPLE_CHOICE",
-        content=content, include_correct=True,
+        content=_tiptap("What is 2+2?"), options=options, include_correct=True,
     )
     root = package.parse_xml_safely(xml.encode())
     mapped = mappers.xml_to_item(root)
     assert mapped["question_type"] == "MULTIPLE_CHOICE"
-    opts = mapped["content"]["options"]
-    assert [o["text"] for o in opts] == ["3", "4"]
-    assert [o["is_correct"] for o in opts] == [False, True]
+    choices = mapped["options"]["choices"]
+    assert [c["text"] for c in choices] == ["3", "4"]
+    assert [c["is_correct"] for c in choices] == [False, True]
 
 
 def test_mapper_rejects_unsupported_interaction():
@@ -71,25 +91,27 @@ def test_parser_rejects_doctype():
 
 # --- API: export then import (round-trip) -------------------------------
 
-@pytest.mark.asyncio
-async def test_export_import_round_trip(client, constructor_token):
-    headers, _ = constructor_token
+@pytest.mark.anyio
+async def test_export_import_round_trip(ac: AsyncClient):
+    await _make_user("c@vu.nl", UserRole.CONSTRUCTOR)
+    token = await _login(ac, "c@vu.nl")
     src = await _bank("src")
-    await _make_item(src.id, "MULTIPLE_CHOICE", "Pick one", [
-        {"id": "a", "text": "no", "is_correct": False},
-        {"id": "b", "text": "yes", "is_correct": True},
-    ])
-    await _make_item(src.id, "ESSAY", "Discuss", [])
+    await _make_item(src.id, "MULTIPLE_CHOICE", "Pick one", {
+        "question_type": "MULTIPLE_CHOICE", "choices": [
+            {"id": "a", "text": "no", "is_correct": False, "weight": 1.0},
+            {"id": "b", "text": "yes", "is_correct": True, "weight": 1.0},
+        ]})
+    await _make_item(src.id, "ESSAY", "Discuss",
+                     {"question_type": "ESSAY", "min_words": 10, "max_words": 200})
 
-    export = await client.get(f"/api/qti/items/export?bank_id={src.id}", headers=headers)
+    export = await ac.get(f"/api/qti/items/export?bank_id={src.id}", headers=_auth(token))
     assert export.status_code == 200
     assert export.headers["content-type"] == "application/zip"
     zip_bytes = export.content
 
     dest = await _bank("dest")
-    imp = await client.post(
-        "/api/qti/import",
-        headers=headers,
+    imp = await ac.post(
+        "/api/qti/import", headers=_auth(token),
         files={"file": ("pkg.zip", zip_bytes, "application/zip")},
         data={"bank_id": str(dest.id), "commit": "true"},
     )
@@ -105,19 +127,19 @@ async def test_export_import_round_trip(client, constructor_token):
     assert types == {"MULTIPLE_CHOICE", "ESSAY"}
 
 
-@pytest.mark.asyncio
-async def test_import_dry_run_does_not_persist(client, constructor_token):
-    headers, _ = constructor_token
+@pytest.mark.anyio
+async def test_import_dry_run_does_not_persist(ac: AsyncClient):
+    await _make_user("c@vu.nl", UserRole.CONSTRUCTOR)
+    token = await _login(ac, "c@vu.nl")
     src = await _bank("dry")
-    await _make_item(src.id, "MULTIPLE_CHOICE", "Q", [
-        {"id": "a", "text": "x", "is_correct": True},
-    ])
-    zip_bytes = (await client.get(f"/api/qti/items/export?bank_id={src.id}", headers=headers)).content
+    await _make_item(src.id, "MULTIPLE_CHOICE", "Q", {
+        "question_type": "MULTIPLE_CHOICE",
+        "choices": [{"id": "a", "text": "x", "is_correct": True, "weight": 1.0}]})
+    zip_bytes = (await ac.get(f"/api/qti/items/export?bank_id={src.id}", headers=_auth(token))).content
 
     dest = await _bank("drydest")
-    imp = await client.post(
-        "/api/qti/import",
-        headers=headers,
+    imp = await ac.post(
+        "/api/qti/import", headers=_auth(token),
         files={"file": ("pkg.zip", zip_bytes, "application/zip")},
         data={"bank_id": str(dest.id), "commit": "false"},
     )
@@ -126,17 +148,17 @@ async def test_import_dry_run_does_not_persist(client, constructor_token):
     assert await prisma.learning_objects.count(where={"bank_id": dest.id}) == 0
 
 
-@pytest.mark.asyncio
-async def test_import_reports_unsupported_item(client, constructor_token):
-    headers, _ = constructor_token
+@pytest.mark.anyio
+async def test_import_reports_unsupported_item(ac: AsyncClient):
+    await _make_user("c@vu.nl", UserRole.CONSTRUCTOR)
+    token = await _login(ac, "c@vu.nl")
     xml = (
         b'<assessmentItem xmlns="http://www.imsglobal.org/xsd/imsqti_v2p1" '
         b'identifier="hot-1" title="Hot"><itemBody><hotspotInteraction '
         b'responseIdentifier="RESPONSE"/></itemBody></assessmentItem>'
     )
-    imp = await client.post(
-        "/api/qti/import",
-        headers=headers,
+    imp = await ac.post(
+        "/api/qti/import", headers=_auth(token),
         files={"file": ("item.xml", xml, "text/xml")},
         data={"commit": "false"},
     )
@@ -146,19 +168,20 @@ async def test_import_reports_unsupported_item(client, constructor_token):
     assert "Unsupported interaction" in body["items"][0]["message"]
 
 
-@pytest.mark.asyncio
-async def test_qti_export_forbidden_for_student(client, student_token):
-    headers, _ = student_token
-    resp = await client.get(f"/api/qti/items/export?bank_id={uuid.uuid4()}", headers=headers)
+@pytest.mark.anyio
+async def test_qti_export_forbidden_for_student(ac: AsyncClient):
+    await _make_user("stu@vu.nl", UserRole.STUDENT)
+    token = await _login(ac, "stu@vu.nl")
+    resp = await ac.get(f"/api/qti/items/export?bank_id={uuid.uuid4()}", headers=_auth(token))
     assert resp.status_code == 403
 
 
-@pytest.mark.asyncio
-async def test_qti_import_forbidden_for_student(client, student_token):
-    headers, _ = student_token
-    resp = await client.post(
-        "/api/qti/import",
-        headers=headers,
+@pytest.mark.anyio
+async def test_qti_import_forbidden_for_student(ac: AsyncClient):
+    await _make_user("stu@vu.nl", UserRole.STUDENT)
+    token = await _login(ac, "stu@vu.nl")
+    resp = await ac.post(
+        "/api/qti/import", headers=_auth(token),
         files={"file": ("x.xml", b"<assessmentItem/>", "text/xml")},
         data={"commit": "false"},
     )

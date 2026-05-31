@@ -4,10 +4,34 @@ import uuid
 from datetime import datetime, timezone
 
 import pytest
+from httpx import AsyncClient
 from prisma import Json
 
 from app.core.prisma_db import prisma
-from tests.conftest import auth_headers_for_role, make_user
+from app.core.security import hash_password
+from app.models.user import UserRole
+
+
+@pytest.fixture(autouse=True)
+async def use_cleanup(cleanup_database):
+    pass
+
+
+async def _make_user(email, role, password="pass1234", vunet_id=None):
+    return await prisma.users.create(
+        data={"email": email, "hashed_password": hash_password(password),
+              "role": role.value, "is_active": True, "vunet_id": vunet_id}
+    )
+
+
+async def _login(ac, email, password="pass1234"):
+    resp = await ac.post("/api/auth/login", json={"email": email, "password": password})
+    assert resp.status_code == 200
+    return resp.json()["access_token"]
+
+
+def _auth(token):
+    return {"Authorization": f"Bearer {token}"}
 
 
 def _csv(rows: list[str]) -> bytes:
@@ -22,18 +46,18 @@ async def _course(code="SIS101"):
 
 # --- roster import -------------------------------------------------------
 
-@pytest.mark.asyncio
-async def test_roster_import_enrolls_student(client, admin_token):
-    headers, _ = admin_token
+@pytest.mark.anyio
+async def test_roster_import_enrolls_student(ac: AsyncClient):
+    await _make_user("admin@vu.nl", UserRole.ADMIN)
+    token = await _login(ac, "admin@vu.nl")
     course = await _course()
     vid = f"net{uuid.uuid4().hex[:6]}"
     csv = _csv([
         "course_code,vunet_id,email,first_name,last_name,role,is_active",
         f"{course.code},{vid},stu@vu.nl,Sam,Student,student,true",
     ])
-    resp = await client.post(
-        "/api/sis/rosters/import",
-        headers=headers,
+    resp = await ac.post(
+        "/api/sis/rosters/import", headers=_auth(token),
         files={"file": ("roster.csv", csv, "text/csv")},
     )
     assert resp.status_code == 200
@@ -47,16 +71,16 @@ async def test_roster_import_enrolls_student(client, admin_token):
     assert enrollment is not None and enrollment.is_active is True
 
 
-@pytest.mark.asyncio
-async def test_roster_import_reports_unknown_course(client, admin_token):
-    headers, _ = admin_token
+@pytest.mark.anyio
+async def test_roster_import_reports_unknown_course(ac: AsyncClient):
+    await _make_user("admin@vu.nl", UserRole.ADMIN)
+    token = await _login(ac, "admin@vu.nl")
     csv = _csv([
         "course_code,vunet_id,email,first_name,last_name,role,is_active",
         "NOPE999,net123,stu@vu.nl,Sam,Student,student,true",
     ])
-    resp = await client.post(
-        "/api/sis/rosters/import",
-        headers=headers,
+    resp = await ac.post(
+        "/api/sis/rosters/import", headers=_auth(token),
         files={"file": ("roster.csv", csv, "text/csv")},
     )
     assert resp.status_code == 200
@@ -65,13 +89,13 @@ async def test_roster_import_reports_unknown_course(client, admin_token):
     assert "Unknown course_code" in body["rows"][0]["message"]
 
 
-@pytest.mark.asyncio
-async def test_roster_import_forbidden_for_student(client, student_token):
-    headers, _ = student_token
+@pytest.mark.anyio
+async def test_roster_import_forbidden_for_student(ac: AsyncClient):
+    await _make_user("stu@vu.nl", UserRole.STUDENT)
+    token = await _login(ac, "stu@vu.nl")
     csv = _csv(["course_code,vunet_id,email,first_name,last_name,role,is_active"])
-    resp = await client.post(
-        "/api/sis/rosters/import",
-        headers=headers,
+    resp = await ac.post(
+        "/api/sis/rosters/import", headers=_auth(token),
         files={"file": ("roster.csv", csv, "text/csv")},
     )
     assert resp.status_code == 403
@@ -79,17 +103,17 @@ async def test_roster_import_forbidden_for_student(client, student_token):
 
 # --- accommodation import ------------------------------------------------
 
-@pytest.mark.asyncio
-async def test_accommodation_import_applies_multiplier(client, admin_token):
-    headers, _ = admin_token
-    student = await make_user("STUDENT", vunet_id=f"acc{uuid.uuid4().hex[:6]}")
+@pytest.mark.anyio
+async def test_accommodation_import_applies_multiplier(ac: AsyncClient):
+    await _make_user("admin@vu.nl", UserRole.ADMIN)
+    token = await _login(ac, "admin@vu.nl")
+    student = await _make_user("s2@vu.nl", UserRole.STUDENT, vunet_id=f"acc{uuid.uuid4().hex[:6]}")
     csv = _csv([
         "vunet_id,provision_time_multiplier,enlarged_display",
         f"{student.vunet_id},1.5,true",
     ])
-    resp = await client.post(
-        "/api/sis/accommodations/import",
-        headers=headers,
+    resp = await ac.post(
+        "/api/sis/accommodations/import", headers=_auth(token),
         files={"file": ("acc.csv", csv, "text/csv")},
     )
     assert resp.status_code == 200
@@ -98,17 +122,17 @@ async def test_accommodation_import_applies_multiplier(client, admin_token):
     assert refreshed.provision_time_multiplier == 1.5
 
 
-@pytest.mark.asyncio
-async def test_accommodation_import_rejects_non_student(client, admin_token):
-    headers, _ = admin_token
-    constructor = await make_user("CONSTRUCTOR", vunet_id=f"con{uuid.uuid4().hex[:6]}")
+@pytest.mark.anyio
+async def test_accommodation_import_rejects_non_student(ac: AsyncClient):
+    await _make_user("admin@vu.nl", UserRole.ADMIN)
+    token = await _login(ac, "admin@vu.nl")
+    con = await _make_user("c2@vu.nl", UserRole.CONSTRUCTOR, vunet_id=f"con{uuid.uuid4().hex[:6]}")
     csv = _csv([
         "vunet_id,provision_time_multiplier,enlarged_display",
-        f"{constructor.vunet_id},1.5,true",
+        f"{con.vunet_id},1.5,true",
     ])
-    resp = await client.post(
-        "/api/sis/accommodations/import",
-        headers=headers,
+    resp = await ac.post(
+        "/api/sis/accommodations/import", headers=_auth(token),
         files={"file": ("acc.csv", csv, "text/csv")},
     )
     assert resp.status_code == 200
@@ -121,44 +145,36 @@ async def _published_result(course):
     test = await prisma.test_definitions.create(
         data={"title": "Final", "blocks": Json([]), "duration_minutes": 60, "course_id": course.id}
     )
-    student = await make_user("STUDENT", vunet_id=f"grd{uuid.uuid4().hex[:6]}")
+    student = await _make_user(
+        f"grd{uuid.uuid4().hex[:6]}@vu.nl", UserRole.STUDENT, vunet_id=f"grd{uuid.uuid4().hex[:6]}"
+    )
     session = await prisma.exam_sessions.create(
         data={
-            "student_id": student.id,
-            "test_definition_id": test.id,
-            "status": "SUBMITTED",
+            "student_id": student.id, "test_definition_id": test.id,
+            "items": Json([]), "status": "SUBMITTED",
+            "started_at": datetime.now(timezone.utc), "expires_at": datetime.now(timezone.utc),
             "submitted_at": datetime.now(timezone.utc),
         }
     )
     await prisma.session_results.create(
         data={
-            "session_id": session.id,
-            "test_definition_id": test.id,
-            "student_id": student.id,
-            "total_points": 8.0,
-            "max_points": 10.0,
-            "percentage": 80.0,
-            "grading_status": "FULLY_GRADED",
-            "questions_graded": 1,
-            "questions_total": 1,
-            "passed": True,
-            "letter_grade": "B",
-            "is_published": True,
-            "published_at": datetime.now(timezone.utc),
-            "created_at": datetime.now(timezone.utc),
+            "session_id": session.id, "test_definition_id": test.id, "student_id": student.id,
+            "total_points": 8.0, "max_points": 10.0, "percentage": 80.0,
+            "grading_status": "FULLY_GRADED", "questions_graded": 1, "questions_total": 1,
+            "passed": True, "letter_grade": "B", "is_published": True,
+            "published_at": datetime.now(timezone.utc), "created_at": datetime.now(timezone.utc),
         }
     )
     return student
 
 
-@pytest.mark.asyncio
-async def test_grade_export_returns_csv(client, admin_token):
-    headers, _ = admin_token
+@pytest.mark.anyio
+async def test_grade_export_returns_csv(ac: AsyncClient):
+    await _make_user("admin@vu.nl", UserRole.ADMIN)
+    token = await _login(ac, "admin@vu.nl")
     course = await _course()
     student = await _published_result(course)
-    resp = await client.get(
-        f"/api/sis/grades/export?course_id={course.id}", headers=headers
-    )
+    resp = await ac.get(f"/api/sis/grades/export?course_id={course.id}", headers=_auth(token))
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("text/csv")
     text = resp.text
@@ -167,17 +183,17 @@ async def test_grade_export_returns_csv(client, admin_token):
     assert "80.0" in text
 
 
-@pytest.mark.asyncio
-async def test_grade_export_requires_filter(client, admin_token):
-    headers, _ = admin_token
-    resp = await client.get("/api/sis/grades/export", headers=headers)
+@pytest.mark.anyio
+async def test_grade_export_requires_filter(ac: AsyncClient):
+    await _make_user("admin@vu.nl", UserRole.ADMIN)
+    token = await _login(ac, "admin@vu.nl")
+    resp = await ac.get("/api/sis/grades/export", headers=_auth(token))
     assert resp.status_code == 400
 
 
-@pytest.mark.asyncio
-async def test_grade_export_forbidden_for_student(client, student_token):
-    headers, _ = student_token
-    resp = await client.get(
-        f"/api/sis/grades/export?course_id={uuid.uuid4()}", headers=headers
-    )
+@pytest.mark.anyio
+async def test_grade_export_forbidden_for_student(ac: AsyncClient):
+    await _make_user("stu@vu.nl", UserRole.STUDENT)
+    token = await _login(ac, "stu@vu.nl")
+    resp = await ac.get(f"/api/sis/grades/export?course_id={uuid.uuid4()}", headers=_auth(token))
     assert resp.status_code == 403

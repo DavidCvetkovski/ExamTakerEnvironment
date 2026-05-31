@@ -116,9 +116,10 @@ async def export_grades_csv(
         published_only=published_only,
     )
 
-    await integration_audit_service.record(
+    await integration_audit_service.record_integration_audit(
         integration="sis",
         action="grade_export",
+        status="success",
         actor_user_id=actor_id,
         resource_type="course" if course_id else "scheduled_session",
         resource_id=course_id or scheduled_session_id,

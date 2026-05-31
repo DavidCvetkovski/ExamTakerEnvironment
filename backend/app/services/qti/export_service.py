@@ -9,6 +9,7 @@ from fastapi import HTTPException, status
 
 from app.core.prisma_db import prisma
 from app.services import integration_audit_service
+from app.services.items_service import extract_text_from_tiptap_json
 from app.services.qti import mappers, package
 
 _EXPORTABLE = {"MULTIPLE_CHOICE", "MULTIPLE_RESPONSE", "ESSAY"}
@@ -25,11 +26,13 @@ def _item_xml(learning_object, *, include_correct: bool) -> tuple[str, str] | No
     if version is None or version.question_type not in _EXPORTABLE:
         return None
     href = f"items/item-{learning_object.id}.xml"
+    title = (extract_text_from_tiptap_json(version.content or {})[:120]) or "Item"
     xml = mappers.item_to_xml(
         identifier=f"item-{learning_object.id}",
-        title=(version.content or {}).get("question", {}).get("prompt", "Item")[:120] or "Item",
+        title=title,
         question_type=version.question_type,
         content=version.content or {},
+        options=version.options or {},
         include_correct=include_correct,
     )
     return href, xml
@@ -48,8 +51,8 @@ async def export_bank(bank_id: str, *, include_correct: bool, actor_id: str) -> 
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="No exportable items in bank"
         )
-    await integration_audit_service.record(
-        integration="qti", action="export_bank", actor_user_id=actor_id,
+    await integration_audit_service.record_integration_audit(
+        integration="qti", action="export_bank", status="success", actor_user_id=actor_id,
         resource_type="item_bank", resource_id=bank_id,
         metadata={"item_count": len(items), "include_correct": include_correct},
     )
@@ -74,8 +77,8 @@ async def export_test(test_definition_id: str, *, include_correct: bool, actor_i
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="No exportable items in test"
         )
-    await integration_audit_service.record(
-        integration="qti", action="export_test", actor_user_id=actor_id,
+    await integration_audit_service.record_integration_audit(
+        integration="qti", action="export_test", status="success", actor_user_id=actor_id,
         resource_type="test_definition", resource_id=test_definition_id,
         metadata={"item_count": len(items), "include_correct": include_correct},
     )

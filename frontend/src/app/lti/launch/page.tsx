@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { Spinner } from '@/components/ui/Spinner';
+import Spinner from '@/components/ui/Spinner';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 

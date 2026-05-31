@@ -56,6 +56,9 @@ export default function GlobalHeader() {
                   ...(user?.role === 'ADMIN'
                       ? [{ name: 'Accommodations', href: '/admin/accommodations' }]
                       : []),
+                  ...(user?.role === 'ADMIN' || user?.role === 'CONSTRUCTOR'
+                      ? [{ name: 'Integrations', href: '/integrations' }]
+                      : []),
               ];
 
     const navLinkClass = (active: boolean) =>

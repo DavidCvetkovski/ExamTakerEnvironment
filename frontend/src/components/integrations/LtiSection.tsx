@@ -7,17 +7,17 @@ import { SectionHeader } from '@/components/ui/PageHeader';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { Input, Field } from '@/components/ui/Input';
-import { Badge } from '@/components/ui/Badge';
-import { EmptyState } from '@/components/ui/EmptyState';
+import Badge from '@/components/ui/Badge';
+import EmptyState from '@/components/ui/EmptyState';
 import {
     Table,
     TableContainer,
-    TableHead,
-    TableBody,
-    TableRow,
-    TableHeaderCell,
-    TableCell,
-} from '@/components/ui/Table';
+    THead as TableHead,
+    TBody as TableBody,
+    TR as TableRow,
+    TH as TableHeaderCell,
+    TD as TableCell,
+} from '@/components/ui';
 import type { LtiPlatformCreate } from '@/lib/integrations.types';
 
 const EMPTY_PLATFORM: LtiPlatformCreate = {

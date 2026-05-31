@@ -4,11 +4,11 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useToast } from '@/components/ui/useToast';
-import { Spinner } from '@/components/ui/Spinner';
+import Spinner from '@/components/ui/Spinner';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { EmptyState } from '@/components/ui/EmptyState';
+import Badge from '@/components/ui/Badge';
+import EmptyState from '@/components/ui/EmptyState';
 
 interface Candidate {
     id: string;

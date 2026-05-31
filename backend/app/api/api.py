@@ -10,6 +10,7 @@ from app.api.endpoints import (
     items,
     lti,
     preferences,
+    qti,
     scheduled_sessions,
     sessions,
     sis,
@@ -35,3 +36,4 @@ api_router.include_router(import_endpoints.router, prefix="/import", tags=["impo
 api_router.include_router(accommodations.router)
 api_router.include_router(lti.router)
 api_router.include_router(sis.router)
+api_router.include_router(qti.router)

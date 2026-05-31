@@ -1,14 +1,17 @@
 # Epoch 12 Progress Matrix
 
-> Last updated: 2026-05-31
+> Last updated: 2026-06-01
 > Purpose: durable handoff notes for continuing Epoch 12 implementation after context/credit interruption.
 >
-> 2026-05-31 update: OIDC **launch validation** (`POST /api/lti/launch`) and
-> user/context/resource **mapping** now landed on `feature/epoch-12-lti-canvas`.
-> `launch_service.validate_launch` verifies the platform-signed `id_token`
-> against a TTL-cached JWKS, enforces the LTI claim set, consumes state
-> single-use, maps the user/context/resource, and audits the launch. SIS, QTI,
-> deep linking, AGS, and frontend integration pages are still not started.
+> 2026-06-01 update: **Deep Linking** (Phase 5) and **AGS grade passback**
+> (Phase 6) backends now landed and committed on `feature/epoch-12-lti-canvas`
+> (commits 87e9fbe, 94efad3), along with the private-key **decrypt/sign helper**
+> that both depend on. **SIS** is in progress (roster + accommodation importers
+> and the job recorder scaffolded, grade export + router/endpoints/tests
+> pending). **QTI**, the **frontend**, **security review**, and **docs** are
+> still not started.
+>
+> Overall Epoch 12 completion: **~55%** (backend ~75%; frontend 0%).
 
 ## Current Slice Summary
 
@@ -42,9 +45,10 @@ This is not a complete Epoch 12 implementation yet. OIDC launch, deep linking, A
 | LTI launch validation | Complete for current slice | Implemented `POST /api/lti/launch`: TTL-cached JWKS fetch (`jwks_client.py`), RS256 signature + aud/iss/exp verification, azp/nonce/deployment/message_type/version claim checks, single-use state consume, and an `lti_launch_audits` row on success/failure. Sets the OpenVision refresh cookie and 302-redirects to the SPA launch resolver. | Deep-link return flow and AGS line-item capture beyond `lineitem` URL are later slices. | `backend/app/services/lti/launch_service.py`, `backend/app/services/lti/jwks_client.py`, `backend/app/api/endpoints/lti.py` |
 | LTI user/context/resource mapping | Complete for current slice | `mapping_service.py`: `resolve_lti_user` links by `(issuer,subject)` and provisions never-seen subjects with an unusable password + least-privilege role (never admin, never re-roles an existing link); `resolve_lti_context` records unmapped contexts (no silent course creation); `resolve_lti_resource_link` records/updates links and captures AGS line-item URLs; `ensure_enrollment` upserts learner enrollment. Synthetic non-deliverable email avoids account-takeover on email collision. | Instructor context→course mapping UI and deep-link resource binding are frontend/later slices. | `backend/app/services/lti/mapping_service.py` |
 | LTI mapping management API | Complete for current slice | `integration_admin_service.py` + endpoints: admin/constructor `GET`/`PATCH /api/lti/contexts` (bind Canvas context→OpenVision course) and `GET`/`PATCH /api/lti/resource-links` (bind resource link→scheduled session/test definition), with `unmapped_only` filters, existence validation (404s), audit rows, and students 403. This unblocks the learner launch (no more "course not configured"). | Frontend UI; constructor-owns-course ownership scoping deferred. | `backend/app/services/lti/integration_admin_service.py`, `backend/app/api/endpoints/lti.py`, `backend/app/schemas/lti.py`, `backend/tests/test_lti_mapping.py` |
-| Deep linking | Not started | Resource-link schema exists. | Implement instructor picker backend, server-side signed deep-link JWT, Canvas return form. | planned LTI services/frontend |
-| AGS grade passback | Not started | Grade-passback schema exists. | Implement token acquisition, score push client, result validation, retry records/manual retry. | planned: `grade_passback_service.py`, `platform_client.py` |
-| SIS/Osiris | Not started | SIS job schema exists. | Implement roster CSV import, accommodation CSV import reuse, grade CSV export, job row reports, docs. | planned SIS router/services |
+| Deep linking | Complete for current slice (backend) | `deep_link_service.py` + endpoints + `test_lti_deep_link.py` (15 tests passing): deep-link session captured at launch, instructor binds a resource link, server signs the `LtiDeepLinkingResponse` JWT with the tool private key (via the new sign helper), Canvas auto-post return form. Committed in 87e9fbe. | Frontend instructor picker page (`/integrations/lti/deep-link`). | `backend/app/services/lti/deep_link_service.py`, `backend/app/api/endpoints/lti.py`, `backend/tests/test_lti_deep_link.py` |
+| AGS grade passback | Complete for current slice (backend) | `grade_passback_service.py` + `platform_client.py` + endpoints + `test_lti_grade_passback.py` (5 tests passing): client-credentials token acquisition, score push to the line item, result validation, passback rows + list endpoint for manual retry. Committed in 94efad3. | Frontend retry/status surface. | `backend/app/services/lti/grade_passback_service.py`, `backend/app/services/lti/platform_client.py`, `backend/tests/test_lti_grade_passback.py` |
+| LTI sign helper | Complete | Private-JWK decrypt + RS256 sign helper added to `jwks_service.py`; unblocks deep linking and AGS JWT signing (previous gap now closed). | — | `backend/app/services/lti/jwks_service.py` |
+| SIS/Osiris | In progress (~60%) | Roster CSV importer, accommodation CSV importer (reuses `apply_update(..., source="sis_import")`), and shared job recorder scaffolded; `schemas/sis.py` added. **Uncommitted/untracked.** | Grade CSV export service, SIS router + endpoints, router wiring, tests, docs. | `backend/app/services/sis/`, `backend/app/schemas/sis.py` |
 | QTI | Not started | QTI job schema exists. | Implement safe XML/ZIP parser, export package generator, import dry-run/commit, sanitization, round-trip tests. | planned QTI router/services |
 | Frontend | Not started | None in this slice. | Add `/integrations`, LTI admin UI, launch/deep-link pages, SIS panels, QTI panels, store/types. | planned frontend files |
 | Security review | Not started | Directive checklist exists in plan only. | Create `directives/epoch_12_security_review.md` and complete before merge. | planned directive |

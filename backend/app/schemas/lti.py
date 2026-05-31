@@ -106,3 +106,77 @@ class LtiJwksResponse(BaseModel):
     """JWKS response consumed by external LTI platforms."""
 
     keys: List[dict[str, Any]]
+
+
+# ---------------------------------------------------------------------------
+# Context / resource-link mapping (instructor & admin)
+# ---------------------------------------------------------------------------
+
+
+class LtiContextLinkResponse(BaseModel):
+    """A Canvas context (course) and its OpenVision course binding, if any."""
+
+    id: UUID
+    platform_id: UUID
+    deployment_id: UUID
+    context_id: str
+    context_label: Optional[str] = None
+    context_title: Optional[str] = None
+    course_id: Optional[UUID] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LtiContextLinkPage(BaseModel):
+    """Paginated list of LTI context links."""
+
+    items: List[LtiContextLinkResponse]
+    total: int
+    skip: int
+    limit: int
+
+
+class LtiContextMappingUpdate(BaseModel):
+    """Bind (or rebind) a Canvas context to an OpenVision course."""
+
+    course_id: UUID
+
+
+class LtiResourceLinkResponse(BaseModel):
+    """A Canvas resource link and its OpenVision exam binding, if any."""
+
+    id: UUID
+    platform_id: UUID
+    deployment_id: UUID
+    context_link_id: Optional[UUID] = None
+    resource_link_id: str
+    resource_title: Optional[str] = None
+    test_definition_id: Optional[UUID] = None
+    scheduled_session_id: Optional[UUID] = None
+    line_item_url: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LtiResourceLinkPage(BaseModel):
+    """Paginated list of LTI resource links."""
+
+    items: List[LtiResourceLinkResponse]
+    total: int
+    skip: int
+    limit: int
+
+
+class LtiResourceMappingUpdate(BaseModel):
+    """Bind a Canvas resource link to a scheduled session (student launch target).
+
+    ``test_definition_id`` is optional context for instructor preview/deep-link;
+    ``scheduled_session_id`` is what a learner launch joins.
+    """
+
+    scheduled_session_id: Optional[UUID] = None
+    test_definition_id: Optional[UUID] = None

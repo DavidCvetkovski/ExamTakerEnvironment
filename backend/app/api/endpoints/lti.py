@@ -11,14 +11,25 @@ from app.core.dependencies import require_role
 from app.core.security import create_refresh_token
 from app.models.user import User, UserRole
 from app.schemas.lti import (
+    LtiContextLinkPage,
+    LtiContextLinkResponse,
+    LtiContextMappingUpdate,
     LtiJwksResponse,
     LtiPlatformCreate,
     LtiPlatformPage,
     LtiPlatformResponse,
     LtiPlatformUpdate,
+    LtiResourceLinkPage,
+    LtiResourceLinkResponse,
+    LtiResourceMappingUpdate,
     LtiToolKeyResponse,
 )
-from app.services.lti import jwks_service, launch_service, platform_service
+from app.services.lti import (
+    integration_admin_service,
+    jwks_service,
+    launch_service,
+    platform_service,
+)
 from app.services.users_service import build_token_payload, set_refresh_cookie
 
 router = APIRouter(prefix="/lti", tags=["lti"])
@@ -83,6 +94,63 @@ async def rotate_tool_key(
 ):
     """Create a new active LTI tool signing key."""
     return await jwks_service.rotate_tool_key(str(current_user.id))
+
+
+# Instructors and admins manage the bindings that make a learner launch resolve.
+_require_integration_manager = require_role(UserRole.ADMIN, UserRole.CONSTRUCTOR)
+
+
+@router.get("/contexts", response_model=LtiContextLinkPage)
+async def list_context_links(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    unmapped_only: bool = Query(False),
+    _: User = Depends(_require_integration_manager),
+):
+    """List Canvas contexts and their OpenVision course bindings."""
+    return await integration_admin_service.list_context_links(
+        skip=skip, limit=limit, unmapped_only=unmapped_only
+    )
+
+
+@router.patch("/contexts/{context_link_id}", response_model=LtiContextLinkResponse)
+async def map_context_to_course(
+    context_link_id: UUID,
+    payload: LtiContextMappingUpdate,
+    current_user: User = Depends(_require_integration_manager),
+):
+    """Bind a Canvas context to an existing OpenVision course."""
+    return await integration_admin_service.map_context_to_course(
+        str(context_link_id), str(payload.course_id), str(current_user.id)
+    )
+
+
+@router.get("/resource-links", response_model=LtiResourceLinkPage)
+async def list_resource_links(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+    unmapped_only: bool = Query(False),
+    _: User = Depends(_require_integration_manager),
+):
+    """List Canvas resource links and their OpenVision exam bindings."""
+    return await integration_admin_service.list_resource_links(
+        skip=skip, limit=limit, unmapped_only=unmapped_only
+    )
+
+
+@router.patch("/resource-links/{resource_link_id}", response_model=LtiResourceLinkResponse)
+async def map_resource_link(
+    resource_link_id: UUID,
+    payload: LtiResourceMappingUpdate,
+    current_user: User = Depends(_require_integration_manager),
+):
+    """Bind a Canvas resource link to a scheduled session and/or test definition."""
+    return await integration_admin_service.map_resource_link(
+        str(resource_link_id),
+        scheduled_session_id=str(payload.scheduled_session_id) if payload.scheduled_session_id else None,
+        test_definition_id=str(payload.test_definition_id) if payload.test_definition_id else None,
+        actor_user_id=str(current_user.id),
+    )
 
 
 @router.get("/login")

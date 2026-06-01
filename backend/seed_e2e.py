@@ -3,7 +3,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from random import Random
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from app.core.security import hash_password
@@ -1733,6 +1733,26 @@ def seed():
 
     try:
         print("Starting E2E seed (selective wipe)...")
+
+        # Epoch 12 (LTI/SIS/QTI) tables have no SQLAlchemy models in this seed,
+        # but several hold FKs into tables wiped below (e.g.
+        # lti_resource_links.scheduled_session_id -> scheduled_exam_sessions).
+        # Clear them first via raw SQL. TRUNCATE ... CASCADE stays within the
+        # integration table set; users are not a dependent, so they survive.
+        # Guarded so the seed still runs against a pre-Epoch-12 database.
+        try:
+            db.execute(text(
+                "TRUNCATE TABLE "
+                "lti_grade_passbacks, lti_resource_links, lti_context_links, "
+                "lti_launch_audits, lti_user_links, lti_deep_link_sessions, "
+                "lti_oidc_states, lti_deployments, lti_tool_keys, lti_platforms, "
+                "sis_import_job_rows, sis_import_jobs, qti_jobs, "
+                "integration_audit_logs CASCADE"
+            ))
+            db.commit()
+        except Exception as exc:
+            db.rollback()
+            print(f"  (skipped integration-table wipe: {exc})")
 
         db.query(InteractionEvent).delete()
         db.query(QuestionGrade).delete()

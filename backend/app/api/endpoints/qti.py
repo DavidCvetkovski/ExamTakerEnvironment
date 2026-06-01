@@ -5,6 +5,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 
 from app.core.dependencies import require_role
 from app.models.user import User, UserRole
@@ -49,6 +50,40 @@ async def export_test(
         str(test_definition_id), include_correct=include_correct, actor_id=str(current_user.id)
     )
     return _zip_response(data, f"qti-test-{test_definition_id}.zip")
+
+
+@router.get("/blueprints/{blueprint_id}/export")
+async def export_blueprint(
+    blueprint_id: UUID,
+    include_correct: bool = Query(True),
+    current_user: User = Depends(_require_author),
+):
+    """Export a blueprint's referenced questions as a QTI 2.1 content package."""
+    data = await export_service.export_test(
+        str(blueprint_id), include_correct=include_correct, actor_id=str(current_user.id)
+    )
+    return _zip_response(data, f"qti-blueprint-{blueprint_id}.zip")
+
+
+class QtiQuestionExportRequest(BaseModel):
+    """Explicit set of learning-object ids to export as one QTI package."""
+
+    learning_object_ids: list[UUID] = Field(min_length=1)
+    include_correct: bool = True
+
+
+@router.post("/questions/export")
+async def export_questions(
+    payload: QtiQuestionExportRequest,
+    current_user: User = Depends(_require_author),
+):
+    """Export a hand-picked set of questions as a QTI 2.1 content package."""
+    data = await export_service.export_learning_objects(
+        [str(i) for i in payload.learning_object_ids],
+        include_correct=payload.include_correct,
+        actor_id=str(current_user.id),
+    )
+    return _zip_response(data, "qti-questions.zip")
 
 
 @router.post("/import", response_model=QtiImportJobResult)

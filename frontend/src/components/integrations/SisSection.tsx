@@ -135,7 +135,11 @@ function GradeExportPanel() {
 
     const run = async () => {
         if (!courseId && !sessionId) {
-            toast({ tone: 'warning', title: 'Add a filter', description: 'Course or session id required.' });
+            toast({
+                tone: 'warning',
+                title: 'Add a filter',
+                description: 'A session ID on its own is enough — or filter by course.',
+            });
             return;
         }
         setBusy(true);
@@ -156,14 +160,16 @@ function GradeExportPanel() {
         <Card>
             <h3 className="text-h3 text-foreground mb-1">Grade export</h3>
             <p className="text-meta text-shell-muted mb-4">
-                Download published results as an Osiris-compatible CSV. At least one filter is required.
+                Download published results as an Osiris-compatible CSV. Paste a completed
+                session’s ID for just that session (copy it from the ⋯ menu on the Sessions
+                page) — or filter by course for everything in it. Either one alone is enough.
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Course id">
-                    <Input value={courseId} onChange={(e) => setCourseId(e.target.value)} placeholder="uuid" />
+                <Field label="Scheduled session ID" hint="Enough on its own">
+                    <Input value={sessionId} onChange={(e) => setSessionId(e.target.value)} placeholder="session uuid" />
                 </Field>
-                <Field label="Scheduled session id">
-                    <Input value={sessionId} onChange={(e) => setSessionId(e.target.value)} placeholder="uuid" />
+                <Field label="Course ID" hint="Or export a whole course">
+                    <Input value={courseId} onChange={(e) => setCourseId(e.target.value)} placeholder="course uuid" />
                 </Field>
             </div>
             <div className="mt-4">

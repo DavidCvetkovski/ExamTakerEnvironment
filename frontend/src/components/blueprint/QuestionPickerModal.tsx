@@ -10,9 +10,18 @@ interface QuestionPickerModalProps {
     onClose: () => void;
     onSelect: (item: AvailableItem) => void;
     excludeIds?: string[];
+    title?: string;
+    selectLabel?: string;
 }
 
-export default function QuestionPickerModal({ isOpen, onClose, onSelect, excludeIds = [] }: QuestionPickerModalProps) {
+export default function QuestionPickerModal({
+    isOpen,
+    onClose,
+    onSelect,
+    excludeIds = [],
+    title = 'Select Question',
+    selectLabel = 'Add',
+}: QuestionPickerModalProps) {
     if (!isOpen) {
         return null;
     }
@@ -22,6 +31,8 @@ export default function QuestionPickerModal({ isOpen, onClose, onSelect, exclude
             onClose={onClose}
             onSelect={onSelect}
             excludeIds={excludeIds}
+            title={title}
+            selectLabel={selectLabel}
         />
     );
 }
@@ -30,6 +41,8 @@ interface OpenQuestionPickerModalProps {
     onClose: () => void;
     onSelect: (item: AvailableItem) => void;
     excludeIds: string[];
+    title: string;
+    selectLabel: string;
 }
 
 function typeLabel(qt: string) {
@@ -61,7 +74,7 @@ function normaliseOptions(v: VersionResponse): Array<{ id: string; text: string;
     return null;
 }
 
-function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestionPickerModalProps) {
+function OpenQuestionPickerModal({ onClose, onSelect, excludeIds, title, selectLabel }: OpenQuestionPickerModalProps) {
     const { availableItems, fetchAvailableItems, isLoading } = useBlueprintStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -144,7 +157,7 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                 style={{ maxHeight: '85vh' }}>
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-shell-border bg-shell-surface/80 px-6 py-5">
-                    <h2 className="text-h2 font-semibold text-foreground">Select Question</h2>
+                    <h2 className="text-h2 font-semibold text-foreground">{title}</h2>
                     <button
                         type="button"
                         onClick={handleClose}
@@ -224,7 +237,7 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                                         onSelect(item);
                                     }}
                                 >
-                                    {excludeIds.includes(inspectedItem.id) ? 'Added' : 'Add'}
+                                    {excludeIds.includes(inspectedItem.id) ? 'Added' : selectLabel}
                                 </Button>
                             </div>
 
@@ -292,7 +305,7 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds }: OpenQuestion
                                                     if (!excluded) onSelect(item);
                                                 }}
                                             >
-                                                {excluded ? 'Added' : 'Add'}
+                                                {excluded ? 'Added' : selectLabel}
                                             </Button>
                                         </div>
                                     </div>

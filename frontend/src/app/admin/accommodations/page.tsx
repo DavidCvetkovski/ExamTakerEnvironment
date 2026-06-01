@@ -31,13 +31,10 @@ import AccommodationEditDrawer from '@/components/admin/AccommodationEditDrawer'
 type SortKey = 'email' | 'vunet' | 'extra';
 type SortDir = 'asc' | 'desc';
 
-// Single muted/active sort glyph — matches the items + grading tables (§7.8).
+// Arrow only on the active column (§7.8). Inactive columns show nothing.
 function SortArrow({ active, dir }: { active: boolean; dir: SortDir }) {
-    return (
-        <span className={active ? 'text-xs ml-1 text-brand' : 'text-xs ml-1 text-shell-muted-dim'}>
-            {!active ? '↑' : dir === 'asc' ? '↑' : '↓'}
-        </span>
-    );
+    if (!active) return null;
+    return <span className="text-xs ml-1 text-brand">{dir === 'asc' ? '↑' : '↓'}</span>;
 }
 
 export default function AccommodationsAdminPage() {

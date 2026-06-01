@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import type { ScheduledSession } from '@/stores/useSessionManagerStore';
 import { useSessionManagerStore } from '@/stores/useSessionManagerStore';
-import { Button, Badge, EmptyState } from '@/components/ui';
+import { Button, Badge, EmptyState, RowActionMenu, useToast } from '@/components/ui';
+import { copyText } from '@/lib/clipboard';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useLifecycleSync } from '@/hooks/useLifecycleSync';
 import { useServerNow } from '@/hooks/useServerNow';
@@ -27,6 +28,7 @@ function SessionRow({
     countdownTarget,
     countdownLabel,
     countdownTone,
+    showCopyId,
 }: {
     session: ScheduledSession;
     isBusy: boolean;
@@ -36,10 +38,17 @@ function SessionRow({
     countdownTarget?: string;
     countdownLabel?: string;
     countdownTone?: string;
+    showCopyId?: boolean;
 }) {
     const { display: countdown } = useCountdown(countdownTarget ?? session.starts_at);
     const now = useServerNow(60_000);
+    const { toast } = useToast();
     const canCancel = session.status !== 'CLOSED' && session.status !== 'CANCELED';
+
+    const copyId = async () => {
+        const ok = await copyText(session.id);
+        toast(ok ? { tone: 'success', title: 'Session ID copied' } : { tone: 'danger', title: 'Copy failed' });
+    };
 
     return (
         <tr className="border-t border-shell-border">
@@ -90,6 +99,12 @@ function SessionRow({
                             Cancel
                         </Button>
                     )}
+                    {showCopyId && (
+                        <RowActionMenu
+                            ariaLabel="Session actions"
+                            items={[{ label: 'Copy session ID', onClick: copyId }]}
+                        />
+                    )}
                 </div>
             </td>
         </tr>
@@ -107,6 +122,7 @@ function SessionTable({
     countdownLabel,
     countdownTone,
     startsHeader,
+    showCopyId,
 }: {
     sessions: ScheduledSession[];
     isBusy: boolean;
@@ -121,6 +137,8 @@ function SessionTable({
      * sessions have already started, so the header reads "Started"; for
      * future-scheduled rows it stays "Starts". */
     startsHeader?: 'Starts' | 'Started';
+    /** Show a row overflow menu to copy the session id (completed rows). */
+    showCopyId?: boolean;
 }) {
     if (sessions.length === 0) return null;
     return (
@@ -148,6 +166,7 @@ function SessionTable({
                             countdownTarget={showCountdown && countdownField ? session[countdownField] : undefined}
                             countdownLabel={countdownLabel}
                             countdownTone={countdownTone}
+                            showCopyId={showCopyId}
                         />
                     ))}
                 </tbody>
@@ -258,6 +277,7 @@ export default function ScheduledSessionsTable({
                                 onPractice={onPractice}
                                 onManageEnrollments={onManageEnrollments}
                                 startsHeader="Started"
+                                showCopyId
                             />
                         </div>
                     )}

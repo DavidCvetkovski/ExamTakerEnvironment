@@ -234,10 +234,10 @@ export const QTI_INFO: IntegrationInfoContent = {
             body: (
                 <Steps
                     items={[
-                        <>Export: paste an item bank ID (or test definition ID) and download
-                        the <Code>.zip</Code>.</>,
+                        <>Export: select individual questions, paste an item bank ID, or paste
+                        a blueprint ID and download the <Code>.zip</Code>.</>,
                         <>Import: upload a <Code>.zip</Code> or single <Code>.xml</Code>, run a
-                        <strong> Dry run</strong> first to see the per-item report.</>,
+                        <strong> Dry run</strong> first to validate it without saving anything.</>,
                         <>If the report looks right, set a target bank ID and
                         <strong> Commit import</strong> to create the questions as drafts.</>,
                     ]}

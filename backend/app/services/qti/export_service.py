@@ -59,6 +59,43 @@ async def export_bank(bank_id: str, *, include_correct: bool, actor_id: str) -> 
     return package.build_package(items)
 
 
+async def export_learning_objects(
+    lo_ids: list[str], *, include_correct: bool, actor_id: str
+) -> bytes:
+    """Export an explicit set of learning objects as a QTI package ZIP.
+
+    Backs the "pick questions" export flow (the same picker used in blueprints).
+    Unsupported/unknown ids are skipped; 404 only if nothing exportable remains.
+    """
+    if not lo_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="No questions selected."
+        )
+    objects = await prisma.learning_objects.find_many(
+        where={"id": {"in": lo_ids}}, include={"item_versions": True}
+    )
+    items = [x for x in (_item_xml(o, include_correct=include_correct) for o in objects) if x]
+    if not items:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="None of the selected questions are exportable.",
+        )
+    await integration_audit_service.record_integration_audit(
+        integration="qti",
+        action="export_questions",
+        status="success",
+        actor_user_id=actor_id,
+        resource_type="learning_objects",
+        resource_id=None,
+        metadata={
+            "requested": len(lo_ids),
+            "item_count": len(items),
+            "include_correct": include_correct,
+        },
+    )
+    return package.build_package(items)
+
+
 async def export_test(test_definition_id: str, *, include_correct: bool, actor_id: str) -> bytes:
     """Export the items referenced by a test definition as a QTI package ZIP.
 

@@ -18,6 +18,7 @@ import BlueprintInspector from '@/components/blueprint/BlueprintInspector';
 import { BackButton, Badge, Button, Input, Select, Spinner, cn, useToast, useConfirm, StatusDot, XIcon, PageHeader } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
 import { formatRelativeTime, formatAbsolute, formatScheduled } from '@/lib/relativeTime';
+import { copyText } from '@/lib/clipboard';
 
 type BlueprintDraft = Partial<TestDefinition>;
 
@@ -590,6 +591,21 @@ function BlueprintPageInner() {
                                             onClick={() => handleDuplicateBlueprint(bp)}
                                         >
                                             Duplicate
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            title={`Copy blueprint ID (${bp.id})`}
+                                            onClick={async () => {
+                                                const ok = await copyText(bp.id);
+                                                toast(
+                                                    ok
+                                                        ? { tone: 'success', title: 'ID copied' }
+                                                        : { tone: 'danger', title: 'Copy failed' }
+                                                );
+                                            }}
+                                        >
+                                            Copy ID
                                         </Button>
                                         {canDelete && (
                                             <Button

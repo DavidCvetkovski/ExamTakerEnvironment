@@ -92,6 +92,24 @@ async def test_parser_rejects_doctype():
         package.parse_xml_safely(evil)
 
 
+@pytest.mark.anyio
+async def test_test_blocks_lo_id_extraction_handles_nested_rules():
+    # Regression: real blueprints nest LO ids under block["rules"][], not on the
+    # block itself. The extractor must reach them (and de-dupe).
+    blocks = [
+        {"title": "Block A", "rules": [
+            {"rule_type": "FIXED", "learning_object_id": "id-1"},
+            {"rule_type": "FIXED", "learning_object_id": "id-2"},
+        ]},
+        {"title": "Block B", "rules": [
+            {"rule_type": "FIXED", "learning_object_id": "id-2"},  # dup
+        ]},
+        {"learning_object_id": "id-3"},  # flat shape still supported
+    ]
+    from app.services.qti import export_service
+    assert export_service._learning_object_ids(blocks) == ["id-1", "id-2", "id-3"]
+
+
 # --- API: export then import (round-trip) -------------------------------
 
 @pytest.mark.anyio

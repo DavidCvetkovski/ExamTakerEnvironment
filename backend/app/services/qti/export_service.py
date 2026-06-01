@@ -85,13 +85,33 @@ async def export_test(test_definition_id: str, *, include_correct: bool, actor_i
     return package.build_package(items)
 
 
+_LO_ID_KEYS = ("learning_object_id", "lo_id", "question_id")
+
+
 def _learning_object_ids(blocks) -> list[str]:
-    """Pull learning-object ids out of a test definition's block JSON."""
+    """Collect learning-object ids from a test definition's block JSON.
+
+    Blueprints nest fixed references under ``block["rules"][].learning_object_id``
+    (Epoch 8.x shape), but older/simpler tests may put an id directly on the
+    block. Walk the structure defensively and de-duplicate while preserving
+    order so an item referenced twice is still exported once.
+    """
     ids: list[str] = []
-    for block in blocks if isinstance(blocks, list) else []:
-        for key in ("learning_object_id", "lo_id", "id"):
-            value = block.get(key) if isinstance(block, dict) else None
+
+    def _take(obj) -> None:
+        if not isinstance(obj, dict):
+            return
+        for key in _LO_ID_KEYS:
+            value = obj.get(key)
             if value:
                 ids.append(str(value))
-                break
-    return ids
+
+    for block in blocks if isinstance(blocks, list) else []:
+        if not isinstance(block, dict):
+            continue
+        _take(block)
+        for rule in block.get("rules", []) or []:
+            _take(rule)
+
+    seen: set[str] = set()
+    return [i for i in ids if not (i in seen or seen.add(i))]

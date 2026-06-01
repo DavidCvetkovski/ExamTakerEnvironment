@@ -18,6 +18,7 @@ import {
     TH as TableHeaderCell,
     TD as TableCell,
 } from '@/components/ui';
+import IntegrationInfo, { LTI_INFO } from '@/components/integrations/IntegrationInfo';
 import type { LtiPlatformCreate } from '@/lib/integrations.types';
 
 const EMPTY_PLATFORM: LtiPlatformCreate = {
@@ -187,6 +188,7 @@ export default function LtiSection() {
             <SectionHeader
                 title="LTI 1.3 platforms"
                 subtitle="Trusted Canvas registrations and the bindings that resolve a launch."
+                actions={<IntegrationInfo content={LTI_INFO} />}
             />
 
             <Card padding="none">

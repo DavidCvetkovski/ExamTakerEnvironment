@@ -1032,13 +1032,23 @@ QUESTION_CATALOG.extend(PY_WORKSHOP_ITEMS)
 QUESTION_CATALOG.extend(JS_WORKSHOP_ITEMS)
 
 
-def ensure_user(db, *, email: str, password: str, role: UserRole, provision_time_multiplier: float = 1.0):
+def ensure_user(
+    db,
+    *,
+    email: str,
+    password: str,
+    role: UserRole,
+    provision_time_multiplier: float = 1.0,
+    vunet_id: str | None = None,
+):
     user = db.query(User).filter(User.email == email).first()
     if user:
         user.hashed_password = hash_password(password)
         user.role = role
         user.is_active = True
         user.provision_time_multiplier = provision_time_multiplier
+        if vunet_id is not None:
+            user.vunet_id = vunet_id
         return user
 
     user = User(
@@ -1047,6 +1057,7 @@ def ensure_user(db, *, email: str, password: str, role: UserRole, provision_time
         role=role,
         is_active=True,
         provision_time_multiplier=provision_time_multiplier,
+        vunet_id=vunet_id,
     )
     db.add(user)
     db.flush()
@@ -1785,39 +1796,45 @@ def seed():
             password="studentpass123",
             role=UserRole.STUDENT,
             provision_time_multiplier=1.25,
+            vunet_id="stu001",
         )
         alex = ensure_user(
             db,
             email="alex.student@vu.nl",
             password="studentpass123",
             role=UserRole.STUDENT,
+            vunet_id="alx002",
         )
         maya = ensure_user(
             db,
             email="maya.student@vu.nl",
             password="studentpass123",
             role=UserRole.STUDENT,
+            vunet_id="may003",
         )
         noor = ensure_user(
             db,
             email="noor.student@vu.nl",
             password="studentpass123",
             role=UserRole.STUDENT,
+            vunet_id="nor004",
         )
         liam = ensure_user(
             db,
             email="liam.student@vu.nl",
             password="studentpass123",
             role=UserRole.STUDENT,
+            vunet_id="lia005",
         )
 
         analytics_students: list[tuple[User, float]] = []
-        for first_name, email, ability in ANALYTICS_STUDENT_PROFILES:
+        for idx, (first_name, email, ability) in enumerate(ANALYTICS_STUDENT_PROFILES):
             analytics_user = ensure_user(
                 db,
                 email=email,
                 password="studentpass123",
                 role=UserRole.STUDENT,
+                vunet_id=f"ana{idx + 1:03d}",
             )
             analytics_students.append((analytics_user, ability))
         db.commit()

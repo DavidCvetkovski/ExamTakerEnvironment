@@ -1,0 +1,6 @@
+course_code,vunet_id,email,first_name,last_name,role,is_active
+CS101,mno345,linus.torvalds@vu.nl,Linus,Torvalds,student,true
+NOPE999,pqr678,margaret.hamilton@vu.nl,Margaret,Hamilton,student,true
+CS101,,no.vunet@vu.nl,No,Vunet,student,true
+CS101,stu901,not-an-email,Bad,Email,student,true
+CS101,vwx234,barbara.liskov@vu.nl,Barbara,Liskov,wizard,true

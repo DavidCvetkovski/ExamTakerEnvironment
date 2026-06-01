@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<assessmentItem xmlns="http://www.imsglobal.org/xsd/imsqti_v2p1" identifier="item-00b9ff88-9dd9-4b2e-9d06-d8909f928675" title="In Web Application Development, which statement best matches the idea of react state?" adaptive="false" timeDependent="false">
+  <responseDeclaration identifier="RESPONSE" cardinality="single" baseType="identifier"><correctResponse><value>A</value></correctResponse></responseDeclaration>
+  <itemBody>
+    <div class="prompt">In Web Application Development, which statement best matches the idea of react state?</div>
+    <choiceInteraction responseIdentifier="RESPONSE" shuffle="false" maxChoices="1"><simpleChoice identifier="A">It supports the core reasoning used in react state</simpleChoice><simpleChoice identifier="B">It is only a naming convention with no practical effect</simpleChoice><simpleChoice identifier="C">It is unrelated to how students solve problems in the course</simpleChoice><simpleChoice identifier="D">It always removes the need for evidence or testing</simpleChoice></choiceInteraction>
+  </itemBody>
+</assessmentItem>

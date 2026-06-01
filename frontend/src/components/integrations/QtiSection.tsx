@@ -18,6 +18,7 @@ import {
     TH as TableHeaderCell,
     TD as TableCell,
 } from '@/components/ui';
+import IntegrationInfo, { QTI_INFO } from '@/components/integrations/IntegrationInfo';
 import type { QtiImportJobResult } from '@/lib/integrations.types';
 
 function ExportPanel() {
@@ -184,6 +185,7 @@ export default function QtiSection() {
             <SectionHeader
                 title="QTI 2.1"
                 subtitle="Portable item/test packages — export and import with a validation report."
+                actions={<IntegrationInfo content={QTI_INFO} />}
             />
             <div className="grid gap-4 lg:grid-cols-2">
                 <ExportPanel />

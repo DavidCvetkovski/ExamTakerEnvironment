@@ -1,0 +1,5 @@
+course_code,vunet_id,email,first_name,last_name,role,is_active
+CS101,abc123,ada.lovelace@vu.nl,Ada,Lovelace,student,true
+CS101,def456,alan.turing@vu.nl,Alan,Turing,student,true
+CS101,ghi789,grace.hopper@vu.nl,Grace,Hopper,student,false
+CS101,jkl012,don.knuth@vu.nl,Donald,Knuth,constructor,true

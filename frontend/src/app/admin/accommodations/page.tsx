@@ -28,6 +28,18 @@ import {
 } from '@/stores/useAccommodationsStore';
 import AccommodationEditDrawer from '@/components/admin/AccommodationEditDrawer';
 
+type SortKey = 'email' | 'vunet' | 'extra';
+type SortDir = 'asc' | 'desc';
+
+// Single muted/active sort glyph — matches the items + grading tables (§7.8).
+function SortArrow({ active, dir }: { active: boolean; dir: SortDir }) {
+    return (
+        <span className={active ? 'text-xs ml-1 text-brand' : 'text-xs ml-1 text-shell-muted-dim'}>
+            {!active ? '↑' : dir === 'asc' ? '↑' : '↓'}
+        </span>
+    );
+}
+
 export default function AccommodationsAdminPage() {
     const { students, total, isLoading, search, setSearch, fetchStudents, importCsv } =
         useAccommodationsStore();
@@ -35,6 +47,32 @@ export default function AccommodationsAdminPage() {
 
     const [selected, setSelected] = useState<AccommodationStudent | null>(null);
     const [importOpen, setImportOpen] = useState(false);
+
+    // Tables always carry an active sort (§7.8); default to email ascending.
+    const [sortKey, setSortKey] = useState<SortKey>('email');
+    const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+    const toggleSort = (key: SortKey) => {
+        if (sortKey === key) {
+            setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+        } else {
+            setSortKey(key);
+            setSortDir('asc');
+        }
+    };
+
+    const sortedStudents = [...students].sort((a, b) => {
+        const dir = sortDir === 'asc' ? 1 : -1;
+        switch (sortKey) {
+            case 'vunet':
+                return dir * (a.vunet_id ?? '').localeCompare(b.vunet_id ?? '');
+            case 'extra':
+                return dir * (a.provision_time_multiplier - b.provision_time_multiplier);
+            case 'email':
+            default:
+                return dir * a.email.localeCompare(b.email);
+        }
+    });
 
     useEffect(() => {
         void fetchStudents({ skip: 0 });
@@ -54,7 +92,7 @@ export default function AccommodationsAdminPage() {
                     <div className="flex items-end justify-between gap-4 flex-wrap">
                         <PageHeader
                             title="Accommodations"
-                            subtitle="Set extra-time and display provisions for students."
+                            subtitle="Set extra-time provisions for students. Display options (enlarged text, high contrast) are self-service during an exam."
                         />
                         <Button variant="secondary" onClick={() => setImportOpen(true)}>
                             Import CSV
@@ -85,15 +123,41 @@ export default function AccommodationsAdminPage() {
                             <Table>
                                 <THead>
                                     <TR>
-                                        <TH>Student</TH>
-                                        <TH>VUnetID</TH>
-                                        <TH align="right">Extra time</TH>
-                                        <TH align="center">Enlarged</TH>
+                                        <TH>
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleSort('email')}
+                                                className="inline-flex items-center uppercase tracking-eyebrow hover:text-foreground"
+                                            >
+                                                Student
+                                                <SortArrow active={sortKey === 'email'} dir={sortDir} />
+                                            </button>
+                                        </TH>
+                                        <TH>
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleSort('vunet')}
+                                                className="inline-flex items-center uppercase tracking-eyebrow hover:text-foreground"
+                                            >
+                                                VUnetID
+                                                <SortArrow active={sortKey === 'vunet'} dir={sortDir} />
+                                            </button>
+                                        </TH>
+                                        <TH align="right">
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleSort('extra')}
+                                                className="inline-flex items-center uppercase tracking-eyebrow hover:text-foreground"
+                                            >
+                                                Extra time
+                                                <SortArrow active={sortKey === 'extra'} dir={sortDir} />
+                                            </button>
+                                        </TH>
                                         <TH align="right"></TH>
                                     </TR>
                                 </THead>
                                 <TBody>
-                                    {students.map((s) => (
+                                    {sortedStudents.map((s) => (
                                         <TR key={s.id}>
                                             <TD>{s.email}</TD>
                                             <TD>{s.vunet_id || '—'}</TD>
@@ -102,7 +166,6 @@ export default function AccommodationsAdminPage() {
                                                     ? 'Standard'
                                                     : `${s.provision_time_multiplier}×`}
                                             </TD>
-                                            <TD align="center">{s.accommodation_enlarged_display ? 'Yes' : '—'}</TD>
                                             <TD align="right">
                                                 <Button variant="ghost" size="sm" onClick={() => setSelected(s)}>
                                                     Edit
@@ -116,7 +179,7 @@ export default function AccommodationsAdminPage() {
                     )}
 
                     <p className="text-meta text-shell-muted-dim">
-                        {total} student{total === 1 ? '' : 's'} · sorted by email
+                        {total} student{total === 1 ? '' : 's'}
                     </p>
                 </div>
 

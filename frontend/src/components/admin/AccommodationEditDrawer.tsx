@@ -12,7 +12,6 @@ import {
 
 const FIELD_LABEL: Record<string, string> = {
     provision_time_multiplier: 'Extra time',
-    accommodation_enlarged_display: 'Enlarged display',
 };
 
 interface Props {
@@ -26,7 +25,6 @@ export default function AccommodationEditDrawer({ student, onClose }: Props) {
     const { toast } = useToast();
 
     const [multiplier, setMultiplier] = useState('1');
-    const [enlarged, setEnlarged] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
@@ -36,7 +34,6 @@ export default function AccommodationEditDrawer({ student, onClose }: Props) {
     useEffect(() => {
         if (student) {
             setMultiplier(String(student.provision_time_multiplier));
-            setEnlarged(student.accommodation_enlarged_display);
             setError(null);
             void fetchAudit(student.id);
         }
@@ -54,7 +51,6 @@ export default function AccommodationEditDrawer({ student, onClose }: Props) {
         try {
             await updateStudent(student.id, {
                 provision_time_multiplier: parsed,
-                enlarged_display: enlarged,
             });
             await fetchAudit(student.id);
             toast({ tone: 'success', title: 'Accommodation updated', description: 'Changes are recorded in the audit log.' });
@@ -93,31 +89,11 @@ export default function AccommodationEditDrawer({ student, onClose }: Props) {
                         />
                     </Field>
 
-                    <div className="flex items-center justify-between gap-4">
-                        <div>
-                            <p className="text-body font-medium text-foreground">Enlarged display</p>
-                            <p className="text-meta text-shell-muted-dim">Forces a larger layout during exams.</p>
-                        </div>
-                        <button
-                            type="button"
-                            role="switch"
-                            aria-checked={enlarged}
-                            aria-label="Enlarged display"
-                            onClick={() => setEnlarged((v) => !v)}
-                            className={[
-                                'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors',
-                                'focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-shell-surface',
-                                enlarged ? 'bg-brand border-brand' : 'bg-shell-input border-shell-border-deep',
-                            ].join(' ')}
-                        >
-                            <span
-                                className={[
-                                    'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-                                    enlarged ? 'translate-x-6' : 'translate-x-1',
-                                ].join(' ')}
-                            />
-                        </button>
-                    </div>
+                    <p className="text-meta text-shell-muted-dim">
+                        Display options (enlarged text, high contrast, dyslexia font) are
+                        self-service — students toggle them during the exam. Admins only set
+                        extra time here.
+                    </p>
 
                     <div className="flex justify-end">
                         <Button variant="primary" onClick={save} loading={saving}>

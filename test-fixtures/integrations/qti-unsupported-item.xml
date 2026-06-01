@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<assessmentItem xmlns="http://www.imsglobal.org/xsd/imsqti_v2p1"
+                identifier="hotspot-demo" title="Click the capital on the map"
+                adaptive="false" timeDependent="false">
+  <responseDeclaration identifier="RESPONSE" cardinality="single" baseType="point"/>
+  <itemBody>
+    <div class="prompt">Click the capital city.</div>
+    <hotspotInteraction responseIdentifier="RESPONSE" maxChoices="1">
+      <object data="map.png" type="image/png" width="400" height="300"/>
+    </hotspotInteraction>
+  </itemBody>
+</assessmentItem>

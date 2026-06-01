@@ -18,6 +18,7 @@ import {
     TH as TableHeaderCell,
     TD as TableCell,
 } from '@/components/ui';
+import IntegrationInfo, { SIS_INFO } from '@/components/integrations/IntegrationInfo';
 import type { SisImportJobResult } from '@/lib/integrations.types';
 
 function ImportPanel({
@@ -180,6 +181,7 @@ export default function SisSection() {
             <SectionHeader
                 title="SIS / Osiris"
                 subtitle="Import rosters and accommodations, export grades."
+                actions={<IntegrationInfo content={SIS_INFO} />}
             />
             <div className="grid gap-4 lg:grid-cols-2">
                 <ImportPanel

@@ -7,7 +7,7 @@ grades are exported; student responses never leave through this path.
 
 import csv
 import io
-from typing import AsyncIterator, Optional
+from typing import Optional
 
 from fastapi import HTTPException, status
 
@@ -90,18 +90,20 @@ def _row_for(result) -> list:
     ]
 
 
-async def export_grades_csv(
+async def build_grades_csv(
     *,
     course_id: Optional[str],
     scheduled_session_id: Optional[str],
     test_definition_id: Optional[str],
     published_only: bool,
     actor_id: str,
-) -> AsyncIterator[str]:
-    """Yield Osiris-compatible CSV lines for the filtered result set.
+) -> str:
+    """Build the Osiris-compatible CSV body for the filtered result set.
 
-    Requires at least a course or scheduled-session filter; audits the export
-    with the filter set and row count (never the grades themselves).
+    All DB work and the audit write happen here (awaited by the handler) so any
+    failure surfaces as a normal HTTP error — never mid-stream after a 200 has
+    already been sent. Requires at least a course or scheduled-session filter;
+    audits the export with the filter set and row count (never the grades).
     """
     if not course_id and not scheduled_session_id:
         raise HTTPException(
@@ -130,11 +132,9 @@ async def export_grades_csv(
         },
     )
 
-    def _line(values: list) -> str:
-        buffer = io.StringIO()
-        csv.writer(buffer).writerow(values)
-        return buffer.getvalue()
-
-    yield _line(_COLUMNS)
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(_COLUMNS)
     for result in results:
-        yield _line(_row_for(result))
+        writer.writerow(_row_for(result))
+    return buffer.getvalue()

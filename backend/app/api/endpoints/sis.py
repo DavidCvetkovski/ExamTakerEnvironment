@@ -6,8 +6,7 @@ admins and constructors and is always filtered (directive §8, CLAUDE.md §1/§4
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, HTTPException, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, File, Form, Query, Response, UploadFile, HTTPException, status
 
 from app.core.dependencies import require_role
 from app.models.user import User, UserRole
@@ -94,21 +93,25 @@ async def export_grades(
     published_only: bool = Query(True),
     current_user: User = Depends(_require_exporter),
 ):
-    """Stream an Osiris-compatible grade CSV for the filtered result set."""
+    """Return an Osiris-compatible grade CSV for the filtered result set.
+
+    The body is built (DB query + audit) before the response is constructed, so
+    a failure returns a clean error rather than breaking a started stream.
+    """
     if course_id is None and scheduled_session_id is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Provide at least a course_id or scheduled_session_id filter.",
         )
-    stream = grade_export_service.export_grades_csv(
+    body = await grade_export_service.build_grades_csv(
         course_id=str(course_id) if course_id else None,
         scheduled_session_id=str(scheduled_session_id) if scheduled_session_id else None,
         test_definition_id=str(test_definition_id) if test_definition_id else None,
         published_only=published_only,
         actor_id=str(current_user.id),
     )
-    return StreamingResponse(
-        stream,
+    return Response(
+        content=body,
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="grades_export.csv"'},
     )

@@ -1,175 +1,118 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# OpenVision development environment startup.
+#
+# Usage:
+#   ./dev-up.sh            Start DB + backend + frontend (no data reset)
+#   ./dev-up.sh --seed     Also reset/seed the database (preserves users)
+#   ./dev-up.sh --no-front Start DB + backend only
+#
+# Flags may be combined and accept short/long forms (-s / --seed).
 
-# OpenVision Local Development Launcher
-# This script spins up the DB, Backend, and Frontend, then opens the site.
+set -euo pipefail
 
-# Exit on error
-set -e
+# Always operate from the repository root (this script's directory), so the
+# script works regardless of the caller's current directory.
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$ROOT_DIR"
 
-echo "🚀 Starting OpenVision Development Environment..."
+# --- Arguments -------------------------------------------------------------
+SEED=false
+RUN_FRONTEND=true
+for arg in "$@"; do
+    case "$arg" in
+        -s|--seed|-seed) SEED=true ;;
+        --no-front|--backend-only) RUN_FRONTEND=false ;;
+        -h|--help)
+            sed -n '3,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+            exit 0 ;;
+        *) echo "⚠️  Unknown argument: $arg (try --help)"; exit 2 ;;
+    esac
+done
 
-# --- 0. Local Tool Detection (Antigravity Patch) ---
-# If local tools were installed by the AI agent, prioritize them.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -d "$SCRIPT_DIR/.node_local/bin" ]; then
-    export PATH="$SCRIPT_DIR/.node_local/bin:$PATH"
-fi
-if [ -d "$SCRIPT_DIR/.python_local/bin" ]; then
-    export PATH="$SCRIPT_DIR/.python_local/bin:$PATH"
-fi
-
-# --- 0. Prerequisite Checks ---
-check_cmd() {
-    if ! command -v "$1" &> /dev/null; then
-        echo "❌ Error: $1 is not installed."
-        exit 1
-    fi
+# --- Cleanup trap ----------------------------------------------------------
+# Track the servers we start so Ctrl+C tears both down cleanly instead of
+# leaving orphaned uvicorn / next processes holding ports 8000 / 3000.
+PIDS=()
+cleanup() {
+    echo ""
+    echo "🛑 Shutting down OpenVision..."
+    for pid in "${PIDS[@]:-}"; do
+        [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
+    done
+    wait 2>/dev/null || true
 }
+trap cleanup EXIT INT TERM
 
-check_cmd "docker"
-check_cmd "python3"
-check_cmd "npm"
-check_cmd "lsof"
+echo "🚀 Starting OpenVision development environment..."
 
-# --- 1. Environment Setup ---
-if [ ! -f ".env" ]; then
-    echo "📄 .env not found, creating from .env.example..."
-    if [ -f ".env.example" ]; then
-        cp .env.example .env
-    else
-        echo "❌ Error: .env.example missing. Cannot proceed."
-        exit 1
-    fi
+# --- Preconditions ---------------------------------------------------------
+if [ ! -f .env ]; then
+    echo "❌ Missing .env at repo root. Copy .env.example and fill it in."
+    exit 1
 fi
-
-# Load env vars for current script (Prisma needs DATABASE_URL)
-set -a && source .env && set +a
-
-# --- 2. Cleanup ---
-echo "🧹 Cleaning up old processes..."
-lsof -ti:8000 | xargs kill -9 2>/dev/null || true
-lsof -ti:3000 | xargs kill -9 2>/dev/null || true
-
-# 1. Start Docker Database
-echo "📦 Starting Database (Docker)..."
-
-# Detect docker-compose command (V2 vs V1)
-if docker compose version > /dev/null 2>&1; then
-    DOCKER_COMPOSE="docker compose"
-elif docker-compose version > /dev/null 2>&1; then
-    DOCKER_COMPOSE="docker-compose"
-else
-    echo "❌ Error: Docker Compose not found. Please install Docker Desktop."
+if [ ! -x backend/.venv/bin/python ]; then
+    echo "❌ Backend virtualenv not found at backend/.venv."
+    echo "   Create it with:  python3 -m venv backend/.venv && backend/.venv/bin/pip install -r backend/requirements.txt"
     exit 1
 fi
 
-$DOCKER_COMPOSE up -d
+# --- Free stale ports ------------------------------------------------------
+echo "🧹 Cleaning up old dev servers..."
+pkill -f "uvicorn app.main:app" 2>/dev/null || true
+pkill -f "next dev" 2>/dev/null || true
 
-# 2. Setup Backend
-echo "🐍 Setting up Backend..."
-cd backend
-if [ ! -d ".venv" ]; then
-    echo "Creating virtual environment..."
-    python3 -m venv .venv
-fi
-source .venv/bin/activate
-python3 -m pip install --upgrade pip -q
-pip install -q -r requirements.txt
+# --- Database --------------------------------------------------------------
+echo "📦 Starting database + Redis (Docker)..."
+docker compose up -d db redis
 
-# Prisma Generation (Industry Standard)
-echo "💎 Generating Prisma Clients (JS & Python)..."
-npx prisma@5.17.0 generate --schema=../prisma/schema.prisma
-
-# Sync Prisma schema to the DB (creates/updates tables in development)
-echo "⚙️ Applying Database Schema (Prisma)..."
-npx prisma@5.17.0 db push --schema=../prisma/schema.prisma --accept-data-loss
-cd ..
-
-# 3. Setup Frontend
-echo "⚛️ Setting up Frontend..."
-cd frontend
-if [ ! -d "node_modules" ]; then
-    echo "Installing frontend dependencies..."
-    npm install -q
-fi
-cd ..
-
-# Parse flags
-SEED_DB=false
-for arg in "$@"; do
-    if [[ "$arg" == "--seed" ]] || [[ "$arg" == "-seed" ]] || [[ "$arg" == "seed" ]]; then
-        SEED_DB=true
+echo "⏳ Waiting for Postgres on localhost:5432..."
+for _ in $(seq 1 60); do
+    if (echo > /dev/tcp/localhost/5432) >/dev/null 2>&1; then
+        echo "✅ Postgres is accepting connections."
+        break
     fi
+    sleep 0.5
 done
 
-# 4. Start Servers
-echo "📡 Starting Backend (Port 8000)..."
-cd backend
-if [ "$SEED_DB" = true ]; then
-    echo "🌱 Seeding/Resetting Database (Preserving Users)..."
-    ./.venv/bin/python seed_e2e.py
+# --- Backend schema --------------------------------------------------------
+echo "💎 Generating Prisma clients (JS + Python)..."
+(cd backend && npx prisma generate)
+(cd backend && .venv/bin/prisma py generate) || true
+
+echo "⚙️  Applying database schema (prisma db push)..."
+(cd backend && npx prisma db push)
+
+# --- Seed (optional) -------------------------------------------------------
+if [ "$SEED" = true ]; then
+    echo "🌱 Seeding / resetting database (preserving users)..."
+    (cd backend && PYTHONPATH=. .venv/bin/python seed_e2e.py)
+    echo "✅ Seeding complete."
+else
+    echo "🌱 Skipping seed (pass --seed to reset data)."
 fi
-./.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload > backend.log 2>&1 &
-BACKEND_PID=$!
-cd ..
 
-echo "🎨 Starting Frontend (Port 3000)..."
-cd frontend
-npm run dev -- -p 3000 > frontend.log 2>&1 &
-FRONTEND_PID=$!
-cd ..
+# --- Frontend deps ---------------------------------------------------------
+if [ "$RUN_FRONTEND" = true ] && [ ! -d frontend/node_modules ]; then
+    echo "📦 Installing frontend dependencies..."
+    (cd frontend && npm install)
+fi
 
-# Clean up function
-cleanup() {
-    echo ""
-    echo "🛑 Shutting down servers..."
-    kill $BACKEND_PID $FRONTEND_PID 2>/dev/null || true
-    echo "Done."
-    exit
-}
+# --- Servers ---------------------------------------------------------------
+echo "📡 Starting backend on http://localhost:8000 ..."
+(cd backend && .venv/bin/uvicorn app.main:app --reload --port 8000) &
+PIDS+=("$!")
 
-trap cleanup SIGINT SIGTERM
+if [ "$RUN_FRONTEND" = true ]; then
+    echo "🎨 Starting frontend on http://localhost:3000 ..."
+    (cd frontend && npm run dev) &
+    PIDS+=("$!")
+fi
 
-# 5. Wait for availability
-echo "⏳ Waiting for servers to warm up..."
-max_retries=30
-count=0
-while ! curl -s http://127.0.0.1:8000/health > /dev/null; do
-    sleep 1
-    count=$((count + 1))
-    if [ $count -eq $max_retries ]; then
-        echo "❌ Backend failed to start. Check logs."
-        cleanup
-    fi
-done
-
-frontend_count=0
-while ! curl -s http://127.0.0.1:3000/login > /dev/null; do
-    sleep 1
-    frontend_count=$((frontend_count + 1))
-    if [ $frontend_count -eq $max_retries ]; then
-        echo "❌ Frontend failed to start. Check frontend/frontend.log."
-        cleanup
-    fi
-done
-
-echo "✅ Environment is ready!"
-echo "🌐 Opening http://127.0.0.1:3000 in your browser..."
-open http://127.0.0.1:3000
-
-echo "-------------------------------------------------------"
-echo "Login Credentials (e2e):"
-echo "  Admin:       admin_e2e@vu.nl / adminpass123"
-echo "  Constructor: constructor_e2e@vu.nl / conpass123"
-echo "  Student:     student_e2e@vu.nl / studentpass123"
 echo ""
-echo "Role Definitions:"
-echo "  - ADMIN: Full system access, users & config management."
-echo "  - CONSTRUCTOR: Authors questions and test blueprints."
-echo "  - STUDENT: Takes exams and views results."
-echo "-------------------------------------------------------"
-echo "Press Ctrl+C to stop both servers."
-echo "-------------------------------------------------------"
+echo "✅ OpenVision is up. Press Ctrl+C to stop."
+echo ""
 
-# Keep script running to maintain processes
+# Block until interrupted; the EXIT/INT/TERM trap tears both servers down.
+# (Plain `wait` for portability — macOS ships bash 3.2, which lacks `wait -n`.)
 wait

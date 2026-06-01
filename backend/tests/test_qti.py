@@ -55,7 +55,8 @@ async def _make_item(bank_id, question_type, prompt, options):
 
 # --- unit: mapper round-trip --------------------------------------------
 
-def test_mapper_round_trip_multiple_choice():
+@pytest.mark.anyio
+async def test_mapper_round_trip_multiple_choice():
     options = {"question_type": "MULTIPLE_CHOICE", "choices": [
         {"id": "a", "text": "3", "is_correct": False, "weight": 1.0},
         {"id": "b", "text": "4", "is_correct": True, "weight": 1.0},
@@ -72,7 +73,8 @@ def test_mapper_round_trip_multiple_choice():
     assert [c["is_correct"] for c in choices] == [False, True]
 
 
-def test_mapper_rejects_unsupported_interaction():
+@pytest.mark.anyio
+async def test_mapper_rejects_unsupported_interaction():
     xml = (
         '<assessmentItem xmlns="http://www.imsglobal.org/xsd/imsqti_v2p1" '
         'identifier="h1" title="H"><itemBody><hotspotInteraction '
@@ -83,7 +85,8 @@ def test_mapper_rejects_unsupported_interaction():
         mappers.xml_to_item(root)
 
 
-def test_parser_rejects_doctype():
+@pytest.mark.anyio
+async def test_parser_rejects_doctype():
     evil = b'<?xml version="1.0"?><!DOCTYPE x [<!ENTITY a "b">]><assessmentItem/>'
     with pytest.raises(package.QtiPackageError):
         package.parse_xml_safely(evil)

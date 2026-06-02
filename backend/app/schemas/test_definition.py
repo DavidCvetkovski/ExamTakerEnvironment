@@ -41,6 +41,20 @@ class TestDefinitionBase(BaseModel):
     # ignored on write (see blueprints_service); only .seb regeneration sets it.
     proctoring_config: ProctoringConfig = Field(default_factory=ProctoringConfig)
 
+    @field_validator("proctoring_config", mode="before")
+    @classmethod
+    def _coerce_null_proctoring(cls, value):
+        """Treat a NULL/missing proctoring_config as the permissive default.
+
+        Legacy and freshly-created test rows store the column as SQL NULL. When
+        reading those rows back (``from_attributes``), Pydantic would otherwise
+        reject ``None`` against the non-optional ``ProctoringConfig`` and raise a
+        ResponseValidationError. Coercing to ``{}`` yields the all-default policy.
+        """
+        if value is None:
+            return {}
+        return value
+
 class TestDefinitionCreate(TestDefinitionBase):
     @field_validator("blocks")
     @classmethod

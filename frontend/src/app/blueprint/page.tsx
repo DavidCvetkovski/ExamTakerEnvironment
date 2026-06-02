@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import { DEFAULT_SCORING_CONFIG, useBlueprintStore, SelectionRule, TestDefinition, type BlueprintStatusFilter } from '@/stores/useBlueprintStore';
+import ProctoringConfigPanel from '@/components/blueprint/ProctoringConfigPanel';
 import { useCourseStore } from '@/stores/useCourseStore';
 import { useExamStore } from '@/stores/useExamStore';
 import { useImportStore } from '@/stores/useImportStore';
@@ -771,6 +772,10 @@ function BlueprintPageInner() {
                                         </button>
                                         <span className="text-sm font-semibold text-shell-muted">Shuffle Answer Order</span>
                                     </div>
+                                    <ProctoringConfigPanel
+                                        value={currentBlueprint?.proctoring_config}
+                                        onChange={(pc) => saveState({ proctoring_config: pc })}
+                                    />
                                 </div>
                             </div>
 

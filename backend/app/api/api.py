@@ -10,6 +10,7 @@ from app.api.endpoints import (
     items,
     lti,
     preferences,
+    proctoring,
     qti,
     scheduled_sessions,
     sessions,
@@ -37,3 +38,4 @@ api_router.include_router(accommodations.router)
 api_router.include_router(lti.router)
 api_router.include_router(sis.router)
 api_router.include_router(qti.router)
+api_router.include_router(proctoring.router)

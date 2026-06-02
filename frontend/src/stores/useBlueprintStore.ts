@@ -49,6 +49,28 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
     shuffle_options: false,
 };
 
+/** Epoch 11 — per-test proctoring policy. seb_config_key is server-managed and
+ *  ignored on write, so the editor never sets it. */
+export interface ProctoringConfig {
+    require_seb: boolean;
+    block_copy_paste: boolean;
+    suppress_context_menu: boolean;
+    detect_focus_loss: boolean;
+    require_fullscreen: boolean;
+    ip_allowlist: string[];
+    detect_session_sharing: boolean;
+}
+
+export const DEFAULT_PROCTORING_CONFIG: ProctoringConfig = {
+    require_seb: false,
+    block_copy_paste: false,
+    suppress_context_menu: false,
+    detect_focus_loss: true,
+    require_fullscreen: false,
+    ip_allowlist: [],
+    detect_session_sharing: false,
+};
+
 export interface TestDefinition {
     id: string;
     title: string;
@@ -59,6 +81,7 @@ export interface TestDefinition {
     duration_minutes: number;
     shuffle_questions: boolean;
     scoring_config?: ScoringConfig;
+    proctoring_config?: ProctoringConfig;
     created_at: string;
     updated_at: string;
 }
@@ -251,6 +274,7 @@ export const useBlueprintStore = create<BlueprintState>()(persist((set, get) => 
                 duration_minutes: 60,
                 shuffle_questions: false,
                 scoring_config: { ...DEFAULT_SCORING_CONFIG },
+                proctoring_config: { ...DEFAULT_PROCTORING_CONFIG },
             },
             savedSnapshot: null,
             error: null,

@@ -29,6 +29,20 @@ async def _validate_course(course_id: Optional[UUID]) -> Optional[str]:
     return str(course_id)
 
 
+def _proctoring_for_write(payload, existing_key: Optional[str]) -> dict:
+    """Serialize the proctoring policy for persistence, keeping seb_config_key
+    server-managed.
+
+    A client write (blueprint create/update) must never be able to set or alter
+    ``seb_config_key`` — that hash is derived only by the .seb regeneration flow.
+    We always overwrite it with the value already stored (None for a new test),
+    so a malicious or stale payload cannot inject a forged key.
+    """
+    policy = payload.proctoring_config.model_dump(mode="json")
+    policy["seb_config_key"] = existing_key
+    return policy
+
+
 async def create_test_definition(
     payload: TestDefinitionCreate, current_user_id: str
 ) -> dict:
@@ -46,6 +60,8 @@ async def create_test_definition(
             "duration_minutes": payload.duration_minutes,
             "shuffle_questions": payload.shuffle_questions,
             "scoring_config": Json(payload.scoring_config),
+            # A new blueprint has no .seb generated yet, so seb_config_key starts None.
+            "proctoring_config": Json(_proctoring_for_write(payload, existing_key=None)),
             # updated_at has no DB default — set it explicitly so the value
             # is never NULL/1970 on freshly created blueprints (Stage 18i).
             "created_at": now,
@@ -85,6 +101,12 @@ async def update_test_definition(
     blocks_data = [block.model_dump(mode="json") for block in payload.blocks]
     course_id = await _validate_course(payload.course_id)
 
+    # Preserve the server-managed SEB Config Key across an editor write.
+    existing = await prisma.test_definitions.find_unique(where={"id": str(test_id)})
+    existing_key = None
+    if existing and isinstance(existing.proctoring_config, dict):
+        existing_key = existing.proctoring_config.get("seb_config_key")
+
     updated = await prisma.test_definitions.update(
         where={"id": str(test_id)},
         data={
@@ -95,6 +117,7 @@ async def update_test_definition(
             "duration_minutes": payload.duration_minutes,
             "shuffle_questions": payload.shuffle_questions,
             "scoring_config": Json(payload.scoring_config),
+            "proctoring_config": Json(_proctoring_for_write(payload, existing_key)),
             # Bump updated_at on every write so the blueprint card always
             # reflects the latest edit time (Stage 18i).
             "updated_at": datetime.utcnow(),

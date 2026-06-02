@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from uuid import UUID
 
-from app.core.dependencies import get_current_user, require_role
+from app.core.dependencies import get_current_user, require_role, require_seb_integrity
 from app.models.user import User, UserRole
 from app.schemas.exam_session import ExamSessionCreate, ExamSessionResponse
 from app.services.exam_sessions_service import (
@@ -44,7 +44,7 @@ async def instantiate_practice(
 @router.get("/{session_id}", response_model=ExamSessionResponse)
 async def get_exam_session(
     session_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_seb_integrity),
 ):
     """Retrieve the frozen exam session."""
     return await get_exam_session_for_user(
@@ -56,7 +56,7 @@ async def get_exam_session(
 @router.post("/{session_id}/submit", response_model=ExamSessionResponse)
 async def submit_session(
     session_id: UUID,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_seb_integrity),
 ):
     """
     Submit an exam session. Marks it as SUBMITTED and locks it

@@ -29,14 +29,24 @@ model exam_sessions {
   expires_at              DateTime                 @db.Timestamp(6)
   scheduled_session_id    String?                  @db.Uuid
   session_mode            examsessionmode          @default(PRACTICE)
+  // Epoch 11 — proctoring presence + interventions (all additive/defaulted).
+  last_seen_at              DateTime?              @db.Timestamp(6)
+  paused_at                 DateTime?              @db.Timestamp(6)
+  accumulated_pause_seconds Int                    @default(0)
+  device_fingerprint        String?                @db.VarChar
+  flagged_for_review        Boolean                @default(false)
+  terminated_by             String?                @db.Uuid
+  terminated_at             DateTime?              @db.Timestamp(6)
   scheduled_exam_sessions scheduled_exam_sessions? @relation(fields: [scheduled_session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   users                   users                    @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   test_definitions        test_definitions         @relation(fields: [test_definition_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   interaction_events      interaction_events[]
   question_grades         question_grades[]
+  proctoring_incidents    proctoring_incidents[]
   session_result          session_results?
 
   @@index([scheduled_session_id], map: "ix_exam_sessions_scheduled_session_id")
+  @@index([scheduled_session_id, status], map: "ix_exam_sessions_scheduled_status")
 }
 
 model courses {
@@ -155,6 +165,9 @@ model test_definitions {
   created_at              DateTime?                 @default(now()) @db.Timestamp(6)
   updated_at              DateTime?                 @db.Timestamp(6)
   scoring_config          Json?
+  // Epoch 11 — per-test proctoring policy (see schemas/proctoring.ProctoringConfig).
+  // NULL == "no proctoring", preserving every legacy blueprint without migration.
+  proctoring_config       Json?
   exam_sessions           exam_sessions[]
   lti_resource_links      lti_resource_links[]
   scheduled_exam_sessions scheduled_exam_sessions[]
@@ -502,6 +515,25 @@ model interaction_events {
   @@unique([session_id, client_event_id], map: "uq_interaction_events_session_client_event")
 }
 
+model proctoring_incidents {
+  id                   String                   @id @default(uuid()) @db.Uuid
+  exam_session_id      String?                  @db.Uuid
+  scheduled_session_id String?                  @db.Uuid
+  student_id           String?                  @db.Uuid
+  incident_type        proctoringincidenttype
+  severity             proctoringseverity
+  source               proctoringincidentsource
+  detail               Json
+  client_ip            String?                  @db.VarChar
+  created_at           DateTime                 @default(now()) @db.Timestamp(6)
+  exam_session         exam_sessions?           @relation(fields: [exam_session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([scheduled_session_id], map: "ix_proctoring_incidents_scheduled_session_id")
+  @@index([exam_session_id], map: "ix_proctoring_incidents_exam_session_id")
+  @@index([scheduled_session_id, created_at], map: "ix_proctoring_incidents_scheduled_created_at")
+  @@index([severity], map: "ix_proctoring_incidents_severity")
+}
+
 model question_grades {
   id                 String        @id @default(uuid()) @db.Uuid
   session_id         String        @db.Uuid
@@ -596,6 +628,34 @@ enum interactioneventtype {
   ANSWER_CHANGE
   FLAG_TOGGLE
   NAVIGATION
+}
+
+enum proctoringincidenttype {
+  SEB_HEADER_MISSING
+  SEB_HASH_INVALID
+  IP_NOT_ALLOWED
+  FOCUS_LOST
+  COPY_ATTEMPT
+  PASTE_ATTEMPT
+  CONTEXT_MENU_ATTEMPT
+  FULLSCREEN_EXIT
+  DEVICE_FINGERPRINT_MISMATCH
+  MULTIPLE_ACTIVE_SESSIONS
+  SUPERVISOR_EXTEND
+  SUPERVISOR_PAUSE
+  SUPERVISOR_RESUME
+  SUPERVISOR_TERMINATE
+}
+
+enum proctoringseverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum proctoringincidentsource {
+  SERVER
+  CLIENT
 }
 
 enum gradingstatus {

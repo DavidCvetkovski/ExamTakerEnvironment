@@ -11,3 +11,9 @@ from .exam_session import ExamSession, SessionStatus, ExamSessionMode
 from .interaction_event import InteractionEvent, InteractionEventType
 from .question_grade import QuestionGrade, GradingStatus
 from .session_result import SessionResult
+from .proctoring_incident import (
+    ProctoringIncident,
+    ProctoringIncidentType,
+    ProctoringSeverity,
+    ProctoringIncidentSource,
+)

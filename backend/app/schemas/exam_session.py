@@ -3,6 +3,7 @@ from uuid import UUID
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from app.models.exam_session import ExamSessionMode, SessionStatus
+from app.schemas.proctoring import ClientProctoringView
 
 class ExamItemSnapshot(BaseModel):
     learning_object_id: UUID
@@ -29,5 +30,9 @@ class ExamSessionResponse(ExamSessionBase):
     started_at: datetime
     submitted_at: Optional[datetime] = None
     return_path: Optional[str] = None
+    # Epoch 11 — proctoring state surfaced to the exam client (advisory UX).
+    paused_at: Optional[datetime] = None
+    flagged_for_review: bool = False
+    proctoring: Optional[ClientProctoringView] = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -7,6 +7,8 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useExamStore } from '@/stores/useExamStore';
 import { useHeartbeat } from '@/hooks/useHeartbeat';
+import { useProctoring } from '@/hooks/useProctoring';
+import ProctoringGate from '@/components/exam/ProctoringGate';
 import { resolveExamTextScale } from '@/lib/accessibility';
 import QuestionRenderer from '@/components/exam/QuestionRenderer';
 import ExamFooter from '@/components/exam/ExamFooter';
@@ -54,6 +56,9 @@ export default function ExamPage() {
 
     // Initialize heartbeat auto-save
     useHeartbeat(sessionId);
+
+    // Epoch 11 — client anti-cheat runtime (advisory; backend 403 is authoritative).
+    useProctoring(sessionId, currentSession?.proctoring);
 
     // Fetch session and recover saved answers on mount
     useEffect(() => {
@@ -194,6 +199,10 @@ export default function ExamPage() {
 
     return (
         <ProtectedRoute allowedRoles={['STUDENT', 'CONSTRUCTOR', 'ADMIN']}>
+          <ProctoringGate
+            proctoring={currentSession.proctoring}
+            scheduledSessionId={currentSession.scheduled_session_id}
+          >
             <div
                 className="min-h-screen bg-shell-surface text-foreground flex flex-col pb-28"
                 data-a11y-scale={examScaleOverride}
@@ -287,6 +296,7 @@ export default function ExamPage() {
                     onClose={() => setShowShortcuts(false)}
                 />
             </div>
+          </ProctoringGate>
         </ProtectedRoute>
     );
 }

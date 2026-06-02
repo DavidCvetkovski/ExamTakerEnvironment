@@ -138,6 +138,19 @@
   --color-danger-bg: rgba(248, 113, 113, 0.10);
   --color-danger-border: rgba(248, 113, 113, 0.30);
 
+  /* ── Epoch 11 — proctoring presence palette (its own token family per §7.1).
+     Aliased onto the theme-adaptive status tokens, so it resolves correctly in
+     all three themes with zero branching (var() substitutes at the use-site). ── */
+  --color-presence-active: var(--color-success);
+  --color-presence-active-fg: var(--color-success-fg);
+  --color-presence-active-bg: var(--color-success-bg);
+  --color-presence-idle: var(--color-warning);
+  --color-presence-idle-fg: var(--color-warning-fg);
+  --color-presence-idle-bg: var(--color-warning-bg);
+  --color-presence-disconnected: var(--color-danger-fg);
+  --color-presence-disconnected-fg: var(--color-danger-fg);
+  --color-presence-disconnected-bg: var(--color-danger-bg);
+
   --color-background: var(--color-shell-bg);
   --color-foreground: #ffffff;
 

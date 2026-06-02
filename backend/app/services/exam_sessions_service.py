@@ -353,9 +353,55 @@ async def instantiate_session_for_student(
     return await instantiate_practice_session(test_definition_id, current_user)
 
 
+async def _hash_fingerprint(raw: str) -> str:
+    """One-way, salted hash of a client fingerprint (Epoch 11 §9.9).
+
+    Stored values are not reversible and not correlatable across exams.
+    """
+    import hashlib
+
+    from app.core.config import settings
+
+    return hashlib.sha256(f"{settings.FINGERPRINT_SALT}:{raw}".encode("utf-8")).hexdigest()
+
+
+async def _apply_device_fingerprint(attempt: Any, raw_fingerprint: str, scheduled: Any) -> None:
+    """Record/compare the device fingerprint, raising a sharing incident on mismatch."""
+    from app.services.proctoring.policy import resolve_proctoring_config
+
+    policy = resolve_proctoring_config(getattr(scheduled, "test_definitions", None))
+    hashed = await _hash_fingerprint(raw_fingerprint)
+    existing = getattr(attempt, "device_fingerprint", None)
+
+    if not existing:
+        await prisma.exam_sessions.update(
+            where={"id": attempt.id}, data={"device_fingerprint": hashed}
+        )
+        return
+
+    if policy.detect_session_sharing and existing != hashed:
+        from app.models.proctoring_incident import (
+            ProctoringIncidentSource,
+            ProctoringIncidentType,
+            ProctoringSeverity,
+        )
+        from app.services.proctoring.incident_service import record_incident
+
+        await record_incident(
+            incident_type=ProctoringIncidentType.DEVICE_FINGERPRINT_MISMATCH,
+            severity=ProctoringSeverity.CRITICAL,
+            source=ProctoringIncidentSource.SERVER,
+            exam_session_id=str(attempt.id),
+            scheduled_session_id=str(scheduled.id),
+            student_id=str(attempt.student_id),
+            detail={"reason": "device_changed"},
+        )
+
+
 async def join_scheduled_session_for_student(
     scheduled_session_id: UUID,
     current_user: Any,
+    device_fingerprint: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Join a scheduled exam session. Reuses an existing attempt when present.
@@ -410,6 +456,8 @@ async def join_scheduled_session_for_student(
         order={"started_at": "desc"},
     )
     if existing_attempt:
+        if device_fingerprint:
+            await _apply_device_fingerprint(existing_attempt, device_fingerprint, scheduled)
         return serialize_exam_session(existing_attempt)
 
     selected_items = await select_items_for_test_definition(scheduled.test_definitions)
@@ -427,7 +475,7 @@ async def join_scheduled_session_for_student(
     individual_expiry = now + timedelta(minutes=duration_minutes)
     expires_at = min(individual_expiry, ensure_utc(scheduled.ends_at))
 
-    return await create_exam_session_record(
+    created = await create_exam_session_record(
         test_definition=scheduled.test_definitions,
         student_id=str(current_user.id),
         selected_items=selected_items,
@@ -436,6 +484,12 @@ async def join_scheduled_session_for_student(
         scheduled_session_id=str(scheduled.id),
         expires_at=expires_at,
     )
+    if device_fingerprint:
+        hashed = await _hash_fingerprint(device_fingerprint)
+        await prisma.exam_sessions.update(
+            where={"id": str(created["id"])}, data={"device_fingerprint": hashed}
+        )
+    return created
 
 
 async def finalize_timed_out_session(session: Any) -> Any:
@@ -492,4 +546,15 @@ async def get_exam_session_for_user(
             detail="Not authorized to view this session.",
         )
 
-    return serialize_exam_session(session)
+    payload = serialize_exam_session(session)
+    payload["proctoring"] = await _client_proctoring_view(session.test_definition_id)
+    return payload
+
+
+async def _client_proctoring_view(test_definition_id: str):
+    """Resolve the secret-free proctoring policy slice for the exam client."""
+    from app.schemas.proctoring import ClientProctoringView
+    from app.services.proctoring.policy import resolve_proctoring_config
+
+    test = await prisma.test_definitions.find_unique(where={"id": str(test_definition_id)})
+    return ClientProctoringView.from_policy(resolve_proctoring_config(test)).model_dump()

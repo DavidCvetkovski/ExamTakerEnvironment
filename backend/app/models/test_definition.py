@@ -39,6 +39,10 @@ class TestDefinition(Base):
     # Grading configuration
     scoring_config = Column(JSONB, nullable=True, default=dict)
 
+    # Epoch 11 — per-test proctoring policy. NULL == "no proctoring".
+    # Shape validated by schemas.proctoring.ProctoringConfig on write.
+    proctoring_config = Column(JSONB, nullable=True, default=None)
+
     # Relationship to user
     creator = relationship("User")
     # Relationship to course (Epoch 8.9.1) — optional association

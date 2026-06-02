@@ -74,13 +74,31 @@ class Settings(BaseSettings):
     RATE_LIMIT_ENABLED: bool = True
     SENTRY_DSN: Optional[str] = None
 
+    # --- Epoch 11: Safe Exam Browser & Proctoring ---
+    # Global kill switch: when False, require_seb_integrity passes through (§19).
+    PROCTORING_ENABLED: bool = True
+    # The public, browser-facing base SEB hashed its requests against (§6.4).
+    # MUST match the host the .seb startURL used (scheme + host + optional port).
+    PUBLIC_EXAM_URL_BASE: str = "http://localhost:3000"
+    # Enable deterministic SEB Config-Key derivation. Leave False to ship
+    # BEK-only mode until Config-Key parity is validated against a real SEB (§6.3).
+    SEB_CONFIG_KEY_ENABLED: bool = False
+    # Salt for the (one-way) device fingerprint hash so stored values are not
+    # reversible or correlatable across exams (§9.9). Falls back to SECRET_KEY.
+    FINGERPRINT_SALT: Optional[str] = None
+    # Presence thresholds (seconds) — single source for green/yellow/red (§9.4).
+    PRESENCE_IDLE_SECONDS: int = 30
+    PRESENCE_DISCONNECTED_SECONDS: int = 90
+
     # LTI key encryption
     LTI_PRIVATE_KEY_ENCRYPTION_KEY: Optional[str] = None
 
     def model_post_init(self, __context) -> None:
-        """Set fallback for LTI encryption key post Pydantic initialization."""
+        """Set fallbacks for derived secrets post Pydantic initialization."""
         if not self.LTI_PRIVATE_KEY_ENCRYPTION_KEY:
             self.LTI_PRIVATE_KEY_ENCRYPTION_KEY = self.SECRET_KEY
+        if not self.FINGERPRINT_SALT:
+            self.FINGERPRINT_SALT = self.SECRET_KEY
 
     @field_validator("ENVIRONMENT")
     @classmethod

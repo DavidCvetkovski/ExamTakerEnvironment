@@ -55,6 +55,15 @@ class ExamSession(Base):
     submitted_at = Column(DateTime, nullable=True)
     expires_at = Column(DateTime, nullable=False)
 
+    # Epoch 11 — proctoring presence + supervisor interventions (additive).
+    last_seen_at = Column(DateTime, nullable=True)
+    paused_at = Column(DateTime, nullable=True)
+    accumulated_pause_seconds = Column(Integer, default=0, nullable=False)
+    device_fingerprint = Column(String, nullable=True)
+    flagged_for_review = Column(Boolean, default=False, nullable=False)
+    terminated_by = Column(UUID(as_uuid=True), nullable=True)
+    terminated_at = Column(DateTime, nullable=True)
+
     # Relationships
     test_definition = relationship("TestDefinition")
     student = relationship("User")

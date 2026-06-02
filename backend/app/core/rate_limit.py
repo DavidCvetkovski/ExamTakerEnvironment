@@ -226,3 +226,20 @@ async def rate_limit_heartbeat(
         window_seconds=60,
         endpoint="heartbeat",
     )
+
+
+async def rate_limit_incident(
+    session_id: UUID,
+    current_user: "User" = Depends(_get_current_user),
+) -> None:
+    """Client incident reports: 120/minute per user+session (Epoch 11 §9.10).
+
+    Generous enough for legitimate bursts (rapid focus changes) but caps a
+    runaway reporter from flooding the incident table.
+    """
+    await _enforce(
+        key=f"incident:user:{current_user.id}:session:{session_id}",
+        limit=120,
+        window_seconds=60,
+        endpoint="incident",
+    )

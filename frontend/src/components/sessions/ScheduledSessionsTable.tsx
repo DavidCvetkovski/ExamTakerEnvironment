@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { ScheduledSession } from '@/stores/useSessionManagerStore';
 import { useSessionManagerStore } from '@/stores/useSessionManagerStore';
 import { Button, Badge, EmptyState, RowActionMenu, useToast } from '@/components/ui';
+import { api } from '@/lib/api';
 import { copyText } from '@/lib/clipboard';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useLifecycleSync } from '@/hooks/useLifecycleSync';
@@ -29,6 +31,7 @@ function SessionRow({
     countdownLabel,
     countdownTone,
     showCopyId,
+    showMonitor,
 }: {
     session: ScheduledSession;
     isBusy: boolean;
@@ -39,16 +42,42 @@ function SessionRow({
     countdownLabel?: string;
     countdownTone?: string;
     showCopyId?: boolean;
+    showMonitor?: boolean;
 }) {
     const { display: countdown } = useCountdown(countdownTarget ?? session.starts_at);
     const now = useServerNow(60_000);
     const { toast } = useToast();
+    const router = useRouter();
     const canCancel = session.status !== 'CLOSED' && session.status !== 'CANCELED';
 
     const copyId = async () => {
         const ok = await copyText(session.id);
         toast(ok ? { tone: 'success', title: 'Session ID copied' } : { tone: 'danger', title: 'Copy failed' });
     };
+
+    const downloadSeb = async () => {
+        try {
+            const res = await api.get(`scheduled-sessions/${session.id}/seb-config`, {
+                responseType: 'blob',
+            });
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `exam-${session.id}.seb`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            toast({ tone: 'success', title: 'SEB config downloaded' });
+        } catch {
+            toast({ tone: 'danger', title: 'Could not download SEB config' });
+        }
+    };
+
+    const menuItems = [
+        ...(showMonitor ? [{ label: 'Download SEB config', onClick: downloadSeb }] : []),
+        ...(showCopyId ? [{ label: 'Copy session ID', onClick: copyId }] : []),
+    ];
 
     return (
         <tr className="border-t border-shell-border">
@@ -75,6 +104,15 @@ function SessionRow({
             )}
             <td className="py-4">
                 <div className="flex flex-wrap gap-2">
+                    {showMonitor && (
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => router.push(`/sessions/${session.id}/monitor`)}
+                        >
+                            Monitor
+                        </Button>
+                    )}
                     <Button
                         variant="secondary"
                         size="sm"
@@ -99,11 +137,8 @@ function SessionRow({
                             Cancel
                         </Button>
                     )}
-                    {showCopyId && (
-                        <RowActionMenu
-                            ariaLabel="Session actions"
-                            items={[{ label: 'Copy session ID', onClick: copyId }]}
-                        />
+                    {menuItems.length > 0 && (
+                        <RowActionMenu ariaLabel="Session actions" items={menuItems} />
                     )}
                 </div>
             </td>
@@ -123,6 +158,7 @@ function SessionTable({
     countdownTone,
     startsHeader,
     showCopyId,
+    showMonitor,
 }: {
     sessions: ScheduledSession[];
     isBusy: boolean;
@@ -139,6 +175,8 @@ function SessionTable({
     startsHeader?: 'Starts' | 'Started';
     /** Show a row overflow menu to copy the session id (completed rows). */
     showCopyId?: boolean;
+    /** Show the live-monitor entry point + SEB download (ongoing rows). */
+    showMonitor?: boolean;
 }) {
     if (sessions.length === 0) return null;
     return (
@@ -167,6 +205,7 @@ function SessionTable({
                             countdownLabel={countdownLabel}
                             countdownTone={countdownTone}
                             showCopyId={showCopyId}
+                            showMonitor={showMonitor}
                         />
                     ))}
                 </tbody>
@@ -230,6 +269,7 @@ export default function ScheduledSessionsTable({
                         countdownLabel="Ends in"
                         countdownTone="var(--color-warning-fg)"
                         startsHeader="Started"
+                        showMonitor
                     />
                 </div>
             )}

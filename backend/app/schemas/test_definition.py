@@ -4,6 +4,8 @@ from datetime import datetime
 from typing import List, Optional, Literal, Union, Dict, Any, Annotated
 import enum
 
+from app.schemas.proctoring import ProctoringConfig
+
 class RuleType(str, enum.Enum):
     FIXED = "FIXED"
     RANDOM = "RANDOM"
@@ -35,6 +37,9 @@ class TestDefinitionBase(BaseModel):
     duration_minutes: int = Field(default=60, gt=0)
     shuffle_questions: bool = False
     scoring_config: Dict[str, Any] = Field(default_factory=dict)
+    # Epoch 11 — proctoring policy. seb_config_key is server-managed and is
+    # ignored on write (see blueprints_service); only .seb regeneration sets it.
+    proctoring_config: ProctoringConfig = Field(default_factory=ProctoringConfig)
 
 class TestDefinitionCreate(TestDefinitionBase):
     @field_validator("blocks")

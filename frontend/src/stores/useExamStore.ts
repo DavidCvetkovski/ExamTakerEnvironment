@@ -31,6 +31,20 @@ export interface ExamSession {
     submitted_at: string | null;
     expires_at: string;
     return_path: string;
+    // Epoch 11 — proctoring state (advisory client UX; backend 403 is authoritative).
+    paused_at?: string | null;
+    flagged_for_review?: boolean;
+    proctoring?: ClientProctoringView | null;
+}
+
+/** Secret-free proctoring policy the exam client needs to drive its UX. */
+export interface ClientProctoringView {
+    require_seb: boolean;
+    block_copy_paste: boolean;
+    suppress_context_menu: boolean;
+    detect_focus_loss: boolean;
+    require_fullscreen: boolean;
+    detect_session_sharing: boolean;
 }
 
 export interface InteractionEvent {

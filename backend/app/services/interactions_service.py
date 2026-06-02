@@ -19,6 +19,21 @@ from app.services.exam_sessions_service import finalize_timed_out_session, seria
 from app.services.heartbeat_ingestion.queue import enqueue_events
 
 
+def _latest_navigation_index(events: List[Dict[str, Any]]) -> Optional[int]:
+    """Best-effort current-question index from the latest NAVIGATION event in a batch."""
+    index: Optional[int] = None
+    for event in events:
+        if event.get("event_type") == InteractionEventType.NAVIGATION.value:
+            payload = event.get("payload") or {}
+            if isinstance(payload, dict):
+                for key in ("index", "questionIndex", "to", "current_index"):
+                    value = payload.get(key)
+                    if isinstance(value, int):
+                        index = value
+                        break
+    return index
+
+
 async def _get_session_with_ownership_check(
     session_id: UUID, current_user
 ) -> Any:
@@ -92,6 +107,14 @@ async def accept_interaction_events(
             detail=f"Session is {session.status}. Cannot accept new events.",
         )
 
+    # Epoch 11: a supervisor-paused attempt is frozen — reject heartbeats so the
+    # client knows to halt. The student's clock is credited back on resume.
+    if getattr(session, "paused_at", None) is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This attempt has been paused by the supervisor.",
+        )
+
     received_at = datetime.now(timezone.utc)
     redis = get_redis()
 
@@ -103,6 +126,14 @@ async def accept_interaction_events(
         received_at=received_at,
         raw_events=events,
     )
+
+    # Epoch 11: refresh live presence for the supervisor monitor. Redis-first,
+    # best-effort, off the durable write path. The latest NAVIGATION index (if
+    # present in this batch) tells the monitor which question they are on.
+    from app.services.proctoring.presence_service import touch as _presence_touch
+
+    current_index = _latest_navigation_index(events)
+    await _presence_touch(str(session_id), current_index)
 
     return {
         "saved": accepted,
@@ -209,3 +240,40 @@ async def submit_exam_session(
         pass
 
     return serialize_exam_session(updated_session)
+
+
+async def report_client_incident(
+    session_id: UUID,
+    payload,
+    current_user,
+    request,
+) -> None:
+    """Record a client-observed proctoring signal against an owned session (Epoch 11 §9.10).
+
+    Ownership is enforced. The incident is tagged ``source=CLIENT`` and its
+    severity is assigned server-side from the (constrained) type — the client
+    cannot escalate its own report.
+    """
+    from app.core.rate_limit import client_ip
+    from app.models.proctoring_incident import ProctoringIncidentSource
+    from app.services.proctoring.incident_service import client_severity_for, record_incident
+
+    session = await _get_session_with_ownership_check(session_id, current_user)
+    incident_type = payload.incident_type.value
+
+    await record_incident(
+        incident_type=incident_type,
+        severity=client_severity_for(incident_type),
+        source=ProctoringIncidentSource.CLIENT,
+        exam_session_id=str(session_id),
+        scheduled_session_id=str(session.scheduled_session_id)
+        if session.scheduled_session_id
+        else None,
+        student_id=str(current_user.id),
+        client_ip=client_ip(request),
+        # Keep only safe, bounded keys from the client's detail — never echo
+        # arbitrary blobs into the audit trail.
+        detail={"reason": str(payload.detail.get("reason", ""))[:200]}
+        if isinstance(payload.detail, dict)
+        else {},
+    )

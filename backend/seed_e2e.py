@@ -20,6 +20,7 @@ from app.models import (
     ItemStatus,
     ItemVersion,
     LearningObject,
+    ProctoringIncident,
     QuestionGrade,
     QuestionType,
     ScheduledExamSession,
@@ -1768,6 +1769,9 @@ def seed():
         db.query(InteractionEvent).delete()
         db.query(QuestionGrade).delete()
         db.query(SessionResult).delete()
+        # Epoch 11: proctoring_incidents FK-references exam_sessions, so it must
+        # be wiped before the parent rows are deleted.
+        db.query(ProctoringIncident).delete()
         db.query(ExamSession).delete()
         db.query(ScheduledExamSession).delete()
         db.query(CourseEnrollment).delete()

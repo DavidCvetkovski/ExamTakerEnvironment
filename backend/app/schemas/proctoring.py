@@ -130,6 +130,7 @@ class IncidentRow(BaseModel):
     detail: Dict[str, Any]
     created_at: datetime
     student_id: Optional[UUID] = None
+    student_email: Optional[str] = None
     exam_session_id: Optional[UUID] = None
 
 

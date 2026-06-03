@@ -88,13 +88,21 @@ async def list_incidents(
     page_size: int,
     severity: Optional[str] = None,
     incident_type: Optional[str] = None,
+    exam_session_id: Optional[UUID] = None,
 ) -> Dict[str, Any]:
-    """Paginated, filterable incident feed for one scheduled session."""
+    """Paginated, filterable incident feed for one scheduled session.
+
+    Pass ``exam_session_id`` to scope the feed to a single student's attempt.
+    Each row is enriched with the student's email so the supervisor can read the
+    feed without cross-referencing the roster.
+    """
     where: Dict[str, Any] = {"scheduled_session_id": str(scheduled_session_id)}
     if severity:
         where["severity"] = severity
     if incident_type:
         where["incident_type"] = incident_type
+    if exam_session_id:
+        where["exam_session_id"] = str(exam_session_id)
 
     total = await prisma.proctoring_incidents.count(where=where)
     rows = await prisma.proctoring_incidents.find_many(
@@ -103,6 +111,13 @@ async def list_incidents(
         skip=(page - 1) * page_size,
         take=page_size,
     )
+
+    # Resolve student emails in one query for the page.
+    student_ids = {r.student_id for r in rows if r.student_id}
+    email_by_id: Dict[str, str] = {}
+    if student_ids:
+        users = await prisma.users.find_many(where={"id": {"in": list(student_ids)}})
+        email_by_id = {u.id: u.email for u in users}
 
     incidents = [
         {
@@ -113,6 +128,7 @@ async def list_incidents(
             "detail": r.detail if isinstance(r.detail, dict) else {},
             "created_at": r.created_at,
             "student_id": r.student_id,
+            "student_email": email_by_id.get(r.student_id) if r.student_id else None,
             "exam_session_id": r.exam_session_id,
         }
         for r in rows

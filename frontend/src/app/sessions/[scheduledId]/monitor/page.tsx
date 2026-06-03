@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -8,6 +8,7 @@ import PageShell from '@/components/layout/PageShell';
 import { BackButton, PageHeader, useConfirm, useToast } from '@/components/ui';
 import IncidentFeed from '@/components/proctoring/IncidentFeed';
 import MonitorTable from '@/components/proctoring/MonitorTable';
+import StudentDetailDrawer from '@/components/proctoring/StudentDetailDrawer';
 import { useProctoringStore, type MonitorAttempt } from '@/stores/useProctoringStore';
 
 const MONITOR_POLL_MS = 5000;
@@ -22,15 +23,18 @@ export default function MonitorPage() {
     const {
         attempts,
         incidents,
+        studentIncidents,
         severityFilter,
         fetchMonitor,
         fetchIncidents,
+        fetchStudentIncidents,
         setSeverityFilter,
         extend,
-        pause,
-        resume,
         terminate,
     } = useProctoringStore();
+
+    // The attempt opened in the detail drawer.
+    const [selected, setSelected] = useState<MonitorAttempt | null>(null);
 
     const refreshMonitor = useCallback(() => fetchMonitor(scheduledId), [fetchMonitor, scheduledId]);
     const refreshIncidents = useCallback(
@@ -91,6 +95,29 @@ export default function MonitorPage() {
         }
     };
 
+    const openStudent = useCallback(
+        (attempt: MonitorAttempt) => {
+            setSelected(attempt);
+            void fetchStudentIncidents(scheduledId, attempt.exam_session_id);
+        },
+        [fetchStudentIncidents, scheduledId],
+    );
+
+    // Keep the open drawer's incidents fresh while it stays open.
+    useEffect(() => {
+        if (!selected) return;
+        const interval = setInterval(() => {
+            void fetchStudentIncidents(scheduledId, selected.exam_session_id);
+        }, INCIDENT_POLL_MS);
+        return () => clearInterval(interval);
+    }, [selected, fetchStudentIncidents, scheduledId]);
+
+    // Show the live row for the selected student so the drawer reflects polls.
+    const selectedLive =
+        selected != null
+            ? attempts.find((a) => a.exam_session_id === selected.exam_session_id) ?? selected
+            : null;
+
     const handleTerminate = async (attempt: MonitorAttempt) => {
         const ok = await confirm({
             title: 'Terminate this attempt?',
@@ -119,9 +146,8 @@ export default function MonitorPage() {
                             onExtend={(id, minutes) =>
                                 withRefresh(extend(id, minutes), `Extended by ${minutes} min`)
                             }
-                            onPause={(id) => withRefresh(pause(id), 'Attempt paused')}
-                            onResume={(id) => withRefresh(resume(id), 'Attempt resumed')}
                             onTerminate={handleTerminate}
+                            onSelectStudent={openStudent}
                         />
                     </div>
                     <div>
@@ -133,6 +159,15 @@ export default function MonitorPage() {
                     </div>
                 </div>
             </PageShell>
+            <StudentDetailDrawer
+                attempt={selectedLive}
+                incidents={studentIncidents}
+                onClose={() => setSelected(null)}
+                onExtend={(id, minutes) =>
+                    withRefresh(extend(id, minutes), `Extended by ${minutes} min`)
+                }
+                onTerminate={handleTerminate}
+            />
             {ConfirmDialog}
         </ProtectedRoute>
     );

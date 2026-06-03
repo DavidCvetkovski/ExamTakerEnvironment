@@ -11,9 +11,9 @@ import type { ClientProctoringView } from '@/stores/useExamStore';
  * violations so a supervisor can see them; it never decides whether the exam
  * may proceed.
  *
- * Copy/paste blocking is deliberately scoped to NOT fire inside answer inputs
- * (textarea / input / contenteditable) so students can still type and paste
- * *their own* essay answers.
+ * When "block copy/paste" is enabled it blocks the clipboard across the whole
+ * exam (typing still works) — pasting a pre-written answer into the essay box is
+ * exactly what that policy is meant to stop.
  */
 type ReportableType =
     | 'FOCUS_LOST'
@@ -23,14 +23,6 @@ type ReportableType =
     | 'FULLSCREEN_EXIT';
 
 const REPORT_THROTTLE_MS = 1500;
-
-function isAnswerField(target: EventTarget | null): boolean {
-    return (
-        target instanceof HTMLTextAreaElement ||
-        target instanceof HTMLInputElement ||
-        (target instanceof HTMLElement && target.isContentEditable)
-    );
-}
 
 export function useProctoring(
     sessionId: string,
@@ -65,23 +57,38 @@ export function useProctoring(
         }
 
         if (policy.block_copy_paste) {
-            const onCopy = (e: ClipboardEvent) => {
-                if (isAnswerField(e.target)) return; // never block the student's own answer
+            // Block clipboard everywhere on the exam. Typing still works (not a
+            // clipboard event); we deliberately do NOT exempt the answer editor,
+            // because pasting a pre-written answer is the exact behaviour an exam
+            // with "block copy/paste" is meant to prevent.
+            const blockClipboard = (incidentType: ReportableType) => (e: ClipboardEvent) => {
                 e.preventDefault();
-                report('COPY_ATTEMPT');
+                e.stopPropagation();
+                report(incidentType);
             };
-            const onPaste = (e: ClipboardEvent) => {
-                if (isAnswerField(e.target)) return;
+            const onCopy = blockClipboard('COPY_ATTEMPT');
+            const onCut = blockClipboard('COPY_ATTEMPT');
+            const onPaste = blockClipboard('PASTE_ATTEMPT');
+            // Capture phase so we intercept before any inner (TipTap) handler can
+            // act, and also guard Ctrl/Cmd+C/X/V directly — some browsers fire the
+            // keydown but suppress the clipboard event.
+            const onKeydown = (e: KeyboardEvent) => {
+                if (!(e.ctrlKey || e.metaKey)) return;
+                const key = e.key.toLowerCase();
+                if (key !== 'c' && key !== 'x' && key !== 'v') return;
                 e.preventDefault();
-                report('PASTE_ATTEMPT');
+                e.stopPropagation();
+                report(key === 'v' ? 'PASTE_ATTEMPT' : 'COPY_ATTEMPT');
             };
-            document.addEventListener('copy', onCopy);
-            document.addEventListener('cut', onCopy);
-            document.addEventListener('paste', onPaste);
+            document.addEventListener('copy', onCopy, true);
+            document.addEventListener('cut', onCut, true);
+            document.addEventListener('paste', onPaste, true);
+            document.addEventListener('keydown', onKeydown, true);
             cleanups.push(() => {
-                document.removeEventListener('copy', onCopy);
-                document.removeEventListener('cut', onCopy);
-                document.removeEventListener('paste', onPaste);
+                document.removeEventListener('copy', onCopy, true);
+                document.removeEventListener('cut', onCut, true);
+                document.removeEventListener('paste', onPaste, true);
+                document.removeEventListener('keydown', onKeydown, true);
             });
         }
 

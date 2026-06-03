@@ -34,6 +34,7 @@ export default function ExamPage() {
         navigateTo,
         toggleFlag,
         submitExam,
+        syncStatus,
     } = useExamStore();
     const announce = useAnnounce();
 
@@ -59,6 +60,16 @@ export default function ExamPage() {
 
     // Epoch 11 — client anti-cheat runtime (advisory; backend 403 is authoritative).
     useProctoring(sessionId, currentSession?.proctoring);
+
+    // Epoch 11 — if a supervisor terminates the attempt, kick the student out
+    // promptly: poll server status every 5s while the attempt is live.
+    useEffect(() => {
+        if (!sessionId || currentSession?.status !== 'STARTED') return;
+        const interval = setInterval(() => {
+            void syncStatus(sessionId);
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [sessionId, currentSession?.status, syncStatus]);
 
     // Fetch session and recover saved answers on mount
     useEffect(() => {

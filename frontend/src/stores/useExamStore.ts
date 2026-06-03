@@ -114,6 +114,9 @@ interface ExamState {
     queueEvent: (event: InteractionEvent) => void;
     flushEvents: (sessionId: string) => Promise<void>;
     loadSavedAnswers: (sessionId: string) => Promise<void>;
+    /** Quietly re-check server status; flips the UI to the submitted screen if a
+     *  supervisor terminated the attempt (or it expired) out from under us. */
+    syncStatus: (sessionId: string) => Promise<void>;
 }
 
 // ─── Store ──────────────────────────────────────────────────────────────────
@@ -287,7 +290,21 @@ export const useExamStore = create<ExamState>((set, get) => ({
                             set({ saveStatus: 'idle' });
                         }
                     }, 2500);
-                } catch {
+                } catch (err: unknown) {
+                    // A 409 means the attempt is no longer STARTED — most often a
+                    // supervisor terminated it. Flip straight to the submitted
+                    // screen instead of silently retrying forever.
+                    const statusCode = (err as { response?: { status?: number } })?.response?.status;
+                    if (statusCode === 409) {
+                        set((state) => ({
+                            pendingEvents: [],
+                            saveStatus: 'idle',
+                            currentSession: state.currentSession
+                                ? { ...state.currentSession, status: 'SUBMITTED' }
+                                : state.currentSession,
+                        }));
+                        return;
+                    }
                     set({ saveStatus: 'error' });
 
                     // Persist to localStorage as offline fallback
@@ -331,6 +348,21 @@ export const useExamStore = create<ExamState>((set, get) => ({
             set({ answers: answers || {}, flags: flags || {} });
         } catch {
             // If recovery fails, start fresh — local state was empty anyway
+        }
+    },
+
+    syncStatus: async (sessionId: string) => {
+        const current = get().currentSession;
+        if (!current || current.status !== 'STARTED') return;
+        try {
+            const response = await api.get(`/sessions/${sessionId}`);
+            if (response.data?.status && response.data.status !== 'STARTED') {
+                // Replace with the authoritative server copy so the page renders
+                // the submission/terminated confirmation immediately.
+                set({ currentSession: response.data });
+            }
+        } catch {
+            // Transient failure — the heartbeat 409 path is the backstop.
         }
     },
 }));

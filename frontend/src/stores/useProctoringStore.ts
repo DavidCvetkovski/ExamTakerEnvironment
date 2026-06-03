@@ -27,6 +27,7 @@ export interface ProctoringIncident {
     detail: Record<string, unknown>;
     created_at: string;
     student_id?: string | null;
+    student_email?: string | null;
     exam_session_id?: string | null;
 }
 
@@ -58,6 +59,8 @@ function errorMessage(err: unknown, fallback: string): string {
 interface ProctoringState {
     attempts: MonitorAttempt[];
     incidents: ProctoringIncident[];
+    /** Incidents scoped to the student opened in the detail drawer. */
+    studentIncidents: ProctoringIncident[];
     serverNow: string | null;
     isLoading: boolean;
     error: string | null;
@@ -65,17 +68,17 @@ interface ProctoringState {
 
     fetchMonitor: (scheduledId: string) => Promise<void>;
     fetchIncidents: (scheduledId: string) => Promise<void>;
+    fetchStudentIncidents: (scheduledId: string, examSessionId: string) => Promise<void>;
     setSeverityFilter: (f: IncidentSeverityFilter) => void;
 
     extend: (sessionId: string, minutes: number) => Promise<void>;
-    pause: (sessionId: string) => Promise<void>;
-    resume: (sessionId: string) => Promise<void>;
     terminate: (sessionId: string) => Promise<void>;
 }
 
 export const useProctoringStore = create<ProctoringState>((set, get) => ({
     attempts: [],
     incidents: [],
+    studentIncidents: [],
     serverNow: null,
     isLoading: false,
     error: null,
@@ -105,16 +108,22 @@ export const useProctoringStore = create<ProctoringState>((set, get) => ({
         }
     },
 
+    fetchStudentIncidents: async (scheduledId, examSessionId) => {
+        try {
+            const res = await api.get<IncidentEnvelope>(
+                `scheduled-sessions/${scheduledId}/incidents`,
+                { params: { exam_session_id: examSessionId, page_size: 200 } },
+            );
+            set({ studentIncidents: res.data.incidents });
+        } catch (err: unknown) {
+            set({ error: errorMessage(err, 'Failed to load student incidents') });
+        }
+    },
+
     setSeverityFilter: (severityFilter) => set({ severityFilter }),
 
     extend: async (sessionId, minutes) => {
         await api.post(`exam-sessions/${sessionId}/extend`, { minutes });
-    },
-    pause: async (sessionId) => {
-        await api.post(`exam-sessions/${sessionId}/pause`);
-    },
-    resume: async (sessionId) => {
-        await api.post(`exam-sessions/${sessionId}/resume`);
     },
     terminate: async (sessionId) => {
         await api.post(`exam-sessions/${sessionId}/terminate`);

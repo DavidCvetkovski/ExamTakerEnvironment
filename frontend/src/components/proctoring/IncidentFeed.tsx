@@ -68,6 +68,11 @@ export default function IncidentFeed({
                                     <p className="text-sm font-medium text-foreground">
                                         {humanizeType(inc.incident_type)}
                                     </p>
+                                    {inc.student_email && (
+                                        <p className="truncate text-meta text-shell-muted">
+                                            {inc.student_email}
+                                        </p>
+                                    )}
                                     <p className="text-meta text-shell-muted-dim">
                                         {inc.source === 'CLIENT' ? 'Reported by client' : 'Server'} ·{' '}
                                         {formatRelativeTime(inc.created_at)}

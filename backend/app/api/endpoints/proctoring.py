@@ -51,12 +51,16 @@ async def incidents(
     page_size: int = Query(50, ge=1, le=200),
     severity: str | None = Query(None),
     incident_type: str | None = Query(None),
+    exam_session_id: UUID | None = Query(None),
     current_user: User = _StaffDep,
 ):
-    """Paginated, filterable incident feed for a scheduled session."""
+    """Paginated, filterable incident feed for a scheduled session.
+
+    ``exam_session_id`` scopes the feed to one student's attempt.
+    """
     assert_can_proctor(current_user)
     return await monitor_service.list_incidents(
-        scheduled_id, page, page_size, severity, incident_type
+        scheduled_id, page, page_size, severity, incident_type, exam_session_id
     )
 
 

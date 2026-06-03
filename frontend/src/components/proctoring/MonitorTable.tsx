@@ -33,10 +33,11 @@ function PresenceBadge({ presence }: { presence: PresenceState }) {
 type SortKey = 'student' | 'presence' | 'question' | 'last_seen' | 'incidents';
 
 function SortArrow({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
-    // §7.8: render only ↑ / ↓. Inactive columns show a muted ↑ (no ↕ glyph).
+    // Only the active column shows an arrow.
+    if (!active) return null;
     return (
-        <span className={active ? 'text-foreground' : 'text-shell-muted-dim'} aria-hidden="true">
-            {active && dir === 'desc' ? '↓' : '↑'}
+        <span className="text-foreground" aria-hidden="true">
+            {dir === 'desc' ? '↓' : '↑'}
         </span>
     );
 }
@@ -100,8 +101,8 @@ export default function MonitorTable({
         );
     }
 
-    const header = (key: SortKey, label: string, align: 'left' | 'right' = 'left') => (
-        <th className={`px-4 py-3 ${align === 'right' ? 'text-right' : ''}`}>
+    const header = (key: SortKey, label: string) => (
+        <th className="px-3 py-2.5">
             <button
                 type="button"
                 onClick={() => toggleSort(key)}
@@ -114,17 +115,16 @@ export default function MonitorTable({
     );
 
     return (
-        <div className="overflow-x-auto rounded-xl border border-shell-border">
-            <table className="min-w-full text-left text-sm">
+        <div className="rounded-xl border border-shell-border">
+            <table className="w-full table-auto text-left text-sm">
                 <thead>
                     <tr className="border-b border-shell-border">
                         {header('student', 'Student')}
                         {header('presence', 'Presence')}
-                        {header('question', 'Question')}
+                        {header('question', 'Q')}
                         {header('last_seen', 'Last seen')}
-                        <th className="px-4 py-3 text-eyebrow uppercase tracking-eyebrow text-shell-muted-dim">Status</th>
-                        {header('incidents', 'Incidents')}
-                        <th className="px-4 py-3 text-right text-eyebrow uppercase tracking-eyebrow text-shell-muted-dim">Actions</th>
+                        {header('incidents', 'Warnings')}
+                        <th className="px-3 py-2.5 text-right text-eyebrow uppercase tracking-eyebrow text-shell-muted-dim">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -136,34 +136,31 @@ export default function MonitorTable({
                                 onClick={() => onSelectStudent(a)}
                                 className="cursor-pointer border-b border-shell-border last:border-0 hover:bg-shell-input/40"
                             >
-                                <td className="px-4 py-3">
+                                <td className="px-3 py-2.5">
                                     <div className="flex items-center gap-2">
                                         <Avatar email={a.student_email} />
-                                        <div>
-                                            <p className="font-medium text-foreground">
+                                        <div className="min-w-0">
+                                            <p className="truncate font-medium text-foreground">
                                                 {a.student_name || a.student_email}
                                             </p>
-                                            {a.flagged_for_review && (
+                                            {(a.flagged_for_review || a.status !== 'STARTED') && (
                                                 <span className="text-eyebrow font-semibold text-[var(--color-danger-fg)]">
-                                                    Flagged for review
+                                                    {a.status !== 'STARTED' ? a.status : 'Flagged for review'}
                                                 </span>
                                             )}
                                         </div>
                                     </div>
                                 </td>
-                                <td className="px-4 py-3">
+                                <td className="px-3 py-2.5">
                                     <PresenceBadge presence={a.presence} />
                                 </td>
-                                <td className="px-4 py-3 tabular-nums text-shell-muted">
+                                <td className="px-3 py-2.5 tabular-nums text-shell-muted">
                                     {a.current_question_label || '—'}
                                 </td>
-                                <td className="px-4 py-3 text-shell-muted-dim">
+                                <td className="px-3 py-2.5 whitespace-nowrap text-shell-muted-dim">
                                     {a.last_seen_at ? formatRelativeTime(a.last_seen_at) : '—'}
                                 </td>
-                                <td className="px-4 py-3 text-shell-muted">
-                                    {a.status === 'STARTED' ? 'In progress' : a.status}
-                                </td>
-                                <td className="px-4 py-3 tabular-nums">
+                                <td className="px-3 py-2.5 tabular-nums">
                                     {a.incident_count > 0 ? (
                                         <span className="font-semibold text-[var(--color-warning-fg)]">
                                             {a.incident_count}
@@ -173,7 +170,7 @@ export default function MonitorTable({
                                     )}
                                 </td>
                                 <td
-                                    className="px-4 py-3 text-right"
+                                    className="px-3 py-2.5 text-right"
                                     onClick={(e) => e.stopPropagation()}
                                 >
                                     <RowActionMenu

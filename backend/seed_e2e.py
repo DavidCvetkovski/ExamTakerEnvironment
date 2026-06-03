@@ -21,6 +21,9 @@ from app.models import (
     ItemVersion,
     LearningObject,
     ProctoringIncident,
+    ProctoringIncidentSource,
+    ProctoringIncidentType,
+    ProctoringSeverity,
     QuestionGrade,
     QuestionType,
     ScheduledExamSession,
@@ -2727,6 +2730,20 @@ def seed():
         # ONGOING run (started 5 min ago, 60-min duration) holds 2 STARTED
         # sessions; the most-recent wave-1 CLOSED run picks up 2 EXPIRED ones.
         ongoing_blueprint = blueprints["Programming Foundations - Intro Midterm"]
+        # Epoch 11 — make the live demo exam proctored so copy/paste blocking,
+        # context-menu suppression, and tab-switch detection are visible out of
+        # the box, and the supervisor monitor has a real proctored attempt.
+        ongoing_blueprint.proctoring_config = {
+            "require_seb": False,
+            "seb_config_key": None,
+            "allowed_browser_exam_keys": [],
+            "block_copy_paste": True,
+            "suppress_context_menu": True,
+            "detect_focus_loss": True,
+            "require_fullscreen": False,
+            "ip_allowlist": [],
+            "detect_session_sharing": False,
+        }
         ongoing_run = ScheduledExamSession(
             course_id=courses["CS-101"].id,
             test_definition_id=ongoing_blueprint.id,
@@ -2740,20 +2757,59 @@ def seed():
         db.flush()
         intro_slugs = BULK_BLUEPRINT_ITEMS["Programming Foundations - Intro Midterm"]
         intro_snapshots = [build_item_snapshot(item_versions[s]) for s in intro_slugs]
+        live_sessions: dict[str, ExamSession] = {}
         for live_student in (alex, maya):
-            db.add(
-                ExamSession(
-                    test_definition_id=ongoing_blueprint.id,
-                    student_id=live_student.id,
-                    scheduled_session_id=ongoing_run.id,
-                    items=intro_snapshots,
-                    status=SessionStatus.STARTED,
-                    session_mode=ExamSessionMode.ASSIGNED,
-                    started_at=now - timedelta(minutes=3),
-                    submitted_at=None,
-                    expires_at=ongoing_run.ends_at,
-                )
+            live = ExamSession(
+                test_definition_id=ongoing_blueprint.id,
+                student_id=live_student.id,
+                scheduled_session_id=ongoing_run.id,
+                items=intro_snapshots,
+                status=SessionStatus.STARTED,
+                session_mode=ExamSessionMode.ASSIGNED,
+                started_at=now - timedelta(minutes=3),
+                submitted_at=None,
+                expires_at=ongoing_run.ends_at,
+                # alex trips a CRITICAL incident below, so flag the attempt.
+                flagged_for_review=(live_student.id == alex.id),
+                last_seen_at=now - timedelta(seconds=10),
             )
+            db.add(live)
+            live_sessions[live_student.id] = live
+        db.flush()
+
+        # Epoch 11 — demo proctoring incidents so the monitor page, severity
+        # filters, and the per-student drawer have data on a fresh seed.
+        def _incident(session, student, itype, severity, source, mins_ago, detail):
+            return ProctoringIncident(
+                exam_session_id=session.id,
+                scheduled_session_id=ongoing_run.id,
+                student_id=student.id,
+                incident_type=itype,
+                severity=severity,
+                source=source,
+                detail=detail,
+                created_at=now - timedelta(minutes=mins_ago),
+            )
+
+        alex_s = live_sessions[alex.id]
+        maya_s = live_sessions[maya.id]
+        db.add_all([
+            _incident(alex_s, alex, ProctoringIncidentType.DEVICE_FINGERPRINT_MISMATCH,
+                      ProctoringSeverity.CRITICAL, ProctoringIncidentSource.SERVER, 2,
+                      {"reason": "device_changed"}),
+            _incident(alex_s, alex, ProctoringIncidentType.COPY_ATTEMPT,
+                      ProctoringSeverity.WARNING, ProctoringIncidentSource.CLIENT, 1,
+                      {"reason": ""}),
+            _incident(alex_s, alex, ProctoringIncidentType.FOCUS_LOST,
+                      ProctoringSeverity.WARNING, ProctoringIncidentSource.CLIENT, 1,
+                      {"reason": ""}),
+            _incident(maya_s, maya, ProctoringIncidentType.CONTEXT_MENU_ATTEMPT,
+                      ProctoringSeverity.WARNING, ProctoringIncidentSource.CLIENT, 2,
+                      {"reason": ""}),
+            _incident(maya_s, maya, ProctoringIncidentType.FOCUS_LOST,
+                      ProctoringSeverity.WARNING, ProctoringIncidentSource.CLIENT, 0,
+                      {"reason": ""}),
+        ])
 
         intro_wave1_run = wave1_runs["Programming Foundations - Intro Midterm"]
         for ditched_student in (noor, liam):

@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useGradingStore, GradingStatus } from '@/stores/useGradingStore';
 import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import {
     BackButton,
     Badge,
@@ -193,7 +194,8 @@ export default function TestGradingDashboard() {
     ];
 
     return (
-        <PageShell width="wide">
+        <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
+            <PageShell width="wide">
             <BackButton
                 href={testId ? `/grading/test/${testId}` : '/grading'}
                 label="All runs of this blueprint"
@@ -429,6 +431,7 @@ export default function TestGradingDashboard() {
                     </TableContainer>
                 )}
             </div>
-        </PageShell>
+            </PageShell>
+        </ProtectedRoute>
     );
 }

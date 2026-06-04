@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useGradingStore, QuestionGrade, ManualGradePayload } from '@/stores/useGradingStore';
 import { useAuthStore } from '@/stores/useAuthStore';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { getExamChoiceContent, toExamContentHtml, toExamContentText } from '@/lib/examContent';
 import { BackButton, Button, Spinner, CheckIcon, XIcon, AlertIcon } from '@/components/ui';
 
@@ -262,7 +263,8 @@ export default function SessionGradingPage() {
     const pendingEssays = questionGrades.filter(g => !g.is_auto_graded && g.is_correct === null && !g.feedback);
 
     return (
-        <div className="min-h-full bg-shell-bg text-foreground">
+        <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
+            <div className="min-h-full bg-shell-bg text-foreground">
             {/* ── Top bar ── */}
             <div className="bg-shell-surface border-b border-shell-border px-6 py-4 sticky top-0 z-30">
                 <div className="max-w-5xl mx-auto flex items-center gap-4">
@@ -409,5 +411,6 @@ export default function SessionGradingPage() {
                 )}
             </div>
         </div>
+        </ProtectedRoute>
     );
 }

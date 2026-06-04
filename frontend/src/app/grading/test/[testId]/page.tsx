@@ -24,6 +24,7 @@ import {
     Spinner,
 } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import { useGradingStore, type GradingRun } from '@/stores/useGradingStore';
@@ -154,75 +155,77 @@ export default function GradingRunsPickerPage() {
     const hasAnyRun = scheduledRuns.length > 0;
 
     return (
-        <PageShell width="wide">
-            <BackButton href="/grading" label="All blueprints" />
+        <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
+            <PageShell width="wide">
+                <BackButton href="/grading" label="All blueprints" />
 
-            <PageHeader
-                title={blueprint?.title ?? 'Choose a run'}
-                subtitle="Each row is one scheduled occurrence of this blueprint. Open a completed run to grade its submissions."
-            />
-
-            {error && (
-                <div className="mb-6 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] px-4 py-3 flex justify-between items-start text-meta">
-                    <span>{error}</span>
-                    <button
-                        onClick={clearError}
-                        aria-label="Dismiss"
-                        className="ml-4 opacity-70 hover:opacity-100"
-                    >
-                        ×
-                    </button>
-                </div>
-            )}
-
-            {runsLoading && !hasAnyRun ? (
-                <div className="flex items-center justify-center py-24 gap-3 text-shell-muted-dim text-meta">
-                    <Spinner size="sm" /> Loading runs…
-                </div>
-            ) : !hasAnyRun ? (
-                <EmptyState
-                    title="No runs to grade yet"
-                    description="Schedule this blueprint and let a session close before students' work appears here."
+                <PageHeader
+                    title={blueprint?.title ?? 'Choose a run'}
+                    subtitle="Each row is one scheduled occurrence of this blueprint. Open a completed run to grade its submissions."
                 />
-            ) : (
-                <div className="space-y-6">
-                    {scheduledRuns.length > 0 && (
-                        <div>
-                            <div className="mb-4 flex items-center justify-between gap-3">
-                                <h2 className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim">
-                                    Individual sessions
-                                </h2>
-                                <div className="flex items-center gap-2">
-                                    <label
-                                        htmlFor="grading-runs-sort"
-                                        className="text-meta text-shell-muted-dim"
-                                    >
-                                        Sort by
-                                    </label>
-                                    <select
-                                        id="grading-runs-sort"
-                                        value={sortKey}
-                                        onChange={(e) => setSortKey(e.target.value as SortKey)}
-                                        className="rounded-xl border border-shell-border bg-shell-input px-3 py-1.5 text-meta text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
-                                    >
-                                        {SORT_OPTIONS.map((opt) => (
-                                            <option key={opt.key} value={opt.key}>
-                                                {opt.label}
-                                            </option>
-                                        ))}
-                                    </select>
+
+                {error && (
+                    <div className="mb-6 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] px-4 py-3 flex justify-between items-start text-meta">
+                        <span>{error}</span>
+                        <button
+                            onClick={clearError}
+                            aria-label="Dismiss"
+                            className="ml-4 opacity-70 hover:opacity-100"
+                        >
+                            ×
+                        </button>
+                    </div>
+                )}
+
+                {runsLoading && !hasAnyRun ? (
+                    <div className="flex items-center justify-center py-24 gap-3 text-shell-muted-dim text-meta">
+                        <Spinner size="sm" /> Loading runs…
+                    </div>
+                ) : !hasAnyRun ? (
+                    <EmptyState
+                        title="No runs to grade yet"
+                        description="Schedule this blueprint and let a session close before students' work appears here."
+                    />
+                ) : (
+                    <div className="space-y-6">
+                        {scheduledRuns.length > 0 && (
+                            <div>
+                                <div className="mb-4 flex items-center justify-between gap-3">
+                                    <h2 className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim">
+                                        Individual sessions
+                                    </h2>
+                                    <div className="flex items-center gap-2">
+                                        <label
+                                            htmlFor="grading-runs-sort"
+                                            className="text-meta text-shell-muted-dim"
+                                        >
+                                            Sort by
+                                        </label>
+                                        <select
+                                            id="grading-runs-sort"
+                                            value={sortKey}
+                                            onChange={(e) => setSortKey(e.target.value as SortKey)}
+                                            className="rounded-xl border border-shell-border bg-shell-input px-3 py-1.5 text-meta text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                                        >
+                                            {SORT_OPTIONS.map((opt) => (
+                                                <option key={opt.key} value={opt.key}>
+                                                    {opt.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-3">
+                                    {scheduledRuns.map((run) => (
+                                        <RunCard key={run.run_id} testId={testId!} run={run} router={router} seq={runNumbers.get(run.run_id)} />
+                                    ))}
                                 </div>
                             </div>
-                            <div className="flex flex-col gap-3">
-                                {scheduledRuns.map((run) => (
-                                    <RunCard key={run.run_id} testId={testId!} run={run} router={router} seq={runNumbers.get(run.run_id)} />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-        </PageShell>
+                        )}
+                    </div>
+                )}
+            </PageShell>
+        </ProtectedRoute>
     );
 }
 

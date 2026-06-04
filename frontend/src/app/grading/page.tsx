@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/useAuthStore';
 import { api } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, PageHeader, Spinner } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { pluralizeCount } from '@/lib/pluralize';
 import { formatRelativeTime } from '@/lib/relativeTime';
 
@@ -161,131 +162,133 @@ export default function GradingLandingPage() {
     const { withData, empty } = useMemo(() => groupByCourse(rows, sortKey), [rows, sortKey]);
 
     return (
-        <PageShell width="wide">
-            <PageHeader
-                title="Grading"
-                subtitle="Blueprints grouped by course. Open one to review its completed sessions, score submissions, and clear the manual-grading queue."
-            />
-
-            {rows.length > 0 && (
-                <div className="mb-4 flex items-center gap-3">
-                    {/* L-17: manual refresh so pending counts stay current as students submit. */}
-                    <button
-                        type="button"
-                        onClick={() => fetchRows()}
-                        disabled={isLoading}
-                        className="inline-flex items-center gap-1.5 text-meta text-shell-muted hover:text-foreground transition-colors disabled:opacity-40"
-                        title="Refresh grading queue"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-                        </svg>
-                        Refresh
-                    </button>
-                    <label htmlFor="grading-sort" className="ml-auto text-meta text-shell-muted-dim">
-                        Sort by
-                    </label>
-                    <select
-                        id="grading-sort"
-                        value={sortKey}
-                        onChange={(e) => setSortKey(e.target.value as SortKey)}
-                        className="rounded-xl border border-shell-border bg-shell-input px-3 py-1.5 text-meta text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
-                    >
-                        {SORT_OPTIONS.map((opt) => (
-                            <option key={opt.key} value={opt.key}>
-                                {opt.label}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            )}
-
-            {isLoading && rows.length === 0 ? (
-                <div className="flex items-center justify-center py-24 gap-3 text-shell-muted-dim text-meta">
-                    <Spinner size="sm" /> Loading grading index…
-                </div>
-            ) : error ? (
-                <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] px-4 py-3 text-meta">
-                    {error}
-                </div>
-            ) : rows.length === 0 ? (
-                <EmptyState
-                    title="No test blueprints yet"
-                    description="Once a blueprint exists, completed sessions will queue here for grading."
+        <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
+            <PageShell width="wide">
+                <PageHeader
+                    title="Grading"
+                    subtitle="Blueprints grouped by course. Open one to review its completed sessions, score submissions, and clear the manual-grading queue."
                 />
-            ) : (
-                <div className="space-y-8">
-                    {withData.length === 0 ? (
-                        <EmptyState
-                            title="No completed sessions yet"
-                            description="Once a scheduled run closes (or a practice attempt is submitted), the blueprint will appear here grouped by course."
-                        />
-                    ) : (
-                        withData.map((group) => (
-                            <section key={group.code ?? '__practice__'} className="space-y-3">
-                                <div className="flex items-baseline justify-between gap-3 border-b border-shell-border pb-2">
-                                    <h2 className="text-h3 font-semibold text-foreground">
-                                        {group.title}
-                                        {group.code && (
-                                            <span className="ml-2 text-meta text-shell-muted-dim font-normal">
-                                                {group.code}
-                                            </span>
-                                        )}
-                                    </h2>
-                                    <span className="text-meta text-shell-muted-dim">
-                                        {pluralizeCount(group.rows.length, 'blueprint')}
-                                    </span>
-                                </div>
-                                <div className="grid gap-4 lg:grid-cols-2">
-                                    {group.rows.map((row) => (
-                                        <BlueprintCard
-                                            key={row.test_definition_id}
-                                            row={row}
-                                            onOpen={() =>
-                                                router.push(`/grading/test/${row.test_definition_id}`)
-                                            }
-                                        />
-                                    ))}
-                                </div>
-                            </section>
-                        ))
-                    )}
 
-                    {empty.length > 0 && (
-                        <section className="space-y-3">
-                            <div className="flex items-baseline justify-between gap-3 border-b border-shell-border pb-2">
-                                <h2 className="text-h3 font-semibold text-shell-muted">
-                                    No completed sessions yet
-                                    <span className="ml-2 text-meta text-shell-muted-dim font-normal">
-                                        {pluralizeCount(empty.length, 'blueprint')}
-                                    </span>
-                                </h2>
-                                <button
-                                    type="button"
-                                    className="text-meta text-brand hover:underline"
-                                    onClick={() => setShowEmpty((v) => !v)}
-                                >
-                                    {showEmpty ? 'Hide' : 'Show'}
-                                </button>
-                            </div>
-                            {showEmpty && (
-                                <div className="grid gap-4 lg:grid-cols-2">
-                                    {empty.map((row) => (
-                                        <BlueprintCard
-                                            key={row.test_definition_id}
-                                            row={row}
-                                            onOpen={() =>
-                                                router.push(`/grading/test/${row.test_definition_id}`)
-                                            }
-                                        />
-                                    ))}
+                {rows.length > 0 && (
+                    <div className="mb-4 flex items-center gap-3">
+                        {/* L-17: manual refresh so pending counts stay current as students submit. */}
+                        <button
+                            type="button"
+                            onClick={() => fetchRows()}
+                            disabled={isLoading}
+                            className="inline-flex items-center gap-1.5 text-meta text-shell-muted hover:text-foreground transition-colors disabled:opacity-40"
+                            title="Refresh grading queue"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                            </svg>
+                            Refresh
+                        </button>
+                        <label htmlFor="grading-sort" className="ml-auto text-meta text-shell-muted-dim">
+                            Sort by
+                        </label>
+                        <select
+                            id="grading-sort"
+                            value={sortKey}
+                            onChange={(e) => setSortKey(e.target.value as SortKey)}
+                            className="rounded-xl border border-shell-border bg-shell-input px-3 py-1.5 text-meta text-foreground focus:outline-none focus:ring-1 focus:ring-brand"
+                        >
+                            {SORT_OPTIONS.map((opt) => (
+                                <option key={opt.key} value={opt.key}>
+                                    {opt.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
+
+                {isLoading && rows.length === 0 ? (
+                    <div className="flex items-center justify-center py-24 gap-3 text-shell-muted-dim text-meta">
+                        <Spinner size="sm" /> Loading grading index…
+                    </div>
+                ) : error ? (
+                    <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] px-4 py-3 text-meta">
+                        {error}
+                    </div>
+                ) : rows.length === 0 ? (
+                    <EmptyState
+                        title="No test blueprints yet"
+                        description="Once a blueprint exists, completed sessions will queue here for grading."
+                    />
+                ) : (
+                    <div className="space-y-8">
+                        {withData.length === 0 ? (
+                            <EmptyState
+                                title="No completed sessions yet"
+                                description="Once a scheduled run closes (or a practice attempt is submitted), the blueprint will appear here grouped by course."
+                            />
+                        ) : (
+                            withData.map((group) => (
+                                <section key={group.code ?? '__practice__'} className="space-y-3">
+                                    <div className="flex items-baseline justify-between gap-3 border-b border-shell-border pb-2">
+                                        <h2 className="text-h3 font-semibold text-foreground">
+                                            {group.title}
+                                            {group.code && (
+                                                <span className="ml-2 text-meta text-shell-muted-dim font-normal">
+                                                    {group.code}
+                                                </span>
+                                            )}
+                                        </h2>
+                                        <span className="text-meta text-shell-muted-dim">
+                                            {pluralizeCount(group.rows.length, 'blueprint')}
+                                        </span>
+                                    </div>
+                                    <div className="grid gap-4 lg:grid-cols-2">
+                                        {group.rows.map((row) => (
+                                            <BlueprintCard
+                                                key={row.test_definition_id}
+                                                row={row}
+                                                onOpen={() =>
+                                                    router.push(`/grading/test/${row.test_definition_id}`)
+                                                }
+                                            />
+                                        ))}
+                                    </div>
+                                </section>
+                            ))
+                        )}
+
+                        {empty.length > 0 && (
+                            <section className="space-y-3">
+                                <div className="flex items-baseline justify-between gap-3 border-b border-shell-border pb-2">
+                                    <h2 className="text-h3 font-semibold text-shell-muted">
+                                        No completed sessions yet
+                                        <span className="ml-2 text-meta text-shell-muted-dim font-normal">
+                                            {pluralizeCount(empty.length, 'blueprint')}
+                                        </span>
+                                    </h2>
+                                    <button
+                                        type="button"
+                                        className="text-meta text-brand hover:underline"
+                                        onClick={() => setShowEmpty((v) => !v)}
+                                    >
+                                        {showEmpty ? 'Hide' : 'Show'}
+                                    </button>
                                 </div>
-                            )}
-                        </section>
-                    )}
-                </div>
-            )}
-        </PageShell>
+                                {showEmpty && (
+                                    <div className="grid gap-4 lg:grid-cols-2">
+                                        {empty.map((row) => (
+                                            <BlueprintCard
+                                                key={row.test_definition_id}
+                                                row={row}
+                                                onOpen={() =>
+                                                    router.push(`/grading/test/${row.test_definition_id}`)
+                                                }
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
+                        )}
+                    </div>
+                )}
+            </PageShell>
+        </ProtectedRoute>
     );
 }
 

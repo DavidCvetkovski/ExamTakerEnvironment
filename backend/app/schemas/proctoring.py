@@ -85,6 +85,10 @@ class MonitorResponse(BaseModel):
     page: int
     page_size: int
     attempts: List[MonitorAttemptRow]
+    course_code: Optional[str] = None
+    course_title: Optional[str] = None
+    test_title: Optional[str] = None
+    ends_at: Optional[datetime] = None
 
 
 # ---------------------------------------------------------------------------

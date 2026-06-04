@@ -96,12 +96,11 @@ export default function ExamPage() {
                 : `${currentSession.expires_at}Z`;
         const end = new Date(tzExpiresAt).getTime();
 
-        let interval: ReturnType<typeof setInterval> | undefined;
         const tick = () => {
             const diff = end - new Date().getTime();
             setMsLeft(Math.max(0, diff));
             if (diff <= 0) {
-                if (interval) clearInterval(interval);
+                clearInterval(interval);
                 setTimeLeft('EXPIRED');
                 // The session may already be expired server-side; swallow the
                 // rejection so it doesn't surface as an unhandled runtime error.
@@ -114,8 +113,8 @@ export default function ExamPage() {
             setTimeLeft(hours > 0 ? `${hours}h ${minutes}m ${seconds}s` : `${minutes}m ${seconds}s`);
         };
 
+        const interval = setInterval(tick, 1000);
         tick(); // synchronous first paint — no blank second
-        interval = setInterval(tick, 1000);
         return () => clearInterval(interval);
     }, [currentSession, sessionId, submitExam]);
 

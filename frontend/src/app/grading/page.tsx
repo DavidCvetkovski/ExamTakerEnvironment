@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -134,25 +134,28 @@ export default function GradingLandingPage() {
     const [error, setError] = useState<string | null>(null);
     const [showEmpty, setShowEmpty] = useState(false);
     const [sortKey, setSortKey] = useState<SortKey>('most_pending');
-
-    const fetchRows = () => {
-        let cancelled = false;
+    const fetchRows = useCallback(() => {
         setIsLoading(true);
         setError(null);
         api.get<GradingIndexRow[]>('/analytics/index')
-            .then((r) => { if (!cancelled) setRows(r.data); })
-            .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load grading index.'); })
-            .finally(() => { if (!cancelled) setIsLoading(false); });
-        return () => { cancelled = true; };
-    };
+            .then((r) => { setRows(r.data); })
+            .catch((err) => { setError(err instanceof Error ? err.message : 'Failed to load grading index.'); })
+            .finally(() => { setIsLoading(false); });
+    }, []);
 
     useEffect(() => {
         if (user?.role === 'STUDENT') {
             router.replace('/my-exams');
             return;
         }
-        return fetchRows();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+        let cancelled = false;
+        api.get<GradingIndexRow[]>('/analytics/index')
+            .then((r) => { if (!cancelled) setRows(r.data); })
+            .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load grading index.'); })
+            .finally(() => { if (!cancelled) setIsLoading(false); });
+
+        return () => { cancelled = true; };
     }, [user, router]);
 
     const { withData, empty } = useMemo(() => groupByCourse(rows, sortKey), [rows, sortKey]);

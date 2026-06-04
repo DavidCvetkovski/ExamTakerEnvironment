@@ -53,6 +53,8 @@ function subscribe(intervalMs: number, listener: () => void): () => void {
     };
 }
 
+const serverSnapshot = new Date();
+
 /**
  * Subscribe to a ticking clock. Default 1s resolution — fine for countdowns
  * and lifecycle bucketing. Coarser intervals (e.g. 60_000) are right when
@@ -62,6 +64,6 @@ export function useNow(intervalMs: number = 1000): Date {
     return useSyncExternalStore(
         (listener) => subscribe(intervalMs, listener),
         () => getBucket(intervalMs).now,
-        () => new Date(), // SSR snapshot — render once, then client-side ticks take over
+        () => serverSnapshot, // SSR snapshot — render once, then client-side ticks take over
     );
 }

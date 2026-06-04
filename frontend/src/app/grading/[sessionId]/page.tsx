@@ -1,7 +1,7 @@
 'use client';
 
 import DOMPurify from 'dompurify';
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useGradingStore, QuestionGrade, ManualGradePayload } from '@/stores/useGradingStore';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -131,32 +131,11 @@ function EssayGradingPanel({
 }) {
     const [pointsInput, setPointsInput] = useState(String(grade.points_awarded));
     const [feedback, setFeedback] = useState(grade.feedback ?? '');
-    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    // Sync if grade changes (e.g. after save)
-    useEffect(() => {
-        setPointsInput(String(grade.points_awarded));
-        setFeedback(grade.feedback ?? '');
-    }, [grade.id, grade.points_awarded, grade.feedback]);
-
     const handleSave = useCallback(() => {
         const pts = parseFloat(pointsInput);
         if (isNaN(pts) || pts < 0 || pts > grade.points_possible) return;
         onSave({ points_awarded: pts, feedback: feedback.trim() || undefined });
     }, [pointsInput, feedback, grade.points_possible, onSave]);
-
-    // Auto-save on feedback change (debounced 2s)
-    useEffect(() => {
-        if (debounceRef.current) clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => {
-            const pts = parseFloat(pointsInput);
-            if (!isNaN(pts) && pts >= 0 && pts <= grade.points_possible) {
-                onSave({ points_awarded: pts, feedback: feedback.trim() || undefined });
-            }
-        }, 2000);
-        return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [feedback, pointsInput]);
 
     const essayText = grade.student_answer?.essay_text as string ?? grade.student_answer?.text as string ?? '';
 
@@ -393,6 +372,7 @@ export default function SessionGradingPage() {
                             {/* Grading body */}
                             {isEssay ? (
                                 <EssayGradingPanel
+                                    key={`${grade.id}-${grade.points_awarded}-${grade.feedback ?? ''}`}
                                     grade={grade}
                                     onSave={(payload) => submitManualGrade(grade.id, payload)}
                                     saving={submittingGradeId === grade.id}

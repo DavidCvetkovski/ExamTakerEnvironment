@@ -32,8 +32,19 @@ export default function MyExamsPage() {
         s.existing_attempt_status === 'SUBMITTED' ||
         s.existing_attempt_status === 'EXPIRED';
 
-    const currentSessions = sessions.filter((s) => s.can_join && !isFinishedForStudent(s));
-    const upcomingSessions = sessions.filter((s) => !s.can_join && !isFinishedForStudent(s));
+    // L-11: a STARTED attempt always has a clear path back regardless of can_join.
+    // Pulled out into its own bucket so a student with an in-progress attempt is
+    // never stranded (e.g. when can_join is false due to a clock edge case).
+    const inProgressSessions = sessions.filter(
+        (s) => s.existing_attempt_status === 'STARTED',
+    );
+    const inProgressIds = new Set(inProgressSessions.map((s) => s.id));
+    const currentSessions = sessions.filter(
+        (s) => s.can_join && !isFinishedForStudent(s) && !inProgressIds.has(s.id),
+    );
+    const upcomingSessions = sessions.filter(
+        (s) => !s.can_join && !isFinishedForStudent(s) && !inProgressIds.has(s.id),
+    );
 
     return (
         <ProtectedRoute allowedRoles={['STUDENT']}>
@@ -49,6 +60,25 @@ export default function MyExamsPage() {
                         <div className="mb-6 rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] px-4 py-3 text-meta">
                             {error}
                         </div>
+                    )}
+
+                    {/* L-11: Resume bucket — always visible when an attempt is in progress. */}
+                    {inProgressSessions.length > 0 && (
+                        <section className="space-y-4 mb-10">
+                            <SectionHeader eyebrow="In progress" title="Resume your exam" />
+                            <div className="grid gap-5 lg:grid-cols-2">
+                                {inProgressSessions.map((session) => (
+                                    <StudentExamCard
+                                        key={session.id}
+                                        session={session}
+                                        onJoin={async (selected) => {
+                                            const attemptId = await joinScheduledSession(selected.id);
+                                            router.push(`/exam/${attemptId}`);
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        </section>
                     )}
 
                     <section className="space-y-4 mb-10">

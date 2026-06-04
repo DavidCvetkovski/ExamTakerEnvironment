@@ -166,6 +166,13 @@ export const useExamStore = create<ExamState>((set, get) => ({
     },
 
     joinScheduledSession: async (scheduledSessionId: string) => {
+        // S-5: flush any in-memory events from a previous session before we reset
+        // store state, so queued answers are never silently dropped on a rapid
+        // re-join. flushEvents persists to localStorage on failure as a backstop.
+        const prev = get().currentSession;
+        if (prev && get().pendingEvents.length > 0) {
+            await get().flushEvents(prev.id);
+        }
         set({ isLoading: true, error: null, currentQuestionIndex: 0, answers: {}, flags: {}, pendingEvents: [] });
         try {
             const response = await api.post(`/student/sessions/${scheduledSessionId}/join`);
@@ -179,6 +186,9 @@ export const useExamStore = create<ExamState>((set, get) => ({
     },
 
     submitExam: async (sessionId: string) => {
+        // H-7: ignore a duplicate submit while one is already in flight, so a
+        // double-click can't fire two POST /submit requests.
+        if (get().isLoading) return;
         set({ isLoading: true, error: null });
         try {
             // Flush any remaining events before submitting
@@ -242,6 +252,13 @@ export const useExamStore = create<ExamState>((set, get) => ({
             payload: { from_index: fromIndex, to_index: index },
             client_created_at: new Date().toISOString(),
         };
+        // H-4: remember the last-seen question per session so a resume/refresh
+        // returns the student where they left off (restored in loadSavedAnswers).
+        try {
+            localStorage.setItem(`openvision_q_index_${session.id}`, String(index));
+        } catch {
+            // localStorage unavailable — non-fatal, resume just falls back to Q1.
+        }
         set((s) => ({
             currentQuestionIndex: index,
             pendingEvents: [...s.pendingEvents, event],
@@ -327,25 +344,39 @@ export const useExamStore = create<ExamState>((set, get) => ({
     },
 
     loadSavedAnswers: async (sessionId: string) => {
+        // Drain any localStorage heartbeat queue from a prior offline tab-close.
+        const key = `openvision_heartbeat_queue_${sessionId}`;
         try {
-            // First, try to drain any localStorage queue
-            const key = `openvision_heartbeat_queue_${sessionId}`;
             const stored = localStorage.getItem(key);
             if (stored) {
                 const queued = JSON.parse(stored);
                 if (queued.length > 0) {
                     await api.post(`/sessions/${sessionId}/heartbeat`, { events: queued });
-                    localStorage.removeItem(key);
                 }
             }
-        } catch {
-            // Offline queue drain failed — server state is still authoritative
+            // Success → clear the queue.
+            localStorage.removeItem(key);
+        } catch (err: unknown) {
+            // M-4: only clear on a definitive 4xx (this session isn't ours / is
+            // gone) — otherwise a transient/offline failure must KEEP the queue so
+            // the student's recovered answers aren't discarded, and it retries on
+            // the next load.
+            const status = (err as { response?: { status?: number } })?.response?.status;
+            if (status === 403 || status === 404) {
+                try { localStorage.removeItem(key); } catch { /* noop */ }
+            }
         }
 
         try {
             const response = await api.get(`/sessions/${sessionId}/answers`);
             const { answers, flags } = response.data;
             set({ answers: answers || {}, flags: flags || {} });
+            // H-4: restore the last-seen question index (clamped to the item range).
+            const savedIndex = Number(localStorage.getItem(`openvision_q_index_${sessionId}`));
+            const itemCount = get().currentSession?.items.length ?? 0;
+            if (Number.isInteger(savedIndex) && savedIndex > 0 && savedIndex < itemCount) {
+                set({ currentQuestionIndex: savedIndex });
+            }
         } catch {
             // If recovery fails, start fresh — local state was empty anyway
         }

@@ -1,8 +1,8 @@
 'use client';
 
-import DOMPurify from 'dompurify';
 import { useExamStore, ExamItem } from '@/stores/useExamStore';
 import { toExamContentHtml } from '@/lib/examContent';
+import { sanitizeExamHtml as sanitizeHtml } from '@/lib/sanitizeHtml';
 import MCQQuestion from './MCQQuestion';
 import MultipleResponseQuestion from './MultipleResponseQuestion';
 import EssayQuestion from './EssayQuestion';
@@ -11,15 +11,6 @@ interface QuestionRendererProps {
     item: ExamItem;
     questionIndex: number;
     totalQuestions: number;
-}
-
-function sanitizeHtml(html: string | null | undefined): string {
-    return html
-        ? DOMPurify.sanitize(html, {
-            ALLOWED_TAGS: ['span', 'p', 'strong', 'em', 'code', 'pre', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'blockquote', 'br', 'hr', 'img'],
-            ALLOWED_ATTR: ['class', 'src', 'alt'],
-        })
-        : '';
 }
 
 /**

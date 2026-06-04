@@ -16,10 +16,11 @@ import QuestionPickerModal from '@/components/blueprint/QuestionPickerModal';
 import BlueprintSaveIndicator from '@/components/blueprint/BlueprintSaveIndicator';
 import BlueprintStatusBadge from '@/components/blueprint/BlueprintStatusBadge';
 import BlueprintInspector from '@/components/blueprint/BlueprintInspector';
-import { BackButton, Badge, Button, Input, Select, Spinner, cn, useToast, useConfirm, StatusDot, XIcon, PageHeader } from '@/components/ui';
+import { BackButton, Badge, Button, Input, Select, Spinner, cn, useToast, useConfirm, StatusDot, XIcon, PageHeader, RowActionMenu } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
 import { formatRelativeTime, formatAbsolute, formatScheduled } from '@/lib/relativeTime';
 import { copyText } from '@/lib/clipboard';
+import { groupByCourse } from '@/lib/courseGrouping';
 
 type BlueprintDraft = Partial<TestDefinition>;
 
@@ -198,6 +199,23 @@ function BlueprintPageInner() {
         if (sortKey === 'duration_desc') list = [...list].sort((a, b) => b.duration_minutes - a.duration_minutes);
         return list;
     }, [blueprints, usageMap, statusFilter, courseFilter, search, sortKey]);
+
+    // Epoch 14.1 — group the (already filtered/sorted) list by course, mirroring
+    // /grading and /analytics. The active sort is preserved within each group by
+    // keeping the input order (no extra row sort passed).
+    const courseTitleById = useMemo(
+        () => new Map(courses.map((c) => [c.id, c.title] as const)),
+        [courses],
+    );
+    const groupedBlueprints = useMemo(
+        () =>
+            groupByCourse(displayedBlueprints, {
+                getCourseId: (bp) => bp.course_id,
+                getCourseTitle: (id) => courseTitleById.get(id),
+                unassignedLabel: 'Unassigned',
+            }),
+        [displayedBlueprints, courseTitleById],
+    );
 
     const handleAddBlock = () => {
         if (!currentBlueprint) return;
@@ -502,8 +520,15 @@ function BlueprintPageInner() {
                         </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {displayedBlueprints.map((bp) => {
+                    <div className="space-y-10">
+                        {groupedBlueprints.map((group) => (
+                          <section key={group.courseId ?? '__unassigned__'} className="space-y-4">
+                            <div className="flex items-baseline justify-between gap-3 border-b border-shell-border pb-2">
+                                <h2 className="text-h3 font-semibold text-foreground">{group.title}</h2>
+                                <span className="text-meta text-shell-muted-dim">{pluralizeCount(group.rows.length, 'blueprint')}</span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {group.rows.map((bp) => {
                             const usage = usageMap[bp.id];
                             const status: BlueprintStatus = usage?.status ?? 'NEW';
                             const canEdit = canEditBlueprint(status);
@@ -547,9 +572,10 @@ function BlueprintPageInner() {
                                         </span>
                                     </div>
 
-                                    {/* Actions */}
-                                    <div className="flex items-center flex-wrap gap-2">
-                                        {canEdit && (
+                                    {/* Actions — primary inline; the rest collapse into a
+                                      * three-dots overflow menu (Epoch 14.1, §7.3). */}
+                                    <div className="flex items-center gap-2">
+                                        {canEdit ? (
                                             <Button
                                                 variant="secondary"
                                                 size="sm"
@@ -557,16 +583,15 @@ function BlueprintPageInner() {
                                             >
                                                 Edit →
                                             </Button>
+                                        ) : (
+                                            <Button
+                                                variant="secondary"
+                                                size="sm"
+                                                onClick={() => router.push(`/blueprint?id=${bp.id}&inspect=true`)}
+                                            >
+                                                Inspect
+                                            </Button>
                                         )}
-                                        {/* Inspect is always available — even on editable blueprints
-                                          * it gives a faster read-only view than entering the editor. */}
-                                        <Button
-                                            variant={canEdit ? 'ghost' : 'secondary'}
-                                            size="sm"
-                                            onClick={() => router.push(`/blueprint?id=${bp.id}&inspect=true`)}
-                                        >
-                                            Inspect
-                                        </Button>
                                         <Button
                                             variant="ghost"
                                             size="sm"
@@ -585,44 +610,49 @@ function BlueprintPageInner() {
                                         >
                                             Practice
                                         </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            loading={duplicatingId === bp.id}
-                                            onClick={() => handleDuplicateBlueprint(bp)}
-                                        >
-                                            Duplicate
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            title={`Copy blueprint ID (${bp.id})`}
-                                            onClick={async () => {
-                                                const ok = await copyText(bp.id);
-                                                toast(
-                                                    ok
-                                                        ? { tone: 'success', title: 'ID copied' }
-                                                        : { tone: 'danger', title: 'Copy failed' }
-                                                );
-                                            }}
-                                        >
-                                            Copy ID
-                                        </Button>
-                                        {canDelete && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                loading={deletingId === bp.id}
-                                                onClick={() => handleDeleteBlueprint(bp)}
-                                                className="text-danger hover:bg-[var(--color-danger-bg)]"
-                                            >
-                                                Delete
-                                            </Button>
-                                        )}
+                                        <div className="ml-auto">
+                                            <RowActionMenu
+                                                ariaLabel="Blueprint actions"
+                                                items={[
+                                                    // Inspect is a quicker read-only view than entering
+                                                    // the editor — offer it when Edit took the inline slot.
+                                                    ...(canEdit
+                                                        ? [{ label: 'Inspect', onClick: () => router.push(`/blueprint?id=${bp.id}&inspect=true`) }]
+                                                        : []),
+                                                    {
+                                                        label: duplicatingId === bp.id ? 'Duplicating…' : 'Duplicate',
+                                                        onClick: () => handleDuplicateBlueprint(bp),
+                                                        disabled: duplicatingId === bp.id,
+                                                    },
+                                                    {
+                                                        label: 'Copy ID',
+                                                        onClick: async () => {
+                                                            const ok = await copyText(bp.id);
+                                                            toast(
+                                                                ok
+                                                                    ? { tone: 'success', title: 'ID copied' }
+                                                                    : { tone: 'danger', title: 'Copy failed' }
+                                                            );
+                                                        },
+                                                    },
+                                                    ...(canDelete
+                                                        ? [{
+                                                            label: deletingId === bp.id ? 'Deleting…' : 'Delete',
+                                                            tone: 'danger' as const,
+                                                            onClick: () => handleDeleteBlueprint(bp),
+                                                            disabled: deletingId === bp.id,
+                                                        }]
+                                                        : []),
+                                                ]}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             );
                         })}
+                            </div>
+                          </section>
+                        ))}
                     </div>
                 </PageShell>
             </ProtectedRoute>
@@ -636,13 +666,24 @@ function BlueprintPageInner() {
         currentBlueprint?.id ? (usageMap[currentBlueprint.id]?.status ?? 'NEW') : 'NEW';
     const lockedByStatus = currentStatus === 'ONGOING' || currentStatus === 'PASSED';
 
+    // Epoch 14.2 — origin-aware back. Inspect opened *from the editor* carries
+    // `from=editor`; its back button returns to the editor (not the full list),
+    // matching §8.4. From the list (or a locked card) it returns to the list.
+    const cameFromEditor = searchParams.get('from') === 'editor';
+
     if (currentBlueprint && (inspectMode || lockedByStatus)) {
+        const backToEditor = () =>
+            router.push(`/blueprint?id=${currentBlueprint.id}`);
         return (
             <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
                 <div className="text-foreground">
                     {ConfirmDialog}
                     <div className="mx-auto max-w-3xl px-4 sm:px-6 pt-8">
-                        <BackButton onClick={handleBackToList} label="All blueprints" />
+                        {cameFromEditor && canEditBlueprint(currentStatus) ? (
+                            <BackButton onClick={backToEditor} label="Back to editor" />
+                        ) : (
+                            <BackButton onClick={handleBackToList} label="All blueprints" />
+                        )}
                     </div>
                     <BlueprintInspector
                         blueprint={currentBlueprint as TestDefinition}
@@ -666,7 +707,7 @@ function BlueprintPageInner() {
                             {currentBlueprint?.id && (
                                 <button
                                     type="button"
-                                    onClick={() => router.push(`/blueprint?id=${currentBlueprint.id}&inspect=true`)}
+                                    onClick={() => router.push(`/blueprint?id=${currentBlueprint.id}&inspect=true&from=editor`)}
                                     className="ml-auto text-meta text-shell-muted hover:text-foreground transition-colors focus-ring rounded"
                                 >
                                     Inspect →

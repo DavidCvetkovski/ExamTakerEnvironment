@@ -40,7 +40,16 @@ class EnrollmentResponse(BaseModel):
 
 class CourseRosterResponse(BaseModel):
     enrollments: list[EnrollmentResponse]
+    # Legacy aggregate flag (true when no edits are possible at all). Prefer the
+    # granular flags below, which distinguish adding from removing.
     roster_locked: bool
+    # Whether each operation is currently permitted. Adding is allowed while an
+    # exam is ongoing (late joiners) but not once one has completed; removing is
+    # blocked the moment an exam is ongoing or completed.
+    can_enroll: bool
+    can_remove: bool
+    # "ONGOING" | "COMPLETED" | None — drives the explanatory banner copy.
+    lock_reason: str | None = None
 
 
 class StudentCandidateResponse(BaseModel):

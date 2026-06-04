@@ -484,6 +484,36 @@ async def join_scheduled_session_for_student(
         scheduled_session_id=str(scheduled.id),
         expires_at=expires_at,
     )
+
+    # C-1: if the scheduled window closes before the student's entitled expiry,
+    # their accommodation could not be fully honoured. Record an incident so the
+    # supervisor is aware — the student is silently short-changed otherwise.
+    if individual_expiry > ensure_utc(scheduled.ends_at):
+        granted_minutes = max(
+            0, int((ensure_utc(scheduled.ends_at) - now).total_seconds() // 60)
+        )
+        from app.models.proctoring_incident import (
+            ProctoringIncidentSource,
+            ProctoringIncidentType,
+            ProctoringSeverity,
+        )
+        from app.services.proctoring.incident_service import record_incident
+
+        await record_incident(
+            incident_type=ProctoringIncidentType.ACCOMMODATION_CLIPPED,
+            severity=ProctoringSeverity.WARNING,
+            source=ProctoringIncidentSource.SERVER,
+            exam_session_id=str(created["id"]),
+            scheduled_session_id=str(scheduled.id),
+            student_id=str(current_user.id),
+            detail={
+                "entitled_minutes": duration_minutes,
+                "granted_minutes": granted_minutes,
+                "clipped_minutes": duration_minutes - granted_minutes,
+                "multiplier": multiplier,
+            },
+        )
+
     if device_fingerprint:
         hashed = await _hash_fingerprint(device_fingerprint)
         await prisma.exam_sessions.update(

@@ -59,34 +59,74 @@ async def list_courses() -> List[Any]:
     )
 
 
-async def is_course_roster_locked(course_id: str) -> bool:
-    """A course roster is frozen only while one of its exams is *currently
-    ongoing* (``starts_at <= now < ends_at``, not canceled).
+async def derive_roster_lock(course_id: str) -> Dict[str, Any]:
+    """Derive which roster edits a course currently permits.
 
-    Closed/past and future/scheduled sessions do not lock — otherwise a course
-    with any past exam could never enroll students for an upcoming session.
-    Derived from the window rather than the persisted status so a not-yet-synced
-    ACTIVE session still locks.
+    Two independent gates, because adding and removing carry different risk:
+
+    - A *completed* exam (window already past, not canceled) freezes the roster
+      entirely — neither add nor remove. The cohort that sat the exam is final;
+      letting someone in or out afterwards would rewrite history.
+    - An *ongoing* exam (``starts_at <= now < ends_at``) blocks removals (you
+      can't pull a student out of a live attempt) but still allows adds, so a
+      late arrival can be let in.
+    - Otherwise (only future/scheduled occurrences, or never scheduled) the
+      roster is fully mutable.
+
+    Derived from the time window rather than the persisted status so a
+    not-yet-synced session still gates correctly.
     """
     now = datetime.now(timezone.utc)
-    ongoing = await prisma.scheduled_exam_sessions.find_first(
+    has_ongoing = await prisma.scheduled_exam_sessions.find_first(
         where={
             "course_id": course_id,
             "status": {"not": CourseSessionStatus.CANCELED.value},
             "starts_at": {"lte": now},
             "ends_at": {"gt": now},
         }
-    )
-    return ongoing is not None
+    ) is not None
+    has_completed = await prisma.scheduled_exam_sessions.find_first(
+        where={
+            "course_id": course_id,
+            "status": {"not": CourseSessionStatus.CANCELED.value},
+            "ends_at": {"lte": now},
+        }
+    ) is not None
+
+    if has_completed:
+        reason = "COMPLETED"
+    elif has_ongoing:
+        reason = "ONGOING"
+    else:
+        reason = None
+
+    return {
+        "can_enroll": not has_completed,
+        "can_remove": not (has_completed or has_ongoing),
+        "lock_reason": reason,
+    }
 
 
-async def assert_roster_mutable(course_id: str) -> None:
-    """Reject roster edits while the course has an exam in progress."""
-    if await is_course_roster_locked(course_id):
+async def assert_can_enroll(course_id: str) -> None:
+    """Reject new enrollments once the course has a completed exam."""
+    lock = await derive_roster_lock(course_id)
+    if not lock["can_enroll"]:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Roster is locked — this course has an exam in progress.",
+            detail="Roster is locked — this course has a completed exam.",
         )
+
+
+async def assert_can_remove(course_id: str) -> None:
+    """Reject removals while the course has an ongoing or completed exam."""
+    lock = await derive_roster_lock(course_id)
+    if not lock["can_remove"]:
+        detail = (
+            "Roster is locked — this course has a completed exam."
+            if lock["lock_reason"] == "COMPLETED"
+            else "Can't remove students while an exam is in progress."
+        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
 
 
 async def list_course_enrollments(course_id: UUID) -> Dict[str, Any]:
@@ -97,9 +137,14 @@ async def list_course_enrollments(course_id: UUID) -> Dict[str, Any]:
         include={"users": True},
         order={"enrolled_at": "asc"},
     )
+    lock = await derive_roster_lock(str(course_id))
     return {
         "enrollments": [serialize_enrollment(enrollment) for enrollment in enrollments],
-        "roster_locked": await is_course_roster_locked(str(course_id)),
+        # Legacy aggregate: locked when neither operation is allowed.
+        "roster_locked": not (lock["can_enroll"] or lock["can_remove"]),
+        "can_enroll": lock["can_enroll"],
+        "can_remove": lock["can_remove"],
+        "lock_reason": lock["lock_reason"],
     }
 
 
@@ -133,7 +178,7 @@ async def add_course_enrollment(
 ) -> Dict[str, Any]:
     """Create or reactivate a course enrollment for a student."""
     await get_course_or_404(str(course_id))
-    await assert_roster_mutable(str(course_id))
+    await assert_can_enroll(str(course_id))
     student = await resolve_student_for_enrollment(payload)
 
     existing = await prisma.course_enrollments.find_first(
@@ -171,7 +216,7 @@ async def add_course_enrollment(
 async def remove_course_enrollment(course_id: UUID, student_id: UUID) -> Dict[str, str]:
     """Permanently remove a student from a course roster."""
     await get_course_or_404(str(course_id))
-    await assert_roster_mutable(str(course_id))
+    await assert_can_remove(str(course_id))
     enrollment = await prisma.course_enrollments.find_first(
         where={
             "course_id": str(course_id),

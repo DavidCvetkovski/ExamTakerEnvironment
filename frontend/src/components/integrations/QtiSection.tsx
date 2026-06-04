@@ -26,7 +26,6 @@ import type { QtiImportJobResult } from '@/lib/integrations.types';
 function ExportPanel() {
     const { toast } = useToast();
     const [questionIds, setQuestionIds] = useState('');
-    const [bankId, setBankId] = useState('');
     const [blueprintId, setBlueprintId] = useState('');
     const [picked, setPicked] = useState<AvailableItem[]>([]);
     const [pickerOpen, setPickerOpen] = useState(false);
@@ -67,8 +66,8 @@ function ExportPanel() {
                 learning_object_ids: parsedQuestionIds,
             })
         );
-    const exportBank = () =>
-        run('Bank', () => downloadFile('qti/items/export', `qti-bank-${bankId}.zip`, { bank_id: bankId }));
+    const exportAll = () =>
+        run('All questions', () => downloadFile('qti/questions/export-all', 'qti-all-questions.zip'));
     const exportBlueprint = () =>
         run('Blueprint', () =>
             downloadFile(`qti/blueprints/${blueprintId}/export`, `qti-blueprint-${blueprintId}.zip`)
@@ -78,7 +77,7 @@ function ExportPanel() {
         <Card>
             <h3 className="text-h3 text-foreground mb-1">Export</h3>
             <p className="text-meta text-shell-muted mb-4">
-                Pick individual questions, or export a whole item bank or blueprint as a QTI 2.1 package.
+                Pick individual questions, or export all questions or a whole blueprint as a QTI 2.1 package.
             </p>
 
             {/* Pick questions — same picker used when building a blueprint. */}
@@ -150,13 +149,10 @@ function ExportPanel() {
 
             {/* Bulk shortcuts. */}
             <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Whole item bank ID" hint="Different from a question ID. Use this for an entire bank.">
-                    <div className="flex gap-2">
-                        <Input value={bankId} onChange={(e) => setBankId(e.target.value)} placeholder="bank uuid" />
-                        <Button variant="secondary" onClick={exportBank} loading={busy} disabled={!bankId}>
-                            Export
-                        </Button>
-                    </div>
+                <Field label="All questions" hint="Export every question in the library as one QTI package.">
+                    <Button variant="secondary" onClick={exportAll} loading={busy}>
+                        Export all questions
+                    </Button>
                 </Field>
                 <Field label="Whole blueprint (id)">
                     <div className="flex gap-2">

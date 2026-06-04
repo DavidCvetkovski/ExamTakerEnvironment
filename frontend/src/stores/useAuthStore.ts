@@ -35,6 +35,8 @@ export interface UserPublic {
     email: string;
     role: 'ADMIN' | 'CONSTRUCTOR' | 'REVIEWER' | 'STUDENT';
     vunet_id: string | null;
+    /** Self-chosen display name (Epoch 14.5). Falls back to the email local-part. */
+    display_name?: string | null;
     is_active: boolean;
     theme_preference?: ThemePreference | null;
     accessibility?: AccessibilityPreferences;
@@ -59,6 +61,7 @@ interface AuthState {
     initialize: () => Promise<void>;
     setThemePreference: (theme: ThemePreference | null) => Promise<void>;
     setAccessibilityPreference: (patch: AccessibilityPatch) => Promise<void>;
+    setDisplayName: (displayName: string | null) => Promise<void>;
     changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
     logoutEverywhere: (password: string) => Promise<void>;
     deactivateAccount: (password: string) => Promise<void>;
@@ -252,6 +255,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             syncStoredA11y(previous);
             set({ accessibility: previous });
             throw error;
+        }
+    },
+
+    setDisplayName: async (displayName) => {
+        const resp = await api.patch('users/me/preferences/profile', {
+            display_name: displayName,
+        });
+        // Trust the server's normalized value (trimmed; empty → null).
+        const resolved: string | null = resp.data?.display_name ?? null;
+        const currentUser = get().user;
+        if (currentUser) {
+            set({ user: { ...currentUser, display_name: resolved } });
         }
     },
 

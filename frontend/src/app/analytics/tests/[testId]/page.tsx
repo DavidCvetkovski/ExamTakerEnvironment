@@ -169,7 +169,10 @@ export default function AnalyticsRunsPickerPage() {
                     />
                 ) : (
                     <div className="space-y-6">
-                        {combined && (
+                        {/* Epoch 14.9 — only surface the combined cohort when there
+                          * is something to combine. With zero submissions the card
+                          * is noise; the empty state below stands alone. */}
+                        {combined && combined.submissions_total > 0 && (
                             <CombinedCard
                                 testId={testId!}
                                 run={combined}

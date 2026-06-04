@@ -39,6 +39,21 @@ async def export_bank(
     return _zip_response(data, f"qti-bank-{bank_id}.zip")
 
 
+@router.get("/questions/export-all")
+async def export_all_questions(
+    include_correct: bool = Query(True),
+    current_user: User = Depends(_require_author),
+):
+    """Export every question in the library as a single QTI 2.1 package.
+
+    The deployment uses one item bank, so this replaces the paste-a-bank-id flow
+    with a one-click "export everything" (Epoch 14.4)."""
+    data = await export_service.export_all_questions(
+        include_correct=include_correct, actor_id=str(current_user.id)
+    )
+    return _zip_response(data, "qti-all-questions.zip")
+
+
 @router.get("/tests/{test_definition_id}/export")
 async def export_test(
     test_definition_id: UUID,

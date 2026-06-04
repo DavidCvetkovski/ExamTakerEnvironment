@@ -42,6 +42,9 @@ export default function ExamPage() {
     const enlargedDisplay = useAuthStore((s) => s.user?.accommodation_enlarged_display ?? false);
 
     const [timeLeft, setTimeLeft] = useState<string>('');
+    // Remaining milliseconds, tracked alongside the display string so the
+    // low-time warning is duration-based (L-5) rather than fragile string-prefix.
+    const [msLeft, setMsLeft] = useState<number | null>(null);
     const [showReview, setShowReview] = useState(false);
     const [showShortcuts, setShowShortcuts] = useState(false);
 
@@ -80,42 +83,39 @@ export default function ExamPage() {
         }
     }, [sessionId, fetchSession, loadSavedAnswers]);
 
-    // Timer logic — auto-submits when time expires so the session is graded
+    // Timer logic — auto-submits when time expires so the session is graded.
+    // The tick runs once synchronously on mount so the countdown is never blank
+    // for the first second (H-1); it reads the absolute expires_at vs the live
+    // wall clock each time, so it self-corrects after any background throttling.
     useEffect(() => {
         if (!currentSession) return;
 
-        const interval = setInterval(() => {
-            const now = new Date().getTime();
-            const tzExpiresAt =
-                currentSession.expires_at.endsWith('Z') || currentSession.expires_at.includes('+')
-                    ? currentSession.expires_at
-                    : `${currentSession.expires_at}Z`;
-            const end = new Date(tzExpiresAt).getTime();
-            const diff = end - now;
+        const tzExpiresAt =
+            currentSession.expires_at.endsWith('Z') || currentSession.expires_at.includes('+')
+                ? currentSession.expires_at
+                : `${currentSession.expires_at}Z`;
+        const end = new Date(tzExpiresAt).getTime();
 
+        let interval: ReturnType<typeof setInterval> | undefined;
+        const tick = () => {
+            const diff = end - new Date().getTime();
+            setMsLeft(Math.max(0, diff));
             if (diff <= 0) {
-                clearInterval(interval);
-                // Show expired state immediately, then auto-submit.
-                // If the submit succeeds, the page transitions to SubmissionConfirmation.
-                // If it fails (e.g. backend already expired the session), the expired
-                // banner stays and the store's error field surfaces the reason.
+                if (interval) clearInterval(interval);
                 setTimeLeft('EXPIRED');
                 // The session may already be expired server-side; swallow the
                 // rejection so it doesn't surface as an unhandled runtime error.
-                // The expired banner is shown and the store holds the reason.
                 void submitExam(sessionId).catch(() => {});
-            } else {
-                const hours = Math.floor(diff / 1000 / 60 / 60);
-                const minutes = Math.floor((diff / 1000 / 60) % 60);
-                const seconds = Math.floor((diff / 1000) % 60);
-                setTimeLeft(
-                    hours > 0
-                        ? `${hours}h ${minutes}m ${seconds}s`
-                        : `${minutes}m ${seconds}s`
-                );
+                return;
             }
-        }, 1000);
+            const hours = Math.floor(diff / 1000 / 60 / 60);
+            const minutes = Math.floor((diff / 1000 / 60) % 60);
+            const seconds = Math.floor((diff / 1000) % 60);
+            setTimeLeft(hours > 0 ? `${hours}h ${minutes}m ${seconds}s` : `${minutes}m ${seconds}s`);
+        };
 
+        tick(); // synchronous first paint — no blank second
+        interval = setInterval(tick, 1000);
         return () => clearInterval(interval);
     }, [currentSession, sessionId, submitExam]);
 
@@ -123,19 +123,30 @@ export default function ExamPage() {
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (!currentSession) return;
-            // Never hijack typing inside a field or rich-text editor.
+            // Never hijack typing inside a free-text field or rich-text editor.
+            // NOTE: radio/checkbox inputs are deliberately NOT excluded here.
+            // Leaving them to the browser lets arrow keys cycle the option group,
+            // so pressing ← / → after picking an answer would silently change the
+            // selection (Epoch 14.3). We intercept arrows below instead.
             if (
                 e.target instanceof HTMLTextAreaElement ||
-                e.target instanceof HTMLInputElement ||
+                (e.target instanceof HTMLInputElement &&
+                    e.target.type !== 'radio' &&
+                    e.target.type !== 'checkbox') ||
                 (e.target instanceof HTMLElement && e.target.isContentEditable)
             ) {
                 return;
             }
 
-            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+            // Only the horizontal arrows move between questions. The vertical
+            // arrows are intentionally inert: they must neither navigate nor
+            // cycle a focused option group (Epoch 14.3).
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                e.preventDefault();
+            } else if (e.key === 'ArrowRight') {
                 e.preventDefault();
                 navigateTo(currentQuestionIndex + 1);
-            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+            } else if (e.key === 'ArrowLeft') {
                 e.preventDefault();
                 navigateTo(currentQuestionIndex - 1);
             } else if (e.key === 'f' || e.key === 'F') {
@@ -219,7 +230,7 @@ export default function ExamPage() {
                 data-a11y-scale={examScaleOverride}
             >
                 {/* Header / Timer Bar */}
-                <header className="sticky top-0 z-10 bg-shell-surface border-b border-shell-border px-6 py-4 flex justify-between items-center shadow-[var(--shadow-card)]">
+                <header className="sticky top-0 z-30 bg-shell-surface border-b border-shell-border px-6 py-4 flex justify-between items-center shadow-[var(--shadow-card)]">
                     <div className="flex items-center gap-4">
                         <div className="w-9 h-9 bg-brand rounded-md flex items-center justify-center font-semibold text-white text-meta">
                             OV
@@ -235,7 +246,7 @@ export default function ExamPage() {
                                 className={`text-h2 font-mono font-semibold tabular-nums ${
                                     isExpired
                                         ? 'text-danger'
-                                        : timeLeft.startsWith('0m') || timeLeft.startsWith('1m') || timeLeft.startsWith('2m')
+                                        : msLeft !== null && msLeft < 3 * 60 * 1000
                                         ? 'text-[var(--color-warning-fg)] animate-pulse'
                                         : 'text-brand'
                                 }`}
@@ -299,6 +310,7 @@ export default function ExamPage() {
                     <ReviewSummary
                         onConfirm={handleSubmit}
                         onCancel={() => setShowReview(false)}
+                        isSubmitting={isLoading}
                     />
                 )}
 

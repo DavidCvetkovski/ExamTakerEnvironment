@@ -1,12 +1,38 @@
 """Schemas for user interface preferences."""
 
-from typing import Literal
+from typing import Literal, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 ThemeName = Literal["dark", "warm", "light-blue", "auto"]
 TextScale = Literal["md", "lg", "xl"]
+
+DISPLAY_NAME_MAX_LENGTH = 80
+
+
+class DisplayNameUpdate(BaseModel):
+    """Self-service display name. ``None`` or an empty/whitespace string clears it
+    (the UI then falls back to the email local-part). Trimmed and length-bounded."""
+    display_name: Optional[str] = None
+
+    @field_validator("display_name")
+    @classmethod
+    def _normalize(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        trimmed = value.strip()
+        if not trimmed:
+            return None
+        if len(trimmed) > DISPLAY_NAME_MAX_LENGTH:
+            raise ValueError(
+                f"Display name must be at most {DISPLAY_NAME_MAX_LENGTH} characters."
+            )
+        return trimmed
+
+
+class DisplayNameResponse(BaseModel):
+    display_name: Optional[str] = None
 
 
 class ThemePreferenceUpdate(BaseModel):

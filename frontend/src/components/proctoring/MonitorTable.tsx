@@ -44,14 +44,12 @@ function SortArrow({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
 
 interface MonitorTableProps {
     attempts: MonitorAttempt[];
-    onExtend: (sessionId: string, minutes: number) => void;
     onTerminate: (attempt: MonitorAttempt) => void;
     onSelectStudent: (attempt: MonitorAttempt) => void;
 }
 
 export default function MonitorTable({
     attempts,
-    onExtend,
     onTerminate,
     onSelectStudent,
 }: MonitorTableProps) {
@@ -148,6 +146,12 @@ export default function MonitorTable({
                                                     {a.status !== 'STARTED' ? a.status : 'Flagged for review'}
                                                 </span>
                                             )}
+                                            {/* S-2: show accommodation multiplier when set. */}
+                                            {a.time_multiplier != null && a.time_multiplier !== 1 && (
+                                                <span className="text-eyebrow text-brand" title={`${a.time_multiplier}× time accommodation`}>
+                                                    {a.time_multiplier}×
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </td>
@@ -177,8 +181,6 @@ export default function MonitorTable({
                                         ariaLabel={`Actions for ${a.student_email}`}
                                         items={[
                                             { label: 'View details', onClick: () => onSelectStudent(a) },
-                                            { label: 'Extend +5 min', onClick: () => onExtend(a.exam_session_id, 5), disabled: ended },
-                                            { label: 'Extend +15 min', onClick: () => onExtend(a.exam_session_id, 15), disabled: ended },
                                             { label: 'Terminate…', onClick: () => onTerminate(a), tone: 'danger', disabled: ended },
                                         ]}
                                     />

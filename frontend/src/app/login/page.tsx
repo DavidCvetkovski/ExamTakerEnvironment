@@ -68,63 +68,17 @@ function LoginPageInner() {
     const busy = isLoading || submitting;
 
     return (
-        <div data-theme-scope="brand-green" className="min-h-full bg-shell-bg flex flex-col md:flex-row text-foreground">
+        <div data-theme="warm" className="min-h-full bg-shell-bg flex items-center justify-center px-6 py-12 text-foreground">
 
-            {/* ── Left panel: brand ── */}
-            <div className="hidden md:flex md:w-[55%] relative bg-shell-surface overflow-hidden flex-col items-center justify-center px-12 py-16">
-                {/* Blobs */}
-                <div className="pointer-events-none absolute inset-0" aria-hidden>
-                    <div className="absolute top-[-20%] left-[-15%] w-[600px] h-[600px] rounded-full bg-brand/12 blur-[130px] animate-blob" />
-                    <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-brand/8 blur-[100px] animate-blob animation-delay-2000" />
-                </div>
-
-                <div className={`relative z-10 max-w-md text-center transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-                    <div className="flex items-center justify-center gap-2.5 mb-10">
-                        <span className="relative inline-flex w-2.5 h-2.5">
-                            <span className="absolute inset-0 rounded-full bg-brand animate-brand-ping" />
-                            <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-brand" />
-                        </span>
-                        <span className="text-xs font-bold uppercase tracking-eyebrow text-shell-muted">OpenVision</span>
-                    </div>
-
-                    <h1 className="text-4xl font-black tracking-tight text-foreground leading-tight mb-4">
-                        Academic Assessment,<br />
-                        <span className="text-brand-gradient">Reimagined.</span>
-                    </h1>
-
-                    <p className="text-shell-muted leading-relaxed mb-12">
-                        Psychometrically sound. Beautifully designed.<br />Built for the modern university.
-                    </p>
-
-                    <div className="flex flex-wrap justify-center gap-3 text-sm text-shell-muted">
-                        {[
-                            'Adaptive Blueprints',
-                            'Psychometric Analytics',
-                            'Secure Exam Delivery',
-                        ].map((label) => (
-                            <span
-                                key={label}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-shell-border bg-shell-bg/60"
-                            >
-                                {label}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* ── Right panel: form ── */}
-            <div className="flex-1 flex items-center justify-center px-6 py-12">
+            {/* ── Centered sign-in card ── */}
+            <div className="flex-1 flex items-center justify-center">
                 <div className={`w-full max-w-sm transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
 
-                    {/* Mobile logo */}
-                    <div className="flex md:hidden items-center justify-center gap-2 mb-8">
-                        <span className="w-2 h-2 rounded-full bg-brand animate-pulse" />
-                        <span className="text-xs font-bold uppercase tracking-eyebrow text-shell-muted">OpenVision</span>
+                    {/* Wordmark */}
+                    <div className="flex items-center justify-center gap-2.5 mb-10">
+                        <span className="w-2.5 h-2.5 rounded-full bg-brand" />
+                        <span className="text-xl font-black tracking-tight text-foreground">OpenVision</span>
                     </div>
-
-                    <h2 className="text-2xl font-black text-foreground mb-1">Welcome back</h2>
-                    <p className="text-sm text-shell-muted mb-8">Sign in to your account to continue.</p>
 
                     {error && (
                         <div

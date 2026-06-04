@@ -59,6 +59,27 @@ async def export_bank(bank_id: str, *, include_correct: bool, actor_id: str) -> 
     return package.build_package(items)
 
 
+async def export_all_questions(*, include_correct: bool, actor_id: str) -> bytes:
+    """Export every supported question in the library as one QTI package ZIP.
+
+    The deployment only ever uses a single item bank, so "export the bank" and
+    "export everything" are the same operation in practice (Epoch 14.4). This
+    skips the bank-id ceremony and exports all learning objects directly.
+    """
+    objects = await prisma.learning_objects.find_many(include={"item_versions": True})
+    items = [x for x in (_item_xml(o, include_correct=include_correct) for o in objects) if x]
+    if not items:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No exportable questions in the library."
+        )
+    await integration_audit_service.record_integration_audit(
+        integration="qti", action="export_all_questions", status="success", actor_user_id=actor_id,
+        resource_type="learning_objects", resource_id=None,
+        metadata={"item_count": len(items), "include_correct": include_correct},
+    )
+    return package.build_package(items)
+
+
 async def export_learning_objects(
     lo_ids: list[str], *, include_correct: bool, actor_id: str
 ) -> bytes:

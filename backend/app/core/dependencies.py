@@ -51,6 +51,12 @@ async def get_current_user(
     )
     try:
         payload = decode_token(token)
+        # Reject non-access tokens (e.g. a long-lived refresh token presented as a
+        # Bearer): access and refresh tokens share the same claims and differ only
+        # by `type`, so this guard is the only thing stopping a refresh token from
+        # authenticating every protected endpoint. (Epoch 14 audit C-3.)
+        if payload.get("type") != "access":
+            raise credentials_exception
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception

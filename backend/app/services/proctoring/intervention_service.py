@@ -1,12 +1,8 @@
-"""Per-attempt supervisor interventions: extend / pause / resume / terminate
-(Epoch 11 §9.6).
+"""Per-attempt supervisor interventions: terminate (Epoch 11 §9.6).
 
-Each action is staff-gated at the endpoint, operates on one exam_session, and
-records a SUPERVISOR_* incident (the audit trail of who did what, when). The only
-authoritative deadline is ``exam_sessions.expires_at`` — pause/resume adjust it
-explicitly so no downstream code needs to learn a new state.
+Staff-gated; records a SUPERVISOR_TERMINATE incident for the audit trail.
 """
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -20,12 +16,6 @@ from app.models.proctoring_incident import (
     ProctoringSeverity,
 )
 from app.services.proctoring.incident_service import record_incident
-
-
-def _ensure_utc(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
 
 
 async def _load_started_session(session_id: UUID) -> Any:
@@ -50,52 +40,6 @@ async def _audit(session: Any, incident_type: ProctoringIncidentType, actor_id: 
         student_id=str(session.student_id),
         detail={**detail, "actor_id": actor_id},
     )
-
-
-async def extend_attempt(session_id: UUID, minutes: int, actor_id: str) -> Any:
-    """Push out a single attempt's deadline by ``minutes``."""
-    session = await _load_started_session(session_id)
-    new_expiry = _ensure_utc(session.expires_at) + timedelta(minutes=minutes)
-    updated = await prisma.exam_sessions.update(
-        where={"id": str(session_id)},
-        data={"expires_at": new_expiry},
-    )
-    await _audit(session, ProctoringIncidentType.SUPERVISOR_EXTEND, actor_id, {"minutes": minutes})
-    return updated
-
-
-async def pause_attempt(session_id: UUID, actor_id: str) -> Any:
-    """Freeze an attempt. Heartbeats are rejected with 409 while paused."""
-    session = await _load_started_session(session_id)
-    if session.paused_at is not None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Attempt is already paused.")
-    updated = await prisma.exam_sessions.update(
-        where={"id": str(session_id)},
-        data={"paused_at": datetime.now(timezone.utc)},
-    )
-    await _audit(session, ProctoringIncidentType.SUPERVISOR_PAUSE, actor_id, {})
-    return updated
-
-
-async def resume_attempt(session_id: UUID, actor_id: str) -> Any:
-    """Resume a paused attempt, crediting the paused time back to the clock."""
-    session = await _load_started_session(session_id)
-    if session.paused_at is None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Attempt is not paused.")
-    now = datetime.now(timezone.utc)
-    paused_seconds = int((now - _ensure_utc(session.paused_at)).total_seconds())
-    updated = await prisma.exam_sessions.update(
-        where={"id": str(session_id)},
-        data={
-            "paused_at": None,
-            "accumulated_pause_seconds": session.accumulated_pause_seconds + paused_seconds,
-            "expires_at": _ensure_utc(session.expires_at) + timedelta(seconds=paused_seconds),
-        },
-    )
-    await _audit(
-        session, ProctoringIncidentType.SUPERVISOR_RESUME, actor_id, {"paused_seconds": paused_seconds}
-    )
-    return updated
 
 
 async def terminate_attempt(session_id: UUID, actor_id: str) -> Any:

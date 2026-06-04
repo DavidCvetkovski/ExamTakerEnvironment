@@ -12,6 +12,15 @@ async def update_theme_preference(user_id: str, theme: str | None):
     )
 
 
+async def update_display_name(user_id: str, display_name: str | None):
+    """Persist a user's self-chosen display name (already trimmed/validated by the
+    schema) and return the updated user record. ``None`` clears it."""
+    return await prisma.users.update(
+        where={"id": user_id},
+        data={"display_name": display_name},
+    )
+
+
 def resolve_accessibility(user) -> AccessibilityPreferences:
     """Project a user record into its public accessibility profile. Single
     source of the field mapping (DB ``a11y_*`` columns → API names)."""

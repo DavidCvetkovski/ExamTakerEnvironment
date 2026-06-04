@@ -55,19 +55,17 @@ export function useHeartbeat(sessionId: string) {
 
     // Flush on beforeunload (tab close, navigate away)
     useEffect(() => {
-        const handleBeforeUnload = () => {
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
             const events = useExamStore.getState().pendingEvents;
             if (events.length > 0) {
                 const payload = JSON.stringify({ events });
                 const blob = new Blob([payload], { type: 'application/json' });
-                const heartbeatUrl = new URL(
-                    `sessions/${sessionId}/heartbeat`,
-                    api.defaults.baseURL ?? window.location.origin
-                ).toString();
-                navigator.sendBeacon(
-                    heartbeatUrl,
-                    blob
-                );
+                // H-3: build the URL by interpolation with a trailing-slash guard.
+                // `new URL(relPath, base)` drops the last path segment when the base
+                // has no trailing slash (e.g. ".../api" → ".../sessions/â€¦"), so the
+                // beacon would 404 and the last answer batch would be lost.
+                const base = (api.defaults.baseURL ?? window.location.origin).replace(/\/$/, '');
+                navigator.sendBeacon(`${base}/sessions/${sessionId}/heartbeat`, blob);
 
                 // Also persist to localStorage as absolute fallback
                 try {
@@ -78,6 +76,12 @@ export function useHeartbeat(sessionId: string) {
                 } catch {
                     // localStorage unavailable
                 }
+
+                // S-4: trigger the browser's native "Leave page?" prompt so an
+                // accidental close/back doesn't silently abandon the exam. Modern
+                // browsers show their own generic copy and ignore custom text.
+                event.preventDefault();
+                event.returnValue = '';
             }
         };
 

@@ -82,10 +82,14 @@ export default function ProctoringGate({
                     </svg>
                 </div>
                 <h1 className="text-h2 font-semibold">Safe Exam Browser required</h1>
-                <p className="text-shell-muted text-meta">
-                    This exam must be taken inside Safe Exam Browser. Download the
-                    configuration below and open it with SEB installed to launch your exam.
-                </p>
+                <div className="text-shell-muted text-meta text-left space-y-2">
+                    <p>This exam must be taken inside Safe Exam Browser. Please follow these steps:</p>
+                    <ol className="list-decimal pl-5 space-y-1">
+                        <li>Download the exam launcher file below.</li>
+                        <li>Open the downloaded file with Safe Exam Browser.</li>
+                        <li>The exam will launch automatically in the secure browser.</li>
+                    </ol>
+                </div>
                 <Button
                     variant="primary"
                     size="md"
@@ -93,7 +97,7 @@ export default function ProctoringGate({
                     disabled={downloading}
                     className="w-full"
                 >
-                    {downloading ? 'Preparing…' : 'Download exam configuration'}
+                    {downloading ? 'Preparing…' : 'Get the exam launcher file'}
                 </Button>
                 {error && (
                     <p className="text-[var(--color-danger-fg)] text-meta" role="alert">

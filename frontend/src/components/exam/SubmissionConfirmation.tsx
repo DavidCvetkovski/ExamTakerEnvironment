@@ -18,7 +18,14 @@ export default function SubmissionConfirmation({ submittedAt, returnPath, mode =
     const formattedTime = submittedAt
         ? formatAbsolute(submittedAt.endsWith('Z') ? submittedAt : `${submittedAt}Z`)
         : 'Just now';
-    const returnLabel = returnPath === '/my-exams' ? 'Back to My Exams' : 'Back to Sessions';
+    // L-14: derive the label from the path instead of a brittle two-value switch.
+    const returnLabel = returnPath.startsWith('/my-')
+        ? 'Back to My Exams'
+        : returnPath.startsWith('/blueprint')
+        ? 'Back to Blueprint'
+        : returnPath.startsWith('/sessions')
+        ? 'Back to Sessions'
+        : 'Continue';
 
     return (
         <div className="min-h-screen bg-shell-surface text-foreground flex items-center justify-center p-8">

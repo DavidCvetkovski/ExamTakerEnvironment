@@ -41,6 +41,7 @@ class UserPublic(BaseModel):
     email: str
     role: UserRole
     vunet_id: Optional[str] = None
+    display_name: Optional[str] = None
     is_active: bool = True
     theme_preference: ThemeName | None = None
     accessibility: AccessibilityPreferences = AccessibilityPreferences()
@@ -64,6 +65,7 @@ class UserPublic(BaseModel):
             "email": data.email,
             "role": data.role,
             "vunet_id": getattr(data, "vunet_id", None),
+            "display_name": getattr(data, "display_name", None),
             "is_active": getattr(data, "is_active", True),
             "theme_preference": getattr(data, "theme_preference", None),
             "accessibility": {

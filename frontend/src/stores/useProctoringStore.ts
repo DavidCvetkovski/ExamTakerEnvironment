@@ -14,9 +14,10 @@ export interface MonitorAttempt {
     current_question_label?: string | null;
     last_seen_at?: string | null;
     presence: PresenceState;
-    is_paused: boolean;
     flagged_for_review: boolean;
     incident_count: number;
+    /** S-2: accommodation time multiplier (null = no accommodation). */
+    time_multiplier?: number | null;
 }
 
 export interface ProctoringIncident {
@@ -40,6 +41,18 @@ interface MonitorEnvelope {
     page: number;
     page_size: number;
     attempts: MonitorAttempt[];
+    // M-1 / S-1: session context fields added to the monitor response.
+    course_code: string | null;
+    course_title: string | null;
+    test_title: string | null;
+    ends_at: string | null;
+}
+
+export interface MonitorMeta {
+    course_code: string | null;
+    course_title: string | null;
+    test_title: string | null;
+    ends_at: string | null;
 }
 
 interface IncidentEnvelope {
@@ -62,6 +75,8 @@ interface ProctoringState {
     /** Incidents scoped to the student opened in the detail drawer. */
     studentIncidents: ProctoringIncident[];
     serverNow: string | null;
+    /** M-1 / S-1: context about the session being monitored. */
+    sessionMeta: MonitorMeta | null;
     isLoading: boolean;
     error: string | null;
     severityFilter: IncidentSeverityFilter;
@@ -71,7 +86,6 @@ interface ProctoringState {
     fetchStudentIncidents: (scheduledId: string, examSessionId: string) => Promise<void>;
     setSeverityFilter: (f: IncidentSeverityFilter) => void;
 
-    extend: (sessionId: string, minutes: number) => Promise<void>;
     terminate: (sessionId: string) => Promise<void>;
 }
 
@@ -80,6 +94,7 @@ export const useProctoringStore = create<ProctoringState>((set, get) => ({
     incidents: [],
     studentIncidents: [],
     serverNow: null,
+    sessionMeta: null,
     isLoading: false,
     error: null,
     severityFilter: 'ALL',
@@ -89,7 +104,17 @@ export const useProctoringStore = create<ProctoringState>((set, get) => ({
             const res = await api.get<MonitorEnvelope>(
                 `scheduled-sessions/${scheduledId}/monitor`,
             );
-            set({ attempts: res.data.attempts, serverNow: res.data.server_now, error: null });
+            set({
+                attempts: res.data.attempts,
+                serverNow: res.data.server_now,
+                sessionMeta: {
+                    course_code: res.data.course_code,
+                    course_title: res.data.course_title,
+                    test_title: res.data.test_title,
+                    ends_at: res.data.ends_at,
+                },
+                error: null,
+            });
         } catch (err: unknown) {
             set({ error: errorMessage(err, 'Failed to load monitor') });
         }
@@ -122,9 +147,6 @@ export const useProctoringStore = create<ProctoringState>((set, get) => ({
 
     setSeverityFilter: (severityFilter) => set({ severityFilter }),
 
-    extend: async (sessionId, minutes) => {
-        await api.post(`exam-sessions/${sessionId}/extend`, { minutes });
-    },
     terminate: async (sessionId) => {
         await api.post(`exam-sessions/${sessionId}/terminate`);
     },

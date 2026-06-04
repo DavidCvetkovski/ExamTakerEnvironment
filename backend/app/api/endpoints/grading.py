@@ -59,6 +59,12 @@ async def get_session_grades(
     """
     from app.core.prisma_db import prisma
     session = await prisma.exam_sessions.find_unique(where={"id": str(session_id)})
+    # Ownership: a CONSTRUCTOR may only read grades for tests they created (ADMIN
+    # sees all). Without this, role alone leaked student answers + feedback across
+    # tenants. (Epoch 14 audit H-10.)
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found.")
+    await assert_test_access(str(session.test_definition_id), current_user)
     grades = await prisma.question_grades.find_many(
         where={"session_id": str(session_id)},
         order={"created_at": "asc"},

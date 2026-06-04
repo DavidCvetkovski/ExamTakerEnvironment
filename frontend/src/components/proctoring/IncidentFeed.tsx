@@ -15,6 +15,13 @@ const SEVERITY_VAR: Record<ProctoringIncident['severity'], string> = {
 
 const FILTERS: IncidentSeverityFilter[] = ['ALL', 'CRITICAL', 'WARNING', 'INFO'];
 
+/** L-8: brief explanation of each severity level — shown as a tooltip on hover. */
+const SEVERITY_LEGEND: Record<Exclude<IncidentSeverityFilter, 'ALL'>, string> = {
+    INFO: 'Supervisor actions and lifecycle events',
+    WARNING: 'Student behaviour worth reviewing (focus loss, copy attempts)',
+    CRITICAL: 'High-confidence violations (SEB integrity failure, session sharing)',
+};
+
 function humanizeType(type: string): string {
     return type.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
 }
@@ -40,6 +47,7 @@ export default function IncidentFeed({
                             key={f}
                             type="button"
                             onClick={() => onFilterChange(f)}
+                            title={f !== 'ALL' ? SEVERITY_LEGEND[f] : undefined}
                             className={`rounded-full px-2.5 py-0.5 text-eyebrow font-semibold transition-colors focus-ring ${
                                 activeFilter === f
                                     ? 'bg-brand/10 text-brand'

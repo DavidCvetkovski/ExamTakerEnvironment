@@ -28,6 +28,9 @@ class ProctoringIncidentType(str, enum.Enum):
     SUPERVISOR_PAUSE = "SUPERVISOR_PAUSE"
     SUPERVISOR_RESUME = "SUPERVISOR_RESUME"
     SUPERVISOR_TERMINATE = "SUPERVISOR_TERMINATE"
+    # Epoch 14 audit C-1: the student's accommodation time could not be honoured
+    # because the scheduled window closes before their individual expiry.
+    ACCOMMODATION_CLIPPED = "ACCOMMODATION_CLIPPED"
 
 
 class ProctoringSeverity(str, enum.Enum):

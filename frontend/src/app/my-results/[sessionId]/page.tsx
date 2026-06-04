@@ -179,7 +179,7 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
                     </div>
                     {isPending && (
                         <div className="flex items-center gap-2 text-[var(--color-warning-fg)] text-xs">
-                            <span>⏳</span>
+                            <Spinner size="sm" />
                             <span>Awaiting manual grading</span>
                         </div>
                     )}
@@ -274,7 +274,7 @@ export default function MyResultDetailPage() {
                                         </>
                                     ) : (
                                         <>
-                                            <p className="text-2xl font-black text-[var(--color-warning-fg)]">⏳</p>
+                                            <Spinner size="md" className="mx-auto" />
                                             <p className="text-xs text-shell-muted-dim mt-1">Pending</p>
                                         </>
                                     )}

@@ -26,15 +26,26 @@ export interface StudentCandidate {
     email: string;
 }
 
+export type RosterLockReason = 'ONGOING' | 'COMPLETED' | null;
+
+export interface RosterLock {
+    canEnroll: boolean;
+    canRemove: boolean;
+    reason: RosterLockReason;
+}
+
 interface CourseRosterResponse {
     enrollments: Enrollment[];
     roster_locked: boolean;
+    can_enroll: boolean;
+    can_remove: boolean;
+    lock_reason: RosterLockReason;
 }
 
 interface CourseState {
     courses: Course[];
     enrollmentsByCourse: Record<string, Enrollment[]>;
-    rosterLockedByCourse: Record<string, boolean>;
+    rosterLockByCourse: Record<string, RosterLock>;
     studentCandidates: StudentCandidate[];
     isLoading: boolean;
     error: string | null;
@@ -49,7 +60,7 @@ interface CourseState {
 export const useCourseStore = create<CourseState>((set, get) => ({
     courses: [],
     enrollmentsByCourse: {},
-    rosterLockedByCourse: {},
+    rosterLockByCourse: {},
     studentCandidates: [],
     isLoading: false,
     error: null,
@@ -89,7 +100,14 @@ export const useCourseStore = create<CourseState>((set, get) => ({
             const response = await api.get<CourseRosterResponse>(`/courses/${courseId}/enrollments`);
             set((state) => ({
                 enrollmentsByCourse: { ...state.enrollmentsByCourse, [courseId]: response.data.enrollments },
-                rosterLockedByCourse: { ...state.rosterLockedByCourse, [courseId]: response.data.roster_locked },
+                rosterLockByCourse: {
+                    ...state.rosterLockByCourse,
+                    [courseId]: {
+                        canEnroll: response.data.can_enroll,
+                        canRemove: response.data.can_remove,
+                        reason: response.data.lock_reason,
+                    },
+                },
                 isLoading: false,
             }));
         } catch (err: unknown) {

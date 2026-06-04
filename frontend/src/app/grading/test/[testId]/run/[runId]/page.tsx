@@ -171,6 +171,8 @@ export default function TestGradingDashboard() {
             return sortDir === 'asc' ? cmp : -cmp;
         });
 
+    const orderedSessionIds = useMemo(() => filtered.map((s) => s.session_id).join(','), [filtered]);
+
     const stats = {
         total: gradingOverview.length,
         // AUTO_GRADED sessions have no manual work pending — count them as fully complete.
@@ -415,7 +417,7 @@ export default function TestGradingDashboard() {
                                             <Button
                                                 variant="secondary"
                                                 size="sm"
-                                                onClick={() => router.push(`/grading/${session.session_id}?fromTest=${testId}&fromRun=${runId}`)}
+                                                onClick={() => router.push(`/grading/${session.session_id}?fromTest=${testId}&fromRun=${runId}&sessionIds=${orderedSessionIds}`)}
                                             >
                                                 Grade →
                                             </Button>

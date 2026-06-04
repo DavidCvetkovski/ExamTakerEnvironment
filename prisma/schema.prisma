@@ -186,6 +186,7 @@ model users {
   role                      userrole
   is_active                 Boolean                   @default(true)
   provision_time_multiplier Float                     @default(1.0)
+  display_name              String?                   @db.VarChar
   theme_preference          String?                   @db.VarChar
   token_version             Int                       @default(0)
   a11y_high_contrast        Boolean                   @default(false)
@@ -554,6 +555,7 @@ model question_grades {
   exam_sessions      exam_sessions @relation(fields: [session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([session_id], map: "ix_question_grades_session_id")
+  @@index([learning_object_id], map: "ix_question_grades_lo_id")
 }
 
 model session_results {
@@ -645,6 +647,7 @@ enum proctoringincidenttype {
   SUPERVISOR_PAUSE
   SUPERVISOR_RESUME
   SUPERVISOR_TERMINATE
+  ACCOMMODATION_CLIPPED
 }
 
 enum proctoringseverity {

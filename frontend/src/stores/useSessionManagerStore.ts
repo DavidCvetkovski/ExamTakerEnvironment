@@ -19,6 +19,8 @@ export interface ScheduledSession {
     starts_at: string;
     ends_at: string;
     status: 'SCHEDULED' | 'ACTIVE' | 'CLOSED' | 'CANCELED';
+    /** M-3: true when the associated test definition has a proctoring_config. */
+    has_proctoring: boolean;
     duration_minutes_override?: number | null;
     created_at: string;
     updated_at?: string | null;

@@ -5,6 +5,8 @@ import { useExamStore } from '@/stores/useExamStore';
 interface ReviewSummaryProps {
     onConfirm: () => void;
     onCancel: () => void;
+    /** Disables the confirm button + shows a spinner while a submit is in flight (H-7). */
+    isSubmitting?: boolean;
 }
 
 /**
@@ -12,15 +14,27 @@ interface ReviewSummaryProps {
  * unanswered, and flagged questions. Students can click items
  * to jump back to specific questions before confirming submission.
  */
-export default function ReviewSummary({ onConfirm, onCancel }: ReviewSummaryProps) {
+export default function ReviewSummary({ onConfirm, onCancel, isSubmitting = false }: ReviewSummaryProps) {
     const { currentSession, answers, flags, navigateTo } = useExamStore();
 
     if (!currentSession) return null;
 
     const items = currentSession.items;
-    const answeredItems = items.filter((item) => !!answers[item.learning_object_id]);
-    const unansweredItems = items.filter((item) => !answers[item.learning_object_id]);
-    const flaggedItems = items.filter((item) => flags[item.learning_object_id]);
+    // H-6: make the three buckets mutually exclusive so the counts sum to the
+    // total and no question appears in two lists. Flagged is its own bucket
+    // (whether answered or not); answered/unanswered exclude flagged.
+    // L-15: test key presence, not truthiness, so a falsy answer payload counts.
+    const flaggedIds = new Set(
+        items.filter((item) => flags[item.learning_object_id]).map((item) => item.learning_object_id),
+    );
+    const isAnswered = (loId: string) => loId in answers;
+    const answeredItems = items.filter(
+        (item) => isAnswered(item.learning_object_id) && !flaggedIds.has(item.learning_object_id),
+    );
+    const unansweredItems = items.filter(
+        (item) => !isAnswered(item.learning_object_id) && !flaggedIds.has(item.learning_object_id),
+    );
+    const flaggedItems = items.filter((item) => flaggedIds.has(item.learning_object_id));
 
     const handleJumpTo = (loId: string) => {
         const idx = items.findIndex((item) => item.learning_object_id === loId);
@@ -111,9 +125,10 @@ export default function ReviewSummary({ onConfirm, onCancel }: ReviewSummaryProp
                     </button>
                     <button
                         onClick={onConfirm}
-                        className="px-5 py-2.5 rounded-lg bg-brand hover:bg-brand text-white font-semibold transition-colors shadow-lg"
+                        disabled={isSubmitting}
+                        className="px-5 py-2.5 rounded-lg bg-brand hover:bg-brand text-white font-semibold transition-colors shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                        Confirm Submission
+                        {isSubmitting ? 'Submitting…' : 'Confirm Submission'}
                     </button>
                 </div>
             </div>

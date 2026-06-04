@@ -34,6 +34,13 @@ export default function MyGradesPage() {
                             <Spinner size="md" />
                             Loading your results…
                         </div>
+                    ) : myResults.length > 0 && myResultsLoading ? (
+                        /* M-6: show a subtle inline refresh indicator while a re-fetch
+                           is in flight (the initial-empty spinner above handles first load). */
+                        <div className="flex items-center gap-2 text-meta text-shell-muted-dim mb-4">
+                            <Spinner size="sm" />
+                            Refreshing…
+                        </div>
                     ) : myResults.length === 0 ? (
                         <EmptyState
                             title="No grades yet"

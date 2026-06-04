@@ -109,7 +109,9 @@ async def test_remove_enrollment_hard_deletes(ac: AsyncClient, setup_courses_dat
 
 
 @pytest.mark.anyio
-async def test_roster_locked_when_session_started(ac: AsyncClient, setup_courses_data):
+async def test_ongoing_session_allows_add_blocks_remove(ac: AsyncClient, setup_courses_data):
+    """While an exam is in progress staff may still admit a late arrival, but
+    they may not pull an enrolled student out of a live attempt."""
     from datetime import datetime, timedelta, timezone
 
     import prisma as prisma_lib
@@ -124,10 +126,18 @@ async def test_roster_locked_when_session_started(ac: AsyncClient, setup_courses
     )
     course_id = create_resp.json()["id"]
 
-    # A blueprint + a session whose window has already started locks the roster.
+    # Enroll the student before any session exists (roster freely mutable).
+    pre_enroll = await ac.post(
+        f"/api/courses/{course_id}/enrollments",
+        json={"student_id": student_id},
+        headers=auth(token),
+    )
+    assert pre_enroll.status_code == 201
+
+    # A session whose window is currently open marks the course ongoing.
     test_def = await prisma.test_definitions.create(
         data={
-            "title": "Locked Exam",
+            "title": "Live Exam",
             "created_by": setup_courses_data["admin_id"],
             "blocks": prisma_lib.Json([]),
             "duration_minutes": 60,
@@ -145,24 +155,40 @@ async def test_roster_locked_when_session_started(ac: AsyncClient, setup_courses
         }
     )
 
-    list_resp = await ac.get(
-        f"/api/courses/{course_id}/enrollments",
-        headers=auth(token),
-    )
-    assert list_resp.json()["roster_locked"] is True
+    body = (
+        await ac.get(f"/api/courses/{course_id}/enrollments", headers=auth(token))
+    ).json()
+    assert body["can_enroll"] is True
+    assert body["can_remove"] is False
+    assert body["lock_reason"] == "ONGOING"
 
-    enroll_resp = await ac.post(
-        f"/api/courses/{course_id}/enrollments",
-        json={"student_id": student_id},
+    # Removing an enrolled student mid-exam is rejected.
+    remove_resp = await ac.delete(
+        f"/api/courses/{course_id}/enrollments/{student_id}",
         headers=auth(token),
     )
-    assert enroll_resp.status_code == 409
+    assert remove_resp.status_code == 409
+
+    # Admitting a late arrival is still allowed.
+    latecomer = await prisma.users.create(
+        data={
+            "email": "latecomer@example.com",
+            "hashed_password": hash_password("pw"),
+            "role": UserRole.STUDENT,
+        }
+    )
+    add_resp = await ac.post(
+        f"/api/courses/{course_id}/enrollments",
+        json={"student_id": str(latecomer.id)},
+        headers=auth(token),
+    )
+    assert add_resp.status_code == 201
 
 
 @pytest.mark.anyio
-async def test_closed_session_does_not_lock_roster(ac: AsyncClient, setup_courses_data):
-    """A past/closed exam must not lock the roster — staff still need to enroll
-    students for the next scheduled session in that course."""
+async def test_completed_session_locks_roster(ac: AsyncClient, setup_courses_data):
+    """Once an exam has completed the cohort is final — neither adding nor
+    removing students is permitted afterwards."""
     from datetime import datetime, timedelta, timezone
 
     import prisma as prisma_lib
@@ -177,6 +203,14 @@ async def test_closed_session_does_not_lock_roster(ac: AsyncClient, setup_course
     )
     course_id = create_resp.json()["id"]
 
+    # Enroll before the session completes so we can prove removal is later blocked.
+    pre_enroll = await ac.post(
+        f"/api/courses/{course_id}/enrollments",
+        json={"student_id": student_id},
+        headers=auth(token),
+    )
+    assert pre_enroll.status_code == 201
+
     test_def = await prisma.test_definitions.create(
         data={
             "title": "Past Exam",
@@ -186,7 +220,7 @@ async def test_closed_session_does_not_lock_roster(ac: AsyncClient, setup_course
         }
     )
     now = datetime.now(timezone.utc)
-    # Window entirely in the past → closed, must not lock.
+    # Window entirely in the past → completed → roster frozen.
     await prisma.scheduled_exam_sessions.create(
         data={
             "course_id": course_id,
@@ -198,18 +232,34 @@ async def test_closed_session_does_not_lock_roster(ac: AsyncClient, setup_course
         }
     )
 
-    list_resp = await ac.get(
-        f"/api/courses/{course_id}/enrollments",
-        headers=auth(token),
-    )
-    assert list_resp.json()["roster_locked"] is False
+    body = (
+        await ac.get(f"/api/courses/{course_id}/enrollments", headers=auth(token))
+    ).json()
+    assert body["roster_locked"] is True
+    assert body["can_enroll"] is False
+    assert body["can_remove"] is False
+    assert body["lock_reason"] == "COMPLETED"
 
+    # Both operations are rejected after completion.
+    latecomer = await prisma.users.create(
+        data={
+            "email": "toolate@example.com",
+            "hashed_password": hash_password("pw"),
+            "role": UserRole.STUDENT,
+        }
+    )
     enroll_resp = await ac.post(
         f"/api/courses/{course_id}/enrollments",
-        json={"student_id": student_id},
+        json={"student_id": str(latecomer.id)},
         headers=auth(token),
     )
-    assert enroll_resp.status_code == 201
+    assert enroll_resp.status_code == 409
+
+    remove_resp = await ac.delete(
+        f"/api/courses/{course_id}/enrollments/{student_id}",
+        headers=auth(token),
+    )
+    assert remove_resp.status_code == 409
 
 
 @pytest.mark.anyio

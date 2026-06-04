@@ -135,25 +135,24 @@ export default function GradingLandingPage() {
     const [showEmpty, setShowEmpty] = useState(false);
     const [sortKey, setSortKey] = useState<SortKey>('most_pending');
 
+    const fetchRows = () => {
+        let cancelled = false;
+        setIsLoading(true);
+        setError(null);
+        api.get<GradingIndexRow[]>('/analytics/index')
+            .then((r) => { if (!cancelled) setRows(r.data); })
+            .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load grading index.'); })
+            .finally(() => { if (!cancelled) setIsLoading(false); });
+        return () => { cancelled = true; };
+    };
+
     useEffect(() => {
         if (user?.role === 'STUDENT') {
             router.replace('/my-exams');
             return;
         }
-        let cancelled = false;
-        (async () => {
-            setIsLoading(true);
-            setError(null);
-            try {
-                const response = await api.get<GradingIndexRow[]>('/analytics/index');
-                if (!cancelled) setRows(response.data);
-            } catch (err) {
-                if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load grading index.');
-            } finally {
-                if (!cancelled) setIsLoading(false);
-            }
-        })();
-        return () => { cancelled = true; };
+        return fetchRows();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user, router]);
 
     const { withData, empty } = useMemo(() => groupByCourse(rows, sortKey), [rows, sortKey]);
@@ -167,7 +166,20 @@ export default function GradingLandingPage() {
 
             {rows.length > 0 && (
                 <div className="mb-4 flex items-center gap-3">
-                    <label htmlFor="grading-sort" className="text-meta text-shell-muted-dim">
+                    {/* L-17: manual refresh so pending counts stay current as students submit. */}
+                    <button
+                        type="button"
+                        onClick={() => fetchRows()}
+                        disabled={isLoading}
+                        className="inline-flex items-center gap-1.5 text-meta text-shell-muted hover:text-foreground transition-colors disabled:opacity-40"
+                        title="Refresh grading queue"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                        </svg>
+                        Refresh
+                    </button>
+                    <label htmlFor="grading-sort" className="ml-auto text-meta text-shell-muted-dim">
                         Sort by
                     </label>
                     <select

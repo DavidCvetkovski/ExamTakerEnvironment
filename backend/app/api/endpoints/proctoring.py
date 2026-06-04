@@ -15,7 +15,6 @@ from app.core.dependencies import require_role
 from app.core.prisma_db import prisma
 from app.models.user import User, UserRole
 from app.schemas.proctoring import (
-    ExtendRequest,
     IncidentFeedResponse,
     MonitorResponse,
 )
@@ -64,6 +63,25 @@ async def incidents(
     )
 
 
+@router.get("/scheduled-sessions/{scheduled_id}/incidents/export")
+async def export_incidents(scheduled_id: UUID, current_user: User = _StaffDep):
+    """Download the full incident log for a scheduled session as a CSV file.
+
+    Most useful after a session closes (the durable proctoring record), but
+    available at any time. Staff-gated; read-only (Epoch 14.7)."""
+    assert_can_proctor(current_user)
+    # Validate existence so a bad id is a 404, not an empty file.
+    await get_scheduled_session_or_404(str(scheduled_id))
+    csv_text = await monitor_service.export_incidents_csv(scheduled_id)
+    return Response(
+        content=csv_text,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="proctoring-log-{scheduled_id}.csv"'
+        },
+    )
+
+
 @router.get("/scheduled-sessions/{scheduled_id}/seb-config")
 async def staff_seb_config(scheduled_id: UUID, current_user: User = _StaffDep):
     """Download the .seb config file for distribution to lab machines / the LMS."""
@@ -78,27 +96,6 @@ async def staff_seb_config(scheduled_id: UUID, current_user: User = _StaffDep):
 
 
 # --- Per-attempt interventions (exam-session scoped) -----------------------
-
-
-@router.post("/exam-sessions/{session_id}/extend")
-async def extend(session_id: UUID, payload: ExtendRequest, current_user: User = _StaffDep):
-    assert_can_proctor(current_user)
-    updated = await intervention_service.extend_attempt(session_id, payload.minutes, str(current_user.id))
-    return serialize_exam_session(updated)
-
-
-@router.post("/exam-sessions/{session_id}/pause")
-async def pause(session_id: UUID, current_user: User = _StaffDep):
-    assert_can_proctor(current_user)
-    updated = await intervention_service.pause_attempt(session_id, str(current_user.id))
-    return serialize_exam_session(updated)
-
-
-@router.post("/exam-sessions/{session_id}/resume")
-async def resume(session_id: UUID, current_user: User = _StaffDep):
-    assert_can_proctor(current_user)
-    updated = await intervention_service.resume_attempt(session_id, str(current_user.id))
-    return serialize_exam_session(updated)
 
 
 @router.post("/exam-sessions/{session_id}/terminate")

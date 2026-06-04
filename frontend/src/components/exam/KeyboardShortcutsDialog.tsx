@@ -5,8 +5,8 @@ import Modal from '@/components/ui/Modal';
 /** The exam keyboard shortcuts, surfaced both here and wired on the exam page.
  *  Single source — the help dialog and the handler read the same intent list. */
 export const EXAM_SHORTCUTS: Array<{ keys: string[]; action: string }> = [
-    { keys: ['→', '↓'], action: 'Next question' },
-    { keys: ['←', '↑'], action: 'Previous question' },
+    { keys: ['→'], action: 'Next question' },
+    { keys: ['←'], action: 'Previous question' },
     { keys: ['F'], action: 'Flag or unflag the current question' },
     { keys: ['?'], action: 'Show this help' },
     { keys: ['Esc'], action: 'Close this dialog' },

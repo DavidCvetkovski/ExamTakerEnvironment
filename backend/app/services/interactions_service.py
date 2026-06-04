@@ -107,14 +107,6 @@ async def accept_interaction_events(
             detail=f"Session is {session.status}. Cannot accept new events.",
         )
 
-    # Epoch 11: a supervisor-paused attempt is frozen — reject heartbeats so the
-    # client knows to halt. The student's clock is credited back on resume.
-    if getattr(session, "paused_at", None) is not None:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This attempt has been paused by the supervisor.",
-        )
-
     received_at = datetime.now(timezone.utc)
     redis = get_redis()
 

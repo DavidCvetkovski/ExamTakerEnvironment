@@ -44,6 +44,11 @@ _CONSUMER_NAME = f"{socket.gethostname()}-pid{os.getpid()}"
 # How long (ms) a message must be pending before another consumer reclaims it
 _AUTOCLAIM_MIN_IDLE_MS = 30_000  # 30 seconds
 
+# M-9: persist the autoclaim cursor between cycles so each pass resumes where the
+# last left off instead of re-scanning the pending-entries list from "0-0".
+# xautoclaim returns "0-0" once it has swept the whole PEL, which naturally resets.
+_autoclaim_cursor = "0-0"
+
 _shutdown_event = asyncio.Event()
 
 
@@ -167,16 +172,21 @@ async def _autoclaim_stale(redis: Redis) -> None:
 
     This recovers entries left by crashed worker instances.
     """
+    global _autoclaim_cursor
     try:
         result = await redis.xautoclaim(
             settings.HEARTBEAT_STREAM_NAME,
             settings.HEARTBEAT_CONSUMER_GROUP,
             _CONSUMER_NAME,
             min_idle_time=_AUTOCLAIM_MIN_IDLE_MS,
-            start_id="0-0",
+            start_id=_autoclaim_cursor,
             count=settings.HEARTBEAT_WORKER_BATCH_SIZE,
         )
-        # result is (next_start_id, messages, deleted_ids)
+        # result is (next_start_id, messages, deleted_ids). Advance the cursor so
+        # the next cycle resumes from here; a "0-0" return means the PEL sweep is
+        # complete and we restart from the top next time.
+        next_cursor = result[0] if isinstance(result, (list, tuple)) and result else None
+        _autoclaim_cursor = next_cursor.decode() if isinstance(next_cursor, bytes) else (next_cursor or "0-0")
         messages = result[1] if isinstance(result, (list, tuple)) and len(result) > 1 else []
         if messages:
             logger.info("Autoclaimed %d stale messages.", len(messages))

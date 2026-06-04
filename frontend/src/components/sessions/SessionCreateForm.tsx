@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useServerNow } from '@/hooks/useServerNow';
+import { getClientSkewMs } from '@/lib/serverTime';
 
 import type { TestDefinition } from '@/stores/useBlueprintStore';
 import type { Course } from '@/stores/useCourseStore';
 import { Button, DatePicker, Field, TimePicker, useToast } from '@/components/ui';
+import { formatScheduled } from '@/lib/relativeTime';
 
 interface SessionCreateFormProps {
     courses: Course[];
@@ -20,11 +23,10 @@ interface SessionCreateFormProps {
 }
 
 function defaultStartsAt(): Date {
-    return new Date(Date.now() + 60_000);
+    return new Date(Date.now() + getClientSkewMs() + 60_000);
 }
 
-function isToday(date: Date): boolean {
-    const now = new Date();
+function isToday(date: Date, now: Date): boolean {
     return date.getFullYear() === now.getFullYear()
         && date.getMonth() === now.getMonth()
         && date.getDate() === now.getDate();
@@ -38,6 +40,7 @@ export default function SessionCreateForm({
     onCreateCourse,
     onSubmit,
 }: SessionCreateFormProps) {
+    const serverNow = useServerNow(60_000);
     const [courseId, setCourseId] = useState('');
     const [testDefinitionId, setTestDefinitionId] = useState('');
     const [startsAt, setStartsAt] = useState<Date>(defaultStartsAt);
@@ -83,10 +86,19 @@ export default function SessionCreateForm({
         }
     };
 
+    // M-15: compute the window close time from the selected blueprint + start time
+    // so constructors can catch scheduling mistakes before they submit.
+    const selectedBp = availableBlueprints.find((bp) => bp.id === testDefinitionId) ?? null;
+    const endsAtPreview = selectedBp && startsAt
+        ? new Date(startsAt.getTime() + selectedBp.duration_minutes * 60_000)
+        : null;
+
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
         if (!courseId || !testDefinitionId || !startsAt) return;
-        if (startsAt.getTime() <= Date.now()) {
+        // L-18: validate against serverNow to handle client clock skew.
+        const currentServerTime = new Date(Date.now() + getClientSkewMs());
+        if (startsAt.getTime() <= currentServerTime.getTime()) {
             toast({ tone: 'danger', title: 'Pick a future time', description: 'The session must start later than now.' });
             return;
         }
@@ -159,20 +171,28 @@ export default function SessionCreateForm({
                                         next.setHours(prev.getHours(), prev.getMinutes(), 0, 0);
                                         return next;
                                     })}
-                                    min={new Date()}
+                                    min={serverNow}
                                 />
                             </Field>
                             <Field label="" className="min-w-0">
                                 <TimePicker
                                     value={startsAt}
                                     onChange={setStartsAt}
-                                    min={isToday(startsAt) ? new Date() : undefined}
+                                    min={isToday(startsAt, serverNow) ? serverNow : undefined}
                                 />
                             </Field>
                         </div>
                         {timeZone && (
                             <p className="mt-1.5 text-xs text-shell-muted italic">
                                 ↳ Scheduled in your timezone ({timeZone})
+                            </p>
+                        )}
+                        {/* M-15: show the computed window close time. */}
+                        {endsAtPreview && (
+                            <p className="mt-1 text-xs text-shell-muted-dim">
+                                Window closes at approximately{' '}
+                                <strong className="text-foreground">{formatScheduled(endsAtPreview.toISOString())}</strong>
+                                {' '}({selectedBp!.duration_minutes} min)
                             </p>
                         )}
                     </div>

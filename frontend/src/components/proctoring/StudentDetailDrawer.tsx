@@ -18,7 +18,6 @@ interface StudentDetailDrawerProps {
     attempt: MonitorAttempt | null;
     incidents: ProctoringIncident[];
     onClose: () => void;
-    onExtend: (sessionId: string, minutes: number) => void;
     onTerminate: (attempt: MonitorAttempt) => void;
 }
 
@@ -26,7 +25,6 @@ export default function StudentDetailDrawer({
     attempt,
     incidents,
     onClose,
-    onExtend,
     onTerminate,
 }: StudentDetailDrawerProps) {
     const open = attempt !== null;
@@ -48,25 +46,11 @@ export default function StudentDetailDrawer({
             title={attempt ? 'Student detail' : ''}
             footer={
                 attempt && !ended ? (
-                    <div className="flex flex-wrap gap-2">
-                        <button
-                            type="button"
-                            onClick={() => onExtend(attempt.exam_session_id, 5)}
-                            className="rounded-md border border-shell-border px-3 py-1.5 text-meta font-medium text-foreground hover:bg-shell-input focus-ring"
-                        >
-                            Extend +5 min
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => onExtend(attempt.exam_session_id, 15)}
-                            className="rounded-md border border-shell-border px-3 py-1.5 text-meta font-medium text-foreground hover:bg-shell-input focus-ring"
-                        >
-                            Extend +15 min
-                        </button>
+                    <div className="flex justify-end">
                         <button
                             type="button"
                             onClick={() => onTerminate(attempt)}
-                            className="ml-auto rounded-md border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] px-3 py-1.5 text-meta font-semibold text-[var(--color-danger-fg)] hover:opacity-90 focus-ring"
+                            className="rounded-md border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] px-3 py-1.5 text-meta font-semibold text-[var(--color-danger-fg)] hover:opacity-90 focus-ring"
                         >
                             Terminate
                         </button>

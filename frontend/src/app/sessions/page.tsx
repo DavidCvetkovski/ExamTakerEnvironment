@@ -22,7 +22,7 @@ export default function SessionsPage() {
     const {
         courses,
         enrollmentsByCourse,
-        rosterLockedByCourse,
+        rosterLockByCourse,
         studentCandidates,
         fetchCourses,
         createCourse,
@@ -47,9 +47,14 @@ export default function SessionsPage() {
     const { confirm, ConfirmDialog } = useConfirm();
 
     const handleRequestCancel = async (sessionId: string) => {
+        // M-2: escalate the warning copy when the session is currently live.
+        const session = scheduledSessions.find((s) => s.id === sessionId);
+        const isLive = session?.status === 'ACTIVE';
         const ok = await confirm({
             title: 'Cancel this session?',
-            message: 'This will prevent students from joining. Already active attempts are unaffected. This action cannot be undone.',
+            message: isLive
+                ? 'This session has students actively taking the exam. Canceling now will not force-submit their attempts — their in-progress work will be lost. This action cannot be undone.'
+                : 'This will prevent students from joining. This action cannot be undone.',
             confirmLabel: 'Yes, cancel',
             tone: 'danger',
         });
@@ -125,7 +130,11 @@ export default function SessionsPage() {
                 <CourseEnrollmentDrawer
                     course={selectedCourse}
                     enrollments={drawerCourseId ? enrollmentsByCourse[drawerCourseId] || [] : []}
-                    rosterLocked={drawerCourseId ? rosterLockedByCourse[drawerCourseId] ?? false : false}
+                    rosterLock={
+                        drawerCourseId
+                            ? rosterLockByCourse[drawerCourseId] ?? { canEnroll: true, canRemove: true, reason: null }
+                            : { canEnroll: true, canRemove: true, reason: null }
+                    }
                     studentCandidates={studentCandidates}
                     isBusy={coursesLoading}
                     isOpen={Boolean(selectedCourse)}

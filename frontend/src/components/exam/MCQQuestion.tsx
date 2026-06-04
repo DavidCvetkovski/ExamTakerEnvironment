@@ -2,6 +2,7 @@
 
 import { useExamStore, ExamItem } from '@/stores/useExamStore';
 import { getExamChoiceContent } from '@/lib/examContent';
+import { sanitizeExamHtml } from '@/lib/sanitizeHtml';
 
 interface MCQQuestionProps {
     item: ExamItem;
@@ -52,7 +53,10 @@ export default function MCQQuestion({ item, questionIndex }: MCQQuestionProps) {
                             onChange={() => handleSelect(idx)}
                             className="w-5 h-5 text-brand bg-shell-input-alt border-shell-border-deep focus:ring-brand focus:ring-offset-0"
                         />
-                        <span className="text-foreground">{choice.text}</span>
+                        <span
+                            className="text-foreground"
+                            dangerouslySetInnerHTML={{ __html: sanitizeExamHtml(choice.html ?? choice.text) }}
+                        />
                     </label>
                 );
             })}

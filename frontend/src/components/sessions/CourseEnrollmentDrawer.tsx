@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
-import type { Course, Enrollment, StudentCandidate } from '@/stores/useCourseStore';
+import type { Course, Enrollment, RosterLock, StudentCandidate } from '@/stores/useCourseStore';
 import { Button, Drawer, CheckIcon, XIcon, useConfirm, useToast } from '@/components/ui';
 import StudentSearchSelect from './StudentSearchSelect';
 
@@ -10,7 +10,7 @@ interface CourseEnrollmentDrawerProps {
     course: Course | null;
     enrollments: Enrollment[];
     studentCandidates: StudentCandidate[];
-    rosterLocked: boolean;
+    rosterLock: RosterLock;
     isBusy: boolean;
     isOpen: boolean;
     onClose: () => void;
@@ -28,17 +28,27 @@ export default function CourseEnrollmentDrawer({
     course,
     enrollments,
     studentCandidates,
-    rosterLocked,
+    rosterLock,
     isBusy,
     isOpen,
     onClose,
     onAddEnrollment,
     onRemoveEnrollment,
 }: CourseEnrollmentDrawerProps) {
+    const { canEnroll, canRemove, reason } = rosterLock;
     const [enrollMode, setEnrollMode] = useState<'single' | 'bulk'>('single');
     const [bulkEmails, setBulkEmails] = useState('');
     const [bulkResults, setBulkResults] = useState<BulkResult[]>([]);
     const [bulkBusy, setBulkBusy] = useState(false);
+
+    // M-14: parse the email list live so the button shows the exact count before firing.
+    const parsedEmails = useMemo(() => {
+        return bulkEmails
+            .split(/[\n,;]+/)
+            .map((e) => e.trim().toLowerCase())
+            .filter((e) => e.includes('@'))
+            .filter((e, i, arr) => arr.indexOf(e) === i);
+    }, [bulkEmails]);
     const { confirm, ConfirmDialog } = useConfirm();
     const { toast } = useToast();
 
@@ -79,18 +89,12 @@ export default function CourseEnrollmentDrawer({
     };
 
     const handleBulkEnroll = async () => {
-        const emails = bulkEmails
-            .split(/[\n,;]+/)
-            .map((e) => e.trim().toLowerCase())
-            .filter((e) => e.includes('@'))
-            .filter((e, i, arr) => arr.indexOf(e) === i);
-
-        if (emails.length === 0) return;
+        if (parsedEmails.length === 0) return;
         setBulkBusy(true);
         setBulkResults([]);
 
         const results = await Promise.allSettled(
-            emails.map((email) =>
+            parsedEmails.map((email) =>
                 onAddEnrollment(course.id, { student_email: email })
                     .then(() => ({ email, status: 'ok' as const }))
                     .catch((err: unknown) => ({ email, status: 'error' as const, message: errorDetail(err) }))
@@ -116,15 +120,24 @@ export default function CourseEnrollmentDrawer({
                     <p className="mt-1 text-body text-foreground">{course.title}</p>
                 </div>
 
-                {rosterLocked ? (
+                {!canEnroll && (
                     <div className="rounded-xl border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-4 py-3">
                         <p className="text-sm font-semibold text-[var(--color-warning-fg)]">Roster locked</p>
                         <p className="mt-1 text-sm text-shell-muted">
-                            This course has an exam in progress, so enrollments can&apos;t change until it ends.
+                            {reason === 'COMPLETED'
+                                ? 'This course has a completed exam, so its roster is final and can no longer change.'
+                                : 'This course has an active exam window. Enrollments are locked until the window closes.'}
                         </p>
                     </div>
-                ) : (
+                )}
+
+                {canEnroll && (
                     <>
+                        {reason === 'ONGOING' && (
+                            <p className="text-sm text-shell-muted">
+                                An exam is in progress. You can still add a late arrival, but students can&apos;t be removed until it ends.
+                            </p>
+                        )}
                         {/* Mode tabs */}
                         <div className="flex gap-1 rounded-xl border border-shell-border bg-shell-input p-1">
                             {(['single', 'bulk'] as const).map((mode) => (
@@ -166,15 +179,23 @@ export default function CourseEnrollmentDrawer({
                                     rows={6}
                                     className="w-full rounded-xl border border-shell-border bg-shell-input px-4 py-3 text-sm text-foreground outline-none transition focus:border-brand resize-none"
                                 />
+                                {/* M-14: live count so the user knows how many addresses were parsed. */}
+                                {bulkEmails.trim() && (
+                                    <p className="text-xs text-shell-muted-dim">
+                                        {parsedEmails.length === 0
+                                            ? 'No valid email addresses detected'
+                                            : `${parsedEmails.length} valid email address${parsedEmails.length === 1 ? '' : 'es'} detected`}
+                                    </p>
+                                )}
                                 <Button
                                     variant="primary"
                                     size="md"
                                     fullWidth
-                                    disabled={bulkBusy || !bulkEmails.trim()}
+                                    disabled={bulkBusy || parsedEmails.length === 0}
                                     loading={bulkBusy}
                                     onClick={handleBulkEnroll}
                                 >
-                                    Enroll all
+                                    {parsedEmails.length > 0 ? `Enroll ${parsedEmails.length} student${parsedEmails.length === 1 ? '' : 's'}` : 'Enroll all'}
                                 </Button>
                                 {bulkResults.length > 0 && (
                                     <div className="space-y-1.5 mt-2">
@@ -203,7 +224,7 @@ export default function CourseEnrollmentDrawer({
                             enrollments.map((enrollment) => (
                                 <div key={enrollment.id} className="flex items-center justify-between rounded-xl border border-shell-border bg-shell-input px-4 py-3">
                                     <p className="font-medium text-foreground">{enrollment.student_email}</p>
-                                    {!rosterLocked && (
+                                    {canRemove && (
                                         <Button
                                             variant="destructive"
                                             size="sm"

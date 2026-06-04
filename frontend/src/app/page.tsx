@@ -4,160 +4,67 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { navLinksForRole } from '@/lib/navigation';
 
 // ─── Unauthenticated landing ─────────────────────────────────────────────────
 
 /**
- * Rotating words for the marketing headline. Each cycles in roughly the
- * same visual width so the surrounding layout doesn't jump. Order chosen
- * so the first impression ("Reimagined.") matches what someone clicking
- * an external link to OpenVision would expect to see at t=0.
+ * Minimal landing surface (Epoch 14.8). Wordmark, one line, one action —
+ * nothing else. Pinned to the warm theme via a scoped `data-theme` so it
+ * renders identically regardless of the visitor's stored preference (they may
+ * not even be signed in yet). Documented PageShell exception (§7.5).
  */
-const ROTATING_WORDS = ['Reimagined.', 'Validated.', 'Modernized.', 'Reinvented.'];
-
-function useWordRotator(words: string[], intervalMs = 2600) {
-    const [index, setIndex] = useState(0);
-    useEffect(() => {
-        const id = window.setInterval(
-            () => setIndex((i) => (i + 1) % words.length),
-            intervalMs,
-        );
-        return () => window.clearInterval(id);
-    }, [words.length, intervalMs]);
-    return words[index];
-}
-
 function MarketingPage({ mounted }: { mounted: boolean }) {
-    const word = useWordRotator(ROTATING_WORDS);
-    // Tracks whether the CTA has been hovered at least once so the shimmer
-    // re-plays cleanly each hover (we toggle a key on the span to restart
-    // the CSS animation; CSS animations don't replay on the same element
-    // unless we either remove + re-add the class or remount).
-    const [shimmerKey, setShimmerKey] = useState(0);
-
     return (
         <div
-            data-theme-scope="brand-green"
-            className="relative min-h-full bg-shell-bg overflow-hidden flex flex-col items-center justify-center px-6 text-center text-foreground"
+            data-theme="warm"
+            className="relative min-h-full bg-shell-bg flex flex-col items-center justify-center px-6 text-center text-foreground"
         >
-            <div className="pointer-events-none absolute inset-0" aria-hidden>
-                <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-brand/10 blur-[120px] animate-blob" />
-                <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-brand/8 blur-[100px] animate-blob animation-delay-2000" />
-            </div>
-
-            <div className={`relative z-10 max-w-2xl transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
-                <div className="flex items-center justify-center gap-3 mb-8">
-                    <span className="relative inline-flex w-3 h-3" aria-hidden>
+            <div
+                className={`relative z-10 flex flex-col items-center gap-8 transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+            >
+                <div className="flex items-center gap-4">
+                    {/* Brand dot with pulse ring */}
+                    <span className="relative inline-flex w-4 h-4 shrink-0" aria-hidden>
                         <span className="absolute inset-0 rounded-full bg-brand animate-brand-ping" />
-                        <span className="relative inline-flex w-3 h-3 rounded-full bg-brand" />
+                        <span className="relative rounded-full w-4 h-4 bg-brand" />
                     </span>
-                    <span className="text-eyebrow tracking-eyebrow text-shell-muted uppercase text-sm font-semibold">OpenVision</span>
+
+                    {/* Wordmark — solid base with a bright stripe that sweeps
+                        through the glyphs every 5 s (overlay copy, clipped to text) */}
+                    <span className="relative inline-block text-5xl sm:text-6xl font-black tracking-tight text-foreground select-none">
+                        OpenVision
+                        <span className="wordmark-sheen absolute inset-0" aria-hidden>
+                            OpenVision
+                        </span>
+                    </span>
                 </div>
-
-                <h1 className="text-5xl sm:text-6xl font-extrabold tracking-tight text-foreground mb-4 leading-tight">
-                    Academic Assessment,<br />
-                    {/*
-                      key={word} forces React to remount the span on every
-                      rotation, which restarts the gradient animation from
-                      its 0% position and makes each new word feel fresh
-                      rather than mid-cycle.
-                    */}
-                    <span
-                        key={word}
-                        className="text-brand-gradient inline-block animate-[fadeInUp_0.6s_ease-out]"
-                        aria-live="polite"
-                    >
-                        {word}
-                    </span>
-                </h1>
-
-                <p className="text-lg text-shell-muted mb-10 leading-relaxed">
-                    Psychometrically sound. Beautifully designed. Built for the modern university.
-                </p>
 
                 <Link
                     href="/login"
-                    onMouseEnter={() => setShimmerKey((k) => k + 1)}
-                    className="group relative inline-flex items-center gap-2 overflow-hidden bg-brand hover:bg-brand/90 text-white font-semibold px-8 py-4 rounded-xl text-base transition-all hover:scale-[1.02] hover:shadow-[0_0_32px_var(--color-brand)] focus-ring"
+                    className="inline-flex items-center justify-center bg-brand hover:bg-brand/90 text-white font-semibold px-8 py-3.5 rounded-xl text-base transition-colors focus-ring"
                 >
-                    {/* Diagonal shimmer that sweeps left → right on hover */}
-                    <span
-                        key={shimmerKey}
-                        aria-hidden
-                        className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-brand-shimmer"
-                    />
-                    <span className="relative">Sign in to OpenVision</span>
-                    <span className="relative transition-transform group-hover:translate-x-0.5">→</span>
+                    Sign in
                 </Link>
-
-                <div className="mt-12 flex flex-wrap justify-center gap-4 text-sm text-shell-muted">
-                    {[
-                        'Adaptive Blueprints',
-                        'Psychometric Analytics',
-                        'Secure Exam Delivery',
-                    ].map((label) => (
-                        <span
-                            key={label}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-shell-border bg-shell-surface/50 hover:border-brand/40 transition-colors"
-                        >
-                            {label}
-                        </span>
-                    ))}
-                </div>
             </div>
         </div>
     );
 }
 
-// ─── Role-aware quick actions ─────────────────────────────────────────────────
+// ─── Role-aware home dashboard ────────────────────────────────────────────────
 
-interface QuickAction {
-    href: string;
-    label: string;
-    description: string;
-}
-
-const CONSTRUCTOR_ACTIONS: QuickAction[] = [
-    { href: '/items', label: 'Item Library', description: 'Browse, author & manage question items' },
-    { href: '/blueprint', label: 'Blueprints', description: 'Design exam blueprints and test structures' },
-    { href: '/sessions', label: 'Sessions', description: 'Schedule and manage exam sessions' },
-    { href: '/analytics', label: 'Analytics', description: 'Review psychometric stats and item performance' },
-];
-
-const ADMIN_ACTIONS: QuickAction[] = [
-    { href: '/sessions', label: 'Sessions', description: 'Manage and schedule all exam sessions' },
-    { href: '/items', label: 'Item Library', description: 'Browse and manage all question items' },
-    { href: '/blueprint', label: 'Blueprints', description: 'Create and edit exam blueprints' },
-    { href: '/analytics', label: 'Analytics', description: 'Platform-wide psychometric analytics' },
-];
-
-const STUDENT_ACTIONS: QuickAction[] = [
-    { href: '/my-exams', label: 'My Exams', description: 'View upcoming and active exam sessions' },
-    { href: '/my-grades', label: 'My Grades', description: 'See published results and feedback' },
-];
-
-function getActions(role: string): QuickAction[] {
-    if (role === 'STUDENT') return STUDENT_ACTIONS;
-    if (role === 'ADMIN') return ADMIN_ACTIONS;
-    return CONSTRUCTOR_ACTIONS; // CONSTRUCTOR | REVIEWER
-}
-
-function getRoleLabel(role: string): string {
-    switch (role) {
-        case 'ADMIN': return 'Administrator';
-        case 'CONSTRUCTOR': return 'Constructor';
-        case 'REVIEWER': return 'Reviewer';
-        case 'STUDENT': return 'Student';
-        default: return role;
-    }
-}
-
+/**
+ * The signed-in home screen. Surfaces *every* destination the role can reach
+ * (Epoch 14.5) — sourced from the same `navLinksForRole` the header uses — as
+ * single-label tiles with no description or arrow.
+ */
 function DashboardPage({ mounted }: { mounted: boolean }) {
     const { user } = useAuthStore();
     const router = useRouter();
-    const role = user?.role ?? 'CONSTRUCTOR';
-    const actions = getActions(role);
-    const firstName = user?.email?.split('@')[0] ?? 'there';
+    // L-3: don't default an unhydrated role to a staff view — pass through null.
+    const role = user?.role ?? null;
+    const links = navLinksForRole(role);
+    const firstName = user?.display_name?.trim() || user?.email?.split('@')[0] || 'there';
 
     return (
         <div className="relative min-h-full bg-shell-bg overflow-hidden">
@@ -170,40 +77,23 @@ function DashboardPage({ mounted }: { mounted: boolean }) {
             <div className={`relative z-10 max-w-4xl mx-auto px-6 py-16 transition-all duration-700 ease-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
                 {/* Header */}
                 <div className="mb-12">
-                    <div className="flex items-center gap-2 mb-4">
-                        <span className="w-2 h-2 rounded-full bg-brand animate-pulse" />
-                        <span className="text-xs font-bold uppercase tracking-eyebrow text-shell-muted">{getRoleLabel(role)}</span>
-                    </div>
                     <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-foreground leading-tight">
-                        Welcome back,<br />
-                        <span className="text-brand">{firstName}.</span>
+                        What would you like to work on today,<br />
+                        <span className="text-brand">{firstName}?</span>
                     </h1>
-                    <p className="mt-4 text-shell-muted text-lg">
-                        What would you like to work on today?
-                    </p>
                 </div>
 
-                {/* Quick action grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {actions.map((action) => (
+                {/* Quick action grid — single label, no subtext, no arrow. */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {links.map((link) => (
                         <button
-                            key={action.href}
-                            onClick={() => router.push(action.href)}
-                            className="group text-left rounded-2xl border border-shell-border bg-shell-surface p-6 transition-all duration-200 hover:-translate-y-1 hover:shadow-elevated hover:border-brand/40 focus-ring focus:outline-none"
+                            key={link.href}
+                            onClick={() => router.push(link.href)}
+                            className="group rounded-2xl border border-shell-border bg-shell-surface px-6 py-7 text-center transition-all duration-200 hover:-translate-y-1 hover:shadow-elevated hover:border-brand/40 focus-ring focus:outline-none"
                         >
-                            <div className="flex items-start gap-4">
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-base font-bold text-foreground">
-                                            {action.label}
-                                        </span>
-                                        <span className="text-shell-muted-dim group-hover:text-brand transition-colors text-sm">→</span>
-                                    </div>
-                                    <p className="mt-1 text-sm text-shell-muted leading-snug">
-                                        {action.description}
-                                    </p>
-                                </div>
-                            </div>
+                            <span className="text-base font-bold text-foreground group-hover:text-brand transition-colors">
+                                {link.name}
+                            </span>
                         </button>
                     ))}
                 </div>

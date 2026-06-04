@@ -106,6 +106,15 @@ export function useProctoring(
         }
 
         if (policy.require_fullscreen) {
+            // C-2: actually enter fullscreen — previously the hook only listened
+            // for exits and never requested it, so the policy was inert. Browsers
+            // require a recent user gesture; the exam is reached via a click, so
+            // this usually succeeds, and a denial is reported rather than swallowed.
+            if (!document.fullscreenElement) {
+                document.documentElement
+                    .requestFullscreen?.()
+                    .catch(() => report('FULLSCREEN_EXIT'));
+            }
             const onFullscreenChange = () => {
                 if (!document.fullscreenElement) report('FULLSCREEN_EXIT');
             };

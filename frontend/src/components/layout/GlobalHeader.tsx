@@ -8,6 +8,7 @@ import { useNavGuardStore } from '@/stores/useNavGuardStore';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 import AccountMenu from '@/components/layout/AccountMenu';
 import { cn, useConfirm } from '@/components/ui';
+import { navLinksForRole } from '@/lib/navigation';
 
 export default function GlobalHeader() {
     const pathname = usePathname();
@@ -40,26 +41,8 @@ export default function GlobalHeader() {
         }
     };
 
-    const navLinks =
-        user?.role === 'STUDENT'
-            ? [
-                  { name: 'My Exams', href: '/my-exams' },
-                  { name: 'My Grades', href: '/my-grades' },
-              ]
-            : [
-                  { name: 'Library', href: '/items' },
-                  { name: 'Blueprints', href: '/blueprint' },
-                  { name: 'Sessions', href: '/sessions' },
-                  { name: 'Grading', href: '/grading' },
-                  { name: 'Analytics', href: '/analytics' },
-                  // Accommodations is admin-only (backend enforces 403 regardless).
-                  ...(user?.role === 'ADMIN'
-                      ? [{ name: 'Accommodations', href: '/admin/accommodations' }]
-                      : []),
-                  ...(user?.role === 'ADMIN' || user?.role === 'CONSTRUCTOR'
-                      ? [{ name: 'Integrations', href: '/integrations' }]
-                      : []),
-              ];
+    // Single source shared with the home dashboard tiles (Epoch 14.5).
+    const navLinks = navLinksForRole(user?.role);
 
     const navLinkClass = (active: boolean) =>
         cn(
@@ -85,7 +68,7 @@ export default function GlobalHeader() {
                             </Link>
                             <nav className="hidden md:flex items-center gap-0.5">
                                 {navLinks.map((link) => {
-                                    const isActive = pathname.startsWith(link.href);
+                                    const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
                                     return (
                                         <Link
                                             key={link.name}
@@ -110,7 +93,7 @@ export default function GlobalHeader() {
                 <div className="md:hidden border-t border-shell-border">
                     <div className="px-2 py-2 flex justify-around overflow-x-auto">
                         {navLinks.map((link) => {
-                            const isActive = pathname.startsWith(link.href);
+                            const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
                             return (
                                 <Link
                                     key={link.name}

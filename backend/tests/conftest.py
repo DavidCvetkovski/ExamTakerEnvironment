@@ -62,6 +62,9 @@ async def cleanup_database():
     await prisma_client.interaction_events.delete_many()
     await prisma_client.question_grades.delete_many()
     await prisma_client.session_results.delete_many()
+    # proctoring_incidents FK exam_sessions with onDelete: NoAction, so it must
+    # be wiped before exam_sessions / scheduled_exam_sessions.
+    await prisma_client.proctoring_incidents.delete_many()
     await prisma_client.exam_sessions.delete_many()
     await prisma_client.scheduled_exam_sessions.delete_many()
     await prisma_client.course_enrollments.delete_many()

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ScheduledSession } from '@/stores/useSessionManagerStore';
 import { useSessionManagerStore } from '@/stores/useSessionManagerStore';
-import { Button, Badge, EmptyState, RowActionMenu, useToast } from '@/components/ui';
+import { Badge, EmptyState, RowActionMenu, useToast } from '@/components/ui';
 import { api } from '@/lib/api';
 import { copyText } from '@/lib/clipboard';
 import { useCountdown } from '@/hooks/useCountdown';
@@ -32,6 +32,8 @@ function SessionRow({
     countdownTone,
     showCopyId,
     showMonitor,
+    showReview,
+    showSebDownload,
 }: {
     session: ScheduledSession;
     isBusy: boolean;
@@ -43,6 +45,9 @@ function SessionRow({
     countdownTone?: string;
     showCopyId?: boolean;
     showMonitor?: boolean;
+    showReview?: boolean;
+    /** L-9: show the SEB download for SCHEDULED rows too (independent of showMonitor). */
+    showSebDownload?: boolean;
 }) {
     const { display: countdown } = useCountdown(countdownTarget ?? session.starts_at);
     const now = useServerNow(60_000);
@@ -74,9 +79,27 @@ function SessionRow({
         }
     };
 
+    // Epoch 14.6 — every per-row control lives in the overflow menu. The order
+    // is deliberate: the navigational primary (Monitor while live, Review once
+    // closed) first, then management actions, then the destructive Cancel last.
     const menuItems = [
-        ...(showMonitor ? [{ label: 'Download SEB config', onClick: downloadSeb }] : []),
+        ...(showMonitor
+            ? [{ label: 'Monitor', onClick: () => router.push(`/sessions/${session.id}/monitor`) }]
+            : []),
+        // Epoch 14.7 — a closed session's recorded proctoring data stays
+        // reachable through the same page, relabelled "Review".
+        // M-3: only show "Review proctoring" when the test was actually proctored.
+        ...(showReview && session.has_proctoring
+            ? [{ label: 'Review proctoring', onClick: () => router.push(`/sessions/${session.id}/monitor?mode=review`) }]
+            : []),
+        { label: 'Manage enrollments', onClick: () => onManageEnrollments(session.course_id) },
+        { label: 'Practice', onClick: () => { void onPractice(session.test_definition_id); } },
+        // L-9: SEB config is available for SCHEDULED and ACTIVE sessions.
+        ...(showMonitor || showSebDownload ? [{ label: 'Get exam launcher file', onClick: downloadSeb }] : []),
         ...(showCopyId ? [{ label: 'Copy session ID', onClick: copyId }] : []),
+        ...(canCancel
+            ? [{ label: 'Cancel session', tone: 'danger' as const, onClick: () => onRequestCancel(session.id), disabled: isBusy }]
+            : []),
     ];
 
     return (
@@ -103,40 +126,7 @@ function SessionRow({
                 </td>
             )}
             <td className="py-4">
-                <div className="flex flex-wrap gap-2">
-                    {showMonitor && (
-                        <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => router.push(`/sessions/${session.id}/monitor`)}
-                        >
-                            Monitor
-                        </Button>
-                    )}
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => onManageEnrollments(session.course_id)}
-                    >
-                        Enrollments
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => onPractice(session.test_definition_id)}
-                    >
-                        Practice
-                    </Button>
-                    {canCancel && (
-                        <Button
-                            variant="destructive"
-                            size="sm"
-                            disabled={isBusy}
-                            onClick={() => onRequestCancel(session.id)}
-                        >
-                            Cancel
-                        </Button>
-                    )}
+                <div className="flex justify-end">
                     {menuItems.length > 0 && (
                         <RowActionMenu ariaLabel="Session actions" items={menuItems} />
                     )}
@@ -159,6 +149,8 @@ function SessionTable({
     startsHeader,
     showCopyId,
     showMonitor,
+    showReview,
+    showSebDownload,
 }: {
     sessions: ScheduledSession[];
     isBusy: boolean;
@@ -169,14 +161,11 @@ function SessionTable({
     countdownField?: 'starts_at' | 'ends_at';
     countdownLabel?: string;
     countdownTone?: string;
-    /** Column-header tense for the start timestamp. Ongoing/completed
-     * sessions have already started, so the header reads "Started"; for
-     * future-scheduled rows it stays "Starts". */
     startsHeader?: 'Starts' | 'Started';
-    /** Show a row overflow menu to copy the session id (completed rows). */
     showCopyId?: boolean;
-    /** Show the live-monitor entry point + SEB download (ongoing rows). */
     showMonitor?: boolean;
+    showReview?: boolean;
+    showSebDownload?: boolean;
 }) {
     if (sessions.length === 0) return null;
     return (
@@ -206,6 +195,8 @@ function SessionTable({
                             countdownTone={countdownTone}
                             showCopyId={showCopyId}
                             showMonitor={showMonitor}
+                            showReview={showReview}
+                            showSebDownload={showSebDownload}
                         />
                     ))}
                 </tbody>
@@ -221,7 +212,16 @@ export default function ScheduledSessionsTable({
     onPractice,
     onManageEnrollments,
 }: ScheduledSessionsTableProps) {
-    const [showCompleted, setShowCompleted] = useState(false);
+    // L-6: auto-expand the completed bucket when it is the only non-empty one
+    // so a constructor whose first session just closed doesn't see a blank page.
+    // useState takes an initialiser fn — buckets aren't known yet, but we can
+    // seed from the passed sessions directly since they're available in scope.
+    const [showCompleted, setShowCompleted] = useState(() => {
+        const now = new Date();
+        const hasOngoing = sessions.some((s) => deriveScheduledStatus(s, now) === 'ACTIVE');
+        const hasScheduled = sessions.some((s) => deriveScheduledStatus(s, now) === 'SCHEDULED');
+        return !hasOngoing && !hasScheduled;
+    });
     const fetchScheduledSessions = useSessionManagerStore((s) => s.fetchScheduledSessions);
 
     // Epoch 8.6 Stage 1 — reactive lifecycle.
@@ -291,6 +291,7 @@ export default function ScheduledSessionsTable({
                         countdownField="starts_at"
                         countdownLabel="Starts in"
                         countdownTone="var(--color-info-fg)"
+                        showSebDownload
                     />
                 </div>
             )}
@@ -318,6 +319,7 @@ export default function ScheduledSessionsTable({
                                 onManageEnrollments={onManageEnrollments}
                                 startsHeader="Started"
                                 showCopyId
+                                showReview
                             />
                         </div>
                     )}

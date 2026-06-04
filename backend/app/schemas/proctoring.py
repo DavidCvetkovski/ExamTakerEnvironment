@@ -74,7 +74,6 @@ class MonitorAttemptRow(BaseModel):
     current_question_label: Optional[str] = None
     last_seen_at: Optional[datetime] = None
     presence: str  # ACTIVE | IDLE | DISCONNECTED
-    is_paused: bool = False
     flagged_for_review: bool = False
     incident_count: int = 0
 
@@ -86,15 +85,6 @@ class MonitorResponse(BaseModel):
     page: int
     page_size: int
     attempts: List[MonitorAttemptRow]
-
-
-# ---------------------------------------------------------------------------
-# Interventions
-# ---------------------------------------------------------------------------
-
-
-class ExtendRequest(BaseModel):
-    minutes: int = Field(gt=0, le=240)
 
 
 # ---------------------------------------------------------------------------

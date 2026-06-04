@@ -162,13 +162,16 @@ async def auto_grade_session(session_id: UUID) -> Dict[str, Any]:
             max_points += points_possible
             pending_manual += 1
 
-    # Upsert question_grades (skip if already exist to avoid race conditions)
+    # Replace question_grades atomically (M-8): wrapping the delete+create in one
+    # transaction stops a concurrent grader (submit vs. timeout-finalize) from
+    # observing — or deleting — a half-written set between the two statements.
     if grade_records:
-        await prisma.question_grades.delete_many(where={"session_id": str(session_id)})
-        await prisma.question_grades.create_many(
-            data=grade_records,
-            skip_duplicates=True,
-        )
+        async with prisma.tx() as tx:
+            await tx.question_grades.delete_many(where={"session_id": str(session_id)})
+            await tx.question_grades.create_many(
+                data=grade_records,
+                skip_duplicates=True,
+            )
 
     # Determine overall grading status.
     # When no manual grading is pending and at least one item was auto-graded,

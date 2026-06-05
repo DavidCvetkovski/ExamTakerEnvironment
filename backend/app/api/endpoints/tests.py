@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from uuid import UUID
 import uuid as _uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from prisma import Json
@@ -148,7 +148,7 @@ async def duplicate_test_definition(
     original = await prisma.test_definitions.find_unique(where={"id": str(test_id)})
     if not original:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Blueprint not found.")
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     copy = await prisma.test_definitions.create(data={
         "id": str(_uuid.uuid4()),
         "title": f"{original.title} (Copy)",

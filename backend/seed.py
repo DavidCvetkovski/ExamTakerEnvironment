@@ -3,7 +3,7 @@ Seed script: Creates test users (ADMIN, CONSTRUCTOR, REVIEWER), an ItemBank,
 and a LearningObject. Prints the LearningObject UUID for the frontend to use.
 """
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.models import Course, CourseEnrollment, ItemBank, LearningObject, ScheduledExamSession, TestDefinition, User
@@ -100,8 +100,8 @@ def seed():
         course_id=course.id,
         test_definition_id=blueprint.id,
         created_by=created_users[UserRole.CONSTRUCTOR].id,
-        starts_at=datetime.utcnow() + timedelta(days=1),
-        ends_at=datetime.utcnow() + timedelta(days=1, minutes=60),
+        starts_at=datetime.now(timezone.utc) + timedelta(days=1),
+        ends_at=datetime.now(timezone.utc) + timedelta(days=1, minutes=60),
     )
     db.add(scheduled)
     db.commit()

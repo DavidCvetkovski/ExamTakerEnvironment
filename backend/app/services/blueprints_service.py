@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
 
@@ -49,7 +49,7 @@ async def create_test_definition(
     blocks_data = [block.model_dump(mode="json") for block in payload.blocks]
     course_id = await _validate_course(payload.course_id)
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     new_test = await prisma.test_definitions.create(
         data={
             "title": payload.title,
@@ -120,7 +120,7 @@ async def update_test_definition(
             "proctoring_config": Json(_proctoring_for_write(payload, existing_key)),
             # Bump updated_at on every write so the blueprint card always
             # reflects the latest edit time (Stage 18i).
-            "updated_at": datetime.utcnow(),
+            "updated_at": datetime.now(timezone.utc),
         }
     )
     # The blocks (and therefore the resolved item pool) may have changed, so

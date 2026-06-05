@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.core.prisma_db import prisma
 from prisma import Json
@@ -100,7 +100,7 @@ def serialize_learning_object_summary(lo) -> Optional[LearningObjectListResponse
             preview = full_text[:100] + ("..." if len(full_text) > 100 else "")
 
     course = getattr(lo, "courses", None)
-    updated_at = latest.created_at or lo.created_at or datetime.utcnow()
+    updated_at = latest.created_at or lo.created_at or datetime.now(timezone.utc)
     return LearningObjectListResponse(
         id=UUID(lo.id),
         bank_id=UUID(lo.bank_id),

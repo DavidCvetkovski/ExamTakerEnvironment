@@ -23,3 +23,4 @@ from .self_heal_incident import (
     SelfHealSeverity,
     SelfHealStatus,
 )
+from .course_enrollment_audit import CourseEnrollmentAudit, CourseEnrollmentAction

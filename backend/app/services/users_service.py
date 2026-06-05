@@ -1,11 +1,14 @@
 from typing import Optional
 from fastapi import HTTPException, status, Response
 
+from jose import JWTError
+
 from app.core.security import (
     hash_password,
     verify_password,
     create_access_token,
     create_refresh_token,
+    decode_token,
 )
 from app.core.config import settings
 from app.core.dependencies import assert_token_version
@@ -191,6 +194,28 @@ async def sign_out_everywhere(
         data={"token_version": {"increment": 1}},
     )
     return issue_session(updated, response)
+
+
+async def logout_user(refresh_token: Optional[str], response: Response) -> None:
+    """Clear the refresh cookie and invalidate the presented refresh token.
+
+    Bumping ``token_version`` kills the refresh token server-side immediately, so
+    a captured cookie can't be replayed after the user logs out (plain logout was
+    previously cookie-clear only). Best-effort: an expired or malformed cookie
+    still clears cleanly — logout is idempotent and never errors.
+    """
+    if refresh_token:
+        try:
+            payload = decode_token(refresh_token)
+            user_id = payload.get("sub")
+            if user_id and payload.get("type") == "refresh":
+                await prisma.users.update(
+                    where={"id": user_id},
+                    data={"token_version": {"increment": 1}},
+                )
+        except JWTError:
+            pass  # already-invalid token — nothing to revoke
+    response.delete_cookie("refresh_token")
 
 
 async def deactivate_self(

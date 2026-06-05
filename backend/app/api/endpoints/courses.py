@@ -66,7 +66,7 @@ async def add_course_enrollment_endpoint(
     current_user: User = Depends(require_role(UserRole.CONSTRUCTOR, UserRole.ADMIN)),
 ):
     """Enroll a student in a course."""
-    return await add_course_enrollment(course_id, payload)
+    return await add_course_enrollment(course_id, payload, changed_by=str(current_user.id))
 
 
 @router.delete("/{course_id}/enrollments/{student_id}")
@@ -76,4 +76,4 @@ async def remove_course_enrollment_endpoint(
     current_user: User = Depends(require_role(UserRole.CONSTRUCTOR, UserRole.ADMIN)),
 ):
     """Deactivate a student's enrollment for a course."""
-    return await remove_course_enrollment(course_id, student_id)
+    return await remove_course_enrollment(course_id, student_id, changed_by=str(current_user.id))

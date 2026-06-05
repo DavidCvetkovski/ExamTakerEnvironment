@@ -230,6 +230,21 @@ model accommodation_audit_log {
   @@index([created_at], map: "ix_accommodation_audit_created_at")
 }
 
+// Epoch 15 — append-only log of who changed a course roster. Courses are
+// co-managed by any constructor (a shared institutional resource), so the audit
+// trail is what makes a roster change attributable. Never updated or deleted.
+model course_enrollment_audit {
+  id          String   @id @default(uuid()) @db.Uuid
+  course_id   String   @db.Uuid
+  student_id  String   @db.Uuid
+  changed_by  String   @db.Uuid
+  action      String   @db.VarChar // 'ENROLL' | 'REMOVE'
+  created_at  DateTime @default(now()) @db.Timestamp(6)
+
+  @@index([course_id], map: "ix_course_enrollment_audit_course_id")
+  @@index([created_at], map: "ix_course_enrollment_audit_created_at")
+}
+
 model lti_platforms {
   id              String    @id @default(uuid()) @db.Uuid
   name            String    @db.VarChar

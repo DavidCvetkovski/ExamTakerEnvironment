@@ -125,10 +125,6 @@ export default function TestGradingDashboard() {
         return runs?.find((r) => r.run_id === runId) ?? null;
     }, [runsByTestId, testId, runId]);
 
-    useEffect(() => {
-        if (user?.role === 'STUDENT') router.replace('/my-exams');
-    }, [user, router]);
-
     const blueprint = useMemo(
         () => blueprints.find((b) => b.id === testId) ?? null,
         [blueprints, testId],

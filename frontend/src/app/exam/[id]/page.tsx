@@ -15,7 +15,7 @@ import ExamFooter from '@/components/exam/ExamFooter';
 import SaveIndicator from '@/components/exam/SaveIndicator';
 import ReviewSummary from '@/components/exam/ReviewSummary';
 import SubmissionConfirmation from '@/components/exam/SubmissionConfirmation';
-import { Button, Spinner } from '@/components/ui';
+import { Button, Spinner, KeyboardIcon } from '@/components/ui';
 import { useAnnounce } from '@/components/ui/useAnnouncer';
 import A11yQuickAdjust from '@/components/exam/A11yQuickAdjust';
 import KeyboardShortcutsDialog from '@/components/exam/KeyboardShortcutsDialog';
@@ -264,10 +264,7 @@ export default function ExamPage() {
                             title="Keyboard shortcuts (?)"
                             className="flex h-9 w-9 items-center justify-center rounded-md border border-shell-border text-shell-muted transition-colors hover:bg-shell-input hover:text-foreground focus-ring"
                         >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <rect x="2" y="6" width="20" height="12" rx="2" />
-                                <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" />
-                            </svg>
+                            <KeyboardIcon size={16} />
                         </button>
                         <Button
                             variant="primary"

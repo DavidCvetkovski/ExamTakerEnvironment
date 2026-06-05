@@ -66,9 +66,12 @@ async def refresh(
     return await svc.refresh_tokens(payload=payload, response=response)
 
 @router.post("/logout")
-async def logout(response: Response):
-    """Clear the refresh token cookie."""
-    response.delete_cookie("refresh_token")
+async def logout(
+    response: Response,
+    refresh_token: Optional[str] = Cookie(None),
+):
+    """Clear the refresh token cookie and revoke it server-side."""
+    await svc.logout_user(refresh_token=refresh_token, response=response)
     return {"detail": "Logged out successfully."}
 
 @router.post("/change-password", response_model=TokenResponse)

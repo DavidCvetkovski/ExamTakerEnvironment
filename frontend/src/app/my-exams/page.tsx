@@ -10,6 +10,7 @@ import { useExamStore } from '@/stores/useExamStore';
 import { useStudentSessionsStore, type StudentScheduledSession } from '@/stores/useStudentSessionsStore';
 import { useLifecycleSync } from '@/hooks/useLifecycleSync';
 import { EmptyState, PageHeader, SectionHeader } from '@/components/ui';
+import PageShell from '@/components/layout/PageShell';
 
 export default function MyExamsPage() {
     const router = useRouter();
@@ -48,8 +49,7 @@ export default function MyExamsPage() {
 
     return (
         <ProtectedRoute allowedRoles={['STUDENT']}>
-            <div className="min-h-full bg-shell-bg text-foreground">
-                <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-10">
+            <PageShell width="standard">
                     <PageHeader
                         eyebrow="Student portal"
                         title="My Exams"
@@ -140,8 +140,7 @@ export default function MyExamsPage() {
                             Looking for past results? See My Grades →
                         </Link>
                     </div>
-                </div>
-            </div>
+            </PageShell>
         </ProtectedRoute>
     );
 }

@@ -25,7 +25,6 @@ import {
 } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { useAuthStore } from '@/stores/useAuthStore';
 import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import { useGradingStore, type GradingRun } from '@/stores/useGradingStore';
 import { formatAbsolute, formatScheduled } from '@/lib/relativeTime';
@@ -119,20 +118,16 @@ const LIFECYCLE_TONE: Record<
 export default function GradingRunsPickerPage() {
     const router = useRouter();
     const { testId } = useParams<{ testId: string }>();
-    const { user } = useAuthStore();
     const { blueprints, fetchBlueprints } = useBlueprintStore();
     const {
         runsByTestId, runsLoading, error,
         fetchGradingRuns, clearError,
     } = useGradingStore();
 
+    // ProtectedRoute already restricts this page to staff — no inline role guard.
     useEffect(() => {
-        if (user?.role === 'STUDENT') {
-            router.replace('/my-exams');
-            return;
-        }
         fetchBlueprints();
-    }, [user, router, fetchBlueprints]);
+    }, [fetchBlueprints]);
 
     useEffect(() => {
         if (testId) void fetchGradingRuns(testId);

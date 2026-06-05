@@ -10,6 +10,7 @@ import {
     EmptyState,
     Input,
     PageHeader,
+    LockIcon,
     RowActionMenu,
     Select,
     SortArrow,
@@ -54,13 +55,7 @@ function LockStatus({ locked, count }: { locked: boolean; count: number }) {
             title={title}
             aria-label={`${label} - ${title}`}
         >
-            {locked ? (
-                <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-                    <path d="M5 7V5a3 3 0 1 1 6 0v2h.5A1.5 1.5 0 0 1 13 8.5v4A1.5 1.5 0 0 1 11.5 14h-7A1.5 1.5 0 0 1 3 12.5v-4A1.5 1.5 0 0 1 4.5 7H5Zm1 0h4V5a2 2 0 1 0-4 0v2Z" />
-                </svg>
-            ) : (
-                <span aria-hidden="true">-</span>
-            )}
+            {locked ? <LockIcon size={13} /> : <span aria-hidden="true">-</span>}
             <span>{label}</span>
         </span>
     );

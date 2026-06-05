@@ -21,7 +21,7 @@ export type { RowAction } from './RowActionMenu';
 export { default as Avatar } from './Avatar';
 export { default as Modal } from './Modal';
 export { default as Drawer } from './Drawer';
-export { CheckIcon, XIcon, AlertIcon } from './icons';
+export { CheckIcon, XIcon, AlertIcon, RefreshIcon, KeyboardIcon, LockIcon } from './icons';
 export { default as SortArrow } from './SortArrow';
 export type { SortDir } from './SortArrow';
 export { default as LiveRegion } from './LiveRegion';

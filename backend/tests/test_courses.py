@@ -78,6 +78,30 @@ async def test_create_course_and_enroll_student(ac: AsyncClient, setup_courses_d
 
 
 @pytest.mark.anyio
+async def test_roster_changes_are_audited(ac: AsyncClient, setup_courses_data):
+    """Courses are co-managed, so every enroll/remove writes an attributable
+    audit row (who, which student, which action)."""
+    token = await login(ac, ADMIN_EMAIL, ADMIN_PASS)
+    course_id = (await ac.post(
+        "/api/courses/", json={"code": "AUD101", "title": "Audited"}, headers=auth(token),
+    )).json()["id"]
+    student_id = setup_courses_data["student_id"]
+
+    await ac.post(
+        f"/api/courses/{course_id}/enrollments",
+        json={"student_id": student_id}, headers=auth(token),
+    )
+    await ac.delete(f"/api/courses/{course_id}/enrollments/{student_id}", headers=auth(token))
+
+    rows = await prisma.course_enrollment_audit.find_many(where={"course_id": course_id})
+    actions = sorted(r.action for r in rows)
+    assert actions == ["ENROLL", "REMOVE"]
+    # Every row is attributed to the admin who made the change.
+    assert all(r.changed_by == setup_courses_data["admin_id"] for r in rows)
+    assert all(r.student_id == student_id for r in rows)
+
+
+@pytest.mark.anyio
 async def test_remove_enrollment_hard_deletes(ac: AsyncClient, setup_courses_data):
     token = await login(ac, ADMIN_EMAIL, ADMIN_PASS)
     student_id = setup_courses_data["student_id"]

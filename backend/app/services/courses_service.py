@@ -172,9 +172,25 @@ async def resolve_student_for_enrollment(payload: EnrollmentCreateRequest) -> An
     return student
 
 
+async def _record_enrollment_audit(
+    *, course_id: str, student_id: str, changed_by: str, action: str
+) -> None:
+    """Append a roster-change audit row. Courses are co-managed, so this is what
+    makes a change attributable to whoever made it (§8.8)."""
+    await prisma.course_enrollment_audit.create(
+        data={
+            "course_id": course_id,
+            "student_id": student_id,
+            "changed_by": changed_by,
+            "action": action,
+        }
+    )
+
+
 async def add_course_enrollment(
     course_id: UUID,
     payload: EnrollmentCreateRequest,
+    changed_by: str,
 ) -> Dict[str, Any]:
     """Create or reactivate a course enrollment for a student."""
     await get_course_or_404(str(course_id))
@@ -200,6 +216,10 @@ async def add_course_enrollment(
             data={"is_active": True},
             include={"users": True},
         )
+        await _record_enrollment_audit(
+            course_id=str(course_id), student_id=str(student.id),
+            changed_by=changed_by, action="ENROLL",
+        )
         return serialize_enrollment(reactivated)
 
     enrollment = await prisma.course_enrollments.create(
@@ -210,10 +230,16 @@ async def add_course_enrollment(
         },
         include={"users": True},
     )
+    await _record_enrollment_audit(
+        course_id=str(course_id), student_id=str(student.id),
+        changed_by=changed_by, action="ENROLL",
+    )
     return serialize_enrollment(enrollment)
 
 
-async def remove_course_enrollment(course_id: UUID, student_id: UUID) -> Dict[str, str]:
+async def remove_course_enrollment(
+    course_id: UUID, student_id: UUID, changed_by: str
+) -> Dict[str, str]:
     """Permanently remove a student from a course roster."""
     await get_course_or_404(str(course_id))
     await assert_can_remove(str(course_id))
@@ -230,4 +256,8 @@ async def remove_course_enrollment(course_id: UUID, student_id: UUID) -> Dict[st
         )
 
     await prisma.course_enrollments.delete(where={"id": enrollment.id})
+    await _record_enrollment_audit(
+        course_id=str(course_id), student_id=str(student_id),
+        changed_by=changed_by, action="REMOVE",
+    )
     return {"status": "removed"}

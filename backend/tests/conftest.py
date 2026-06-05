@@ -45,6 +45,7 @@ async def cleanup_database():
         await redis_module.redis_client.flushdb()
     # Order: Children first
     await prisma_client.self_heal_incidents.delete_many()
+    await prisma_client.course_enrollment_audit.delete_many()
     await prisma_client.integration_audit_logs.delete_many()
     await prisma_client.lti_grade_passbacks.delete_many()
     await prisma_client.qti_jobs.delete_many()

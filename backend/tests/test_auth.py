@@ -172,6 +172,20 @@ async def test_logout_clears_cookie(ac: AsyncClient):
     assert logout_resp.json()["detail"] == "Logged out successfully."
 
 
+@pytest.mark.anyio
+async def test_logout_revokes_refresh_token_server_side(ac: AsyncClient):
+    """After logout, the captured refresh token can no longer mint a session
+    (token_version bumped) — not just a cleared cookie."""
+    await ac.post("/api/auth/register", json={"email": "revoke@vu.nl", "password": "strongpassword123"})
+    login = await ac.post("/api/auth/login", json={"email": "revoke@vu.nl", "password": "strongpassword123"})
+    stolen = login.cookies.get("refresh_token")
+
+    await ac.post("/api/auth/logout", cookies={"refresh_token": stolen})
+
+    replay = await ac.post("/api/auth/refresh", cookies={"refresh_token": stolen})
+    assert replay.status_code == 401
+
+
 # ---------------------------------------------------------------------------
 # Token + auth hardening
 # ---------------------------------------------------------------------------

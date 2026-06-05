@@ -10,6 +10,7 @@ from app.core.security import (
 from app.core.config import settings
 from app.core.dependencies import assert_token_version
 from app.core.prisma_db import prisma
+from app.models.user import UserRole
 from app.schemas.auth import RegisterRequest, LoginRequest, TokenResponse, UserPublic
 
 def build_token_payload(user) -> dict:
@@ -34,7 +35,9 @@ def set_refresh_cookie(response: Response, refresh_token: str):
         value=refresh_token,
         httponly=True,
         samesite="lax",
-        secure=False,  # Set True in production
+        # Secure in production so the long-lived refresh token is never sent over
+        # plaintext HTTP; left off in dev/test where the app runs on http://.
+        secure=settings.ENVIRONMENT == "production",
         max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400,
     )
 
@@ -78,7 +81,8 @@ async def register_user(payload: RegisterRequest, response: Response) -> TokenRe
         data={
             "email": payload.email,
             "hashed_password": hash_password(payload.password),
-            "role": payload.role.value,
+            # Forced, never client-supplied — see RegisterRequest security note.
+            "role": UserRole.STUDENT.value,
             "vunet_id": payload.vunet_id,
             "is_active": True,
             "provision_time_multiplier": 1.0

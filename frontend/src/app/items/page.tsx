@@ -12,6 +12,7 @@ import {
     PageHeader,
     RowActionMenu,
     Select,
+    SortArrow,
     Spinner,
     Table,
     TableContainer,
@@ -20,9 +21,11 @@ import {
     TH,
     THead,
     TR,
+    XIcon,
     useToast,
 } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
+import { useTableSort } from '@/hooks/useTableSort';
 import { formatRelativeTime } from '@/lib/relativeTime';
 import { subjectTone } from '@/lib/subjectColor';
 import { pluralizeCount } from '@/lib/pluralize';
@@ -66,21 +69,24 @@ function LockStatus({ locked, count }: { locked: boolean; count: number }) {
 type QType = 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY';
 
 function TypeChip({ type }: { type: QType }) {
+    // Labels spell out the answer model rather than relying on SC/MC
+    // abbreviations, which read backwards against the internal enum names
+    // (MULTIPLE_CHOICE = one correct answer; MULTIPLE_RESPONSE = several).
     const map: Record<QType, { label: string; cls: string; title: string }> = {
         MULTIPLE_CHOICE: {
-            label: 'SC',
+            label: 'Single',
             cls: 'bg-[var(--color-info-bg)] text-[var(--color-info-fg)] border-[var(--color-info-border)]',
-            title: 'Single choice',
+            title: 'Single choice — one correct answer',
         },
         MULTIPLE_RESPONSE: {
-            label: 'MC',
+            label: 'Multiple',
             cls: 'bg-[var(--color-subject-2-bg)] text-[var(--color-subject-2-fg)] border-[var(--color-subject-2-border)]',
-            title: 'Multiple choice',
+            title: 'Multiple response — several correct answers',
         },
         ESSAY: {
-            label: 'ESS',
+            label: 'Essay',
             cls: 'bg-shell-input-alt text-shell-muted border-shell-border',
-            title: 'Essay',
+            title: 'Essay — manually graded',
         },
     };
     const t = map[type];
@@ -126,16 +132,6 @@ function CourseLabel({ title, code }: { title?: string | null; code?: string | n
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type SortKey = 'preview' | 'course' | 'topic' | 'points' | 'type' | 'lock' | 'updated' | 'created';
-type SortDir = 'asc' | 'desc';
-
-function SortArrow({ active, dir }: { active: boolean; dir: SortDir }) {
-    if (!active) return null;
-    return (
-        <span className="text-xs ml-1 text-brand">
-            {dir === 'asc' ? '↑' : '↓'}
-        </span>
-    );
-}
 
 // Keeps the column label + sort arrow on one line. Without this, narrow
 // columns (Points, Type) wrap the arrow under the label.
@@ -173,8 +169,7 @@ function ItemsLibraryPageInner() {
     const [typeFilter, setTypeFilter] = useState<'all' | 'MULTIPLE_CHOICE' | 'MULTIPLE_RESPONSE' | 'ESSAY'>('all');
     const [lockFilter, setLockFilter] = useState<'all' | 'locked' | 'unlocked'>('all');
     const [pointsFilter, setPointsFilter] = useState<'all' | '1' | '2' | '3+'>('all');
-    const [sortKey, setSortKey] = useState<SortKey>('course');
-    const [sortDir, setSortDir] = useState<SortDir>('asc');
+    const { sortKey, sortDir, toggle: handleColumnSort } = useTableSort<SortKey>('course');
 
     useEffect(() => {
         if (lastEditingLoId) {
@@ -241,15 +236,6 @@ function ItemsLibraryPageInner() {
         }
     }, [uniqueTopics, topicFilter]);
 
-    const handleColumnSort = (key: SortKey) => {
-        if (sortKey === key) {
-            setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortKey(key);
-            setSortDir('asc');
-        }
-    };
-
     const filteredItems = useMemo(() => {
         const isIdSearch = UUID_RE.test(searchQuery.trim());
         let list = items.filter((item) => {
@@ -299,8 +285,8 @@ function ItemsLibraryPageInner() {
         try {
             const newId = await createItem();
             router.push(`/author?lo_id=${newId}`);
-        } catch (err) {
-            console.error(err);
+        } catch {
+            toast({ tone: 'danger', title: 'Could not create question', description: 'Please try again.' });
         } finally {
             setIsCreating(false);
         }
@@ -551,9 +537,10 @@ function ImportedBanner({ onDismiss }: { onDismiss: () => void }) {
             </p>
             <button
                 onClick={onDismiss}
-                className="text-xs text-[var(--color-success-fg)] hover:underline ml-4 focus-ring rounded"
+                aria-label="Dismiss"
+                className="inline-flex items-center gap-1 text-xs text-[var(--color-success-fg)] hover:underline ml-4 focus-ring rounded"
             >
-                Clear x
+                Clear <XIcon size={12} />
             </button>
         </div>
     );

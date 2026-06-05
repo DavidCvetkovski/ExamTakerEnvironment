@@ -535,6 +535,38 @@ model proctoring_incidents {
   @@index([severity], map: "ix_proctoring_incidents_severity")
 }
 
+// Epoch 15 — self-heal incident log. Append-only-ish (deduped by fingerprint)
+// store of runtime exceptions and user feedback. This is the data foundation
+// the autonomous fix loop consumes; capturing is best-effort and never blocks
+// the request path. `status` tracks the triage/repair workflow, distinct from
+// the §7.9 temporal lifecycle vocabulary.
+model self_heal_incidents {
+  id             String                 @id @default(uuid()) @db.Uuid
+  source         selfhealincidentsource
+  severity       selfhealseverity
+  status         selfhealstatus         @default(NEW)
+  // One-line human-readable summary (exception class, or truncated feedback).
+  title          String                 @db.VarChar
+  message        String
+  traceback      String?
+  // Stable hash used to collapse recurring occurrences of the same fault.
+  fingerprint    String                 @unique(map: "ux_self_heal_incidents_fingerprint") @db.VarChar
+  occurrences    Int                    @default(1)
+  request_method String?                @db.VarChar
+  request_path   String?                @db.VarChar
+  request_id     String?                @db.VarChar
+  // Role only — never the user id or any PII (§1 security contract).
+  user_role      String?                @db.VarChar
+  context        Json
+  first_seen_at  DateTime               @default(now()) @db.Timestamp(6)
+  last_seen_at   DateTime               @default(now()) @db.Timestamp(6)
+  created_at     DateTime               @default(now()) @db.Timestamp(6)
+
+  @@index([status], map: "ix_self_heal_incidents_status")
+  @@index([severity], map: "ix_self_heal_incidents_severity")
+  @@index([last_seen_at], map: "ix_self_heal_incidents_last_seen_at")
+}
+
 model question_grades {
   id                 String        @id @default(uuid()) @db.Uuid
   session_id         String        @db.Uuid
@@ -666,4 +698,24 @@ enum gradingstatus {
   AUTO_GRADED
   PARTIALLY_GRADED
   FULLY_GRADED
+}
+
+enum selfhealincidentsource {
+  RUNTIME_EXCEPTION
+  USER_FEEDBACK
+}
+
+enum selfhealseverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum selfhealstatus {
+  NEW
+  TRIAGED
+  IN_PROGRESS
+  FIX_PROPOSED
+  RESOLVED
+  WONT_FIX
 }

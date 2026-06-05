@@ -14,7 +14,11 @@ from app.core.metrics import POSTGRES_READINESS_ERRORS_TOTAL, REDIS_ERRORS_TOTAL
 from app.core.prisma_db import connect_prisma, disconnect_prisma, prisma
 from app.core.redis import connect_redis, disconnect_redis, get_redis
 from app.core.security import hash_password
-from app.middleware import RequestContextMiddleware, SecurityHeadersMiddleware
+from app.middleware import (
+    RequestContextMiddleware,
+    SecurityHeadersMiddleware,
+    SelfHealCaptureMiddleware,
+)
 from app.models import User, UserRole
 
 # Initialise structured logging before anything else
@@ -95,6 +99,9 @@ app.add_middleware(
 )
 app.add_middleware(RequestContextMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+# Innermost user middleware: closest to the routes, so it observes unhandled
+# route exceptions directly and the request_id is already populated.
+app.add_middleware(SelfHealCaptureMiddleware)
 
 # --- API routes ---
 app.include_router(api_router, prefix="/api")

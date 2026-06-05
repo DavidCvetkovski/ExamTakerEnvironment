@@ -1,6 +1,7 @@
 """Request context middleware: correlation IDs and structured access logs."""
 import logging
 import time
+import traceback as _traceback
 import uuid
 from typing import Callable
 
@@ -86,3 +87,39 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "max-age=63072000; includeSubDomains",
             )
         return response
+
+
+class SelfHealCaptureMiddleware(BaseHTTPMiddleware):
+    """Capture unhandled runtime exceptions into the self-heal incident log (Epoch 15).
+
+    Sits closest to the routes so it sees the raw exception before any 500
+    handler turns it into a response. Handled ``HTTPException`` results (4xx/5xx
+    responses produced inside the app) never reach here as exceptions — only
+    genuinely unhandled faults do, which is exactly the backlog the fix loop
+    should act on.
+
+    Capture is best-effort and fully isolated: the original exception is always
+    re-raised unchanged so FastAPI's normal error handling and any Sentry
+    integration behave exactly as before.
+    """
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        try:
+            return await call_next(request)
+        except Exception as exc:  # noqa: BLE001 — we re-raise after recording
+            try:
+                # Imported lazily to keep the middleware import-light and avoid a
+                # cycle with the service layer at app construction time.
+                from app.services import self_heal_service
+
+                await self_heal_service.record_exception(
+                    exc=exc,
+                    request_method=request.method,
+                    request_path=request.url.path,
+                    request_id=getattr(request.state, "request_id", None),
+                    traceback_text=_traceback.format_exc(),
+                    query_keys=list(request.query_params.keys()),
+                )
+            except Exception:  # noqa: BLE001 — never mask the original fault
+                logger.exception("Self-heal capture failed for %s", request.url.path)
+            raise

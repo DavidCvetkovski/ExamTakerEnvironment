@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Avatar, EmptyState, RowActionMenu } from '@/components/ui';
+import { Avatar, EmptyState, RowActionMenu, SortArrow } from '@/components/ui';
 import { formatRelativeTime } from '@/lib/relativeTime';
 import type { MonitorAttempt, PresenceState } from '@/stores/useProctoringStore';
 
@@ -31,16 +31,6 @@ function PresenceBadge({ presence }: { presence: PresenceState }) {
 }
 
 type SortKey = 'student' | 'presence' | 'question' | 'last_seen' | 'incidents';
-
-function SortArrow({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
-    // Only the active column shows an arrow.
-    if (!active) return null;
-    return (
-        <span className="text-foreground" aria-hidden="true">
-            {dir === 'desc' ? '↓' : '↑'}
-        </span>
-    );
-}
 
 interface MonitorTableProps {
     attempts: MonitorAttempt[];

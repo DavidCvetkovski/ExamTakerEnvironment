@@ -1,12 +1,15 @@
 'use client';
 
-import DOMPurify from 'dompurify';
 import { useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
+
 import { useResultsStore, QuestionResultDetail } from '@/stores/useResultsStore';
-import { useAuthStore } from '@/stores/useAuthStore';
 import { getExamChoiceContent, toExamContentHtml } from '@/lib/examContent';
-import { BackButton, Spinner, CheckIcon, XIcon } from '@/components/ui';
+import { sanitizeExamHtml } from '@/lib/sanitizeHtml';
+import { BackButton, Spinner, StatCard, CheckIcon, XIcon, AlertIcon } from '@/components/ui';
+import PageShell from '@/components/layout/PageShell';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import AnswerChoiceList from '@/components/grading/AnswerChoiceList';
 import { formatAbsolute } from '@/lib/relativeTime';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -15,109 +18,80 @@ function extractEssayText(answer: Record<string, unknown>): string {
     return (answer?.essay_text ?? answer?.text ?? '') as string;
 }
 
-function sanitizeHtml(html: string | null | undefined): string {
-    return html
-        ? DOMPurify.sanitize(html, {
-            ALLOWED_TAGS: ['span', 'p', 'strong', 'em', 'code', 'pre', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'blockquote', 'br', 'hr'],
-            ALLOWED_ATTR: ['class'],
-        })
-        : '';
-}
-
 function MCQAnswerDisplay({ detail }: { detail: QuestionResultDetail }) {
     const options = getExamChoiceContent(detail.question_options);
-    const opts = (detail.correct_answer as Record<string, number[]> | null)?.correct_indices ?? [];
+    const correctIndices = (detail.correct_answer as Record<string, number[]> | null)?.correct_indices ?? [];
     const studentIdx = detail.student_answer?.selected_option_index as number | undefined;
     const studentIdxs = detail.student_answer?.selected_option_indices as number[] | undefined;
-    const allSelected = studentIdx !== undefined ? [studentIdx] : (studentIdxs ?? []);
+    const selectedIndices = studentIdx !== undefined ? [studentIdx] : (studentIdxs ?? []);
 
     return (
-        <div className="space-y-4 mt-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <div className="rounded-2xl border border-shell-border bg-shell-surface/60 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-shell-muted-dim mb-2">Your Answer</p>
-                    {allSelected.length > 0 ? (
+        <div className="mt-3 space-y-4">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div className="rounded-xl border border-shell-border bg-shell-surface/60 p-4">
+                    <p className="mb-2 text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim">Your answer</p>
+                    {selectedIndices.length > 0 ? (
                         <div className="space-y-2">
-                            {allSelected.map((idx) => (
-                                <div
-                                    key={idx}
-                                    className={`rounded-xl border px-3 py-2 text-sm ${
-                                        opts.includes(idx)
-                                            ? 'border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-fg)]'
-                                            : 'border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)]'
-                                    }`}
-                                >
-                                    <span className="mr-2 font-semibold">{String.fromCharCode(65 + idx)}.</span>
-                                    <span
-                                        className="inline-block align-middle prose prose-sm max-w-none prose-p:my-0 prose-li:my-0 prose-pre:my-1"
-                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(options[idx]?.html ?? options[idx]?.text ?? `Option ${idx + 1}`) }}
-                                    />
-                                </div>
-                            ))}
+                            {selectedIndices.map((idx) => {
+                                const correct = correctIndices.includes(idx);
+                                return (
+                                    <div
+                                        key={idx}
+                                        className={`rounded-lg border px-3 py-2 text-sm ${correct ? 'border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-fg)]' : 'border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)]'}`}
+                                    >
+                                        <span className="mr-2 font-semibold">{String.fromCharCode(65 + idx)}.</span>
+                                        <span
+                                            className="prose prose-sm inline-block max-w-none align-middle prose-p:my-0 prose-li:my-0 prose-pre:my-1"
+                                            dangerouslySetInnerHTML={{ __html: sanitizeExamHtml(options[idx]?.html ?? options[idx]?.text ?? `Option ${idx + 1}`) }}
+                                        />
+                                    </div>
+                                );
+                            })}
                         </div>
                     ) : (
-                        <span className="text-shell-muted-dim text-sm italic">No answer submitted</span>
+                        <span className="text-meta italic text-shell-muted-dim">No answer submitted</span>
                     )}
                 </div>
 
-                <div className="rounded-2xl border border-[var(--color-success-border)] bg-[var(--color-success-bg)]/50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-success-fg)] mb-2">Correct Answer</p>
-                    {opts.length > 0 ? (
+                <div className="rounded-xl border border-[var(--color-success-border)] bg-[var(--color-success-bg)]/50 p-4">
+                    <p className="mb-2 text-eyebrow font-semibold uppercase tracking-eyebrow text-[var(--color-success-fg)]">Correct answer</p>
+                    {correctIndices.length > 0 ? (
                         <div className="space-y-2">
-                            {opts.map((idx) => (
-                                <div key={idx} className="rounded-xl border border-[var(--color-success-border)] bg-[var(--color-success-bg)] px-3 py-2 text-sm text-[var(--color-success-fg)]">
+                            {correctIndices.map((idx) => (
+                                <div key={idx} className="rounded-lg border border-[var(--color-success-border)] bg-[var(--color-success-bg)] px-3 py-2 text-sm text-[var(--color-success-fg)]">
                                     <span className="mr-2 font-semibold">{String.fromCharCode(65 + idx)}.</span>
                                     <span
-                                        className="inline-block align-middle prose prose-sm max-w-none prose-p:my-0 prose-li:my-0 prose-pre:my-1"
-                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(options[idx]?.html ?? options[idx]?.text ?? `Option ${idx + 1}`) }}
+                                        className="prose prose-sm inline-block max-w-none align-middle prose-p:my-0 prose-li:my-0 prose-pre:my-1"
+                                        dangerouslySetInnerHTML={{ __html: sanitizeExamHtml(options[idx]?.html ?? options[idx]?.text ?? `Option ${idx + 1}`) }}
                                     />
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <span className="text-shell-muted-dim text-sm italic">—</span>
+                        <span className="text-meta italic text-shell-muted-dim">—</span>
                     )}
                 </div>
             </div>
 
             {options.length > 0 && (
-                <div className="rounded-2xl border border-shell-border bg-shell-input-alt p-4">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-shell-muted-dim mb-3">Available Options</p>
-                    <div className="space-y-2">
-                        {options.map((option, idx) => {
-                            const isSelected = allSelected.includes(idx);
-                            const isCorrect = opts.includes(idx);
-                            return (
-                                <div
-                                    key={`${idx}-${option.text}`}
-                                    className={`rounded-xl border px-3 py-2 text-sm ${
-                                        isSelected && isCorrect
-                                            ? 'border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-fg)]'
-                                            : isSelected
-                                                ? 'border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)]'
-                                                : isCorrect
-                                                    ? 'border-[var(--color-success-border)] bg-[var(--color-success-bg)]/50 text-[var(--color-success-fg)]'
-                                                    : 'border-shell-border bg-shell-surface/80 text-foreground'
-                                    }`}
-                                >
-                                    <span className="mr-2 font-semibold">{String.fromCharCode(65 + idx)}.</span>
-                                    <span
-                                        className="inline-block align-middle prose prose-sm max-w-none prose-p:my-0 prose-li:my-0 prose-pre:my-1"
-                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(option.html) }}
-                                    />
-                                </div>
-                            );
-                        })}
-                    </div>
+                <div className="rounded-xl border border-shell-border bg-shell-input-alt p-4">
+                    <p className="mb-3 text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim">Available options</p>
+                    <AnswerChoiceList options={options} selectedIndices={selectedIndices} correctIndices={correctIndices} />
                 </div>
             )}
         </div>
     );
 }
 
+function StatusIcon({ detail }: { detail: QuestionResultDetail }) {
+    const isPending = !detail.is_auto_graded && detail.is_correct === null;
+    if (isPending) return <AlertIcon size={16} />;
+    if (detail.is_correct) return <CheckIcon size={16} />;
+    return <XIcon size={16} />;
+}
+
 function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: number }) {
     const isEssay = detail.question_type === 'ESSAY';
-    const isCorrect = detail.is_correct;
     const isPending = !detail.is_auto_graded && detail.is_correct === null;
 
     let borderColor = 'border-shell-border';
@@ -125,60 +99,58 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
     if (isPending) {
         borderColor = 'border-[var(--color-warning-border)]';
         accentColor = 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]';
-    } else if (isCorrect === true) {
+    } else if (detail.is_correct === true) {
         borderColor = 'border-[var(--color-success-border)]';
         accentColor = 'bg-[var(--color-success-bg)] text-[var(--color-success-fg)]';
-    } else if (isCorrect === false) {
+    } else if (detail.is_correct === false) {
         borderColor = 'border-[var(--color-danger-border)]';
         accentColor = 'bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)]';
     }
 
     return (
-        <div className={`rounded-2xl border ${borderColor} bg-shell-surface/80 p-6 shadow-sm space-y-4`}>
-            {/* Header row */}
+        <div className={`space-y-4 rounded-xl border ${borderColor} bg-shell-surface/80 p-6`}>
             <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${accentColor}`}>
-                        {isPending ? '?' : isCorrect ? <CheckIcon size={16} /> : isEssay ? '#' : <XIcon size={16} />}
+                    <div className={`flex h-8 w-8 items-center justify-center rounded-full ${accentColor}`}>
+                        <StatusIcon detail={detail} />
                     </div>
                     <div>
-                        <p className="font-bold text-foreground text-sm">Question {index + 1}</p>
-                        <p className="text-xs text-shell-muted-dim capitalize">
+                        <p className="text-sm font-semibold text-foreground">Question {index + 1}</p>
+                        <p className="text-meta capitalize text-shell-muted-dim">
                             {isEssay ? 'Open answer' : detail.question_type?.replace('_', ' ').toLowerCase()}
                         </p>
                     </div>
                 </div>
-                <div className="text-right shrink-0">
-                    <p className="text-lg font-black text-foreground">
+                <div className="shrink-0 text-right">
+                    <p className="text-h3 text-foreground">
                         {detail.points_awarded}
-                        <span className="text-shell-muted-dim font-normal text-sm"> / {detail.points_possible}</span>
+                        <span className="text-meta font-normal text-shell-muted-dim"> / {detail.points_possible}</span>
                     </p>
-                    <p className="text-xs text-shell-muted-dim">points</p>
+                    <p className="text-meta text-shell-muted-dim">points</p>
                 </div>
             </div>
 
             {detail.question_content != null && (
                 <div
-                    className="prose max-w-none rounded-2xl border border-shell-border bg-shell-input-alt px-4 py-3 text-foreground"
-                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(toExamContentHtml(detail.question_content)) }}
+                    className="prose max-w-none rounded-lg border border-shell-border bg-shell-input-alt px-4 py-3 text-foreground"
+                    dangerouslySetInnerHTML={{ __html: sanitizeExamHtml(toExamContentHtml(detail.question_content)) }}
                 />
             )}
 
-            {/* Answer display */}
             {isEssay ? (
                 <div className="space-y-3">
-                    <div className="rounded-2xl border border-shell-border bg-shell-input-alt p-4">
-                        <p className="text-xs font-semibold uppercase tracking-widest text-shell-muted-dim mb-2">Your Essay</p>
+                    <div className="rounded-xl border border-shell-border bg-shell-input-alt p-4">
+                        <p className="mb-2 text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim">Your essay</p>
                         {extractEssayText(detail.student_answer) ? (
-                            <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
                                 {extractEssayText(detail.student_answer)}
                             </p>
                         ) : (
-                            <p className="text-sm text-shell-muted-dim italic">No answer submitted</p>
+                            <p className="text-sm italic text-shell-muted-dim">No answer submitted</p>
                         )}
                     </div>
                     {isPending && (
-                        <div className="flex items-center gap-2 text-[var(--color-warning-fg)] text-xs">
+                        <div className="flex items-center gap-2 text-meta text-[var(--color-warning-fg)]">
                             <Spinner size="sm" />
                             <span>Awaiting manual grading</span>
                         </div>
@@ -188,11 +160,10 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
                 <MCQAnswerDisplay detail={detail} />
             )}
 
-            {/* Feedback */}
             {detail.feedback && (
-                <div className="rounded-2xl border border-brand/30 bg-brand/10 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-brand mb-1">Grader Feedback</p>
-                    <p className="text-sm text-foreground leading-relaxed">{detail.feedback}</p>
+                <div className="rounded-xl border border-brand/30 bg-brand/10 p-4">
+                    <p className="mb-1 text-eyebrow font-semibold uppercase tracking-eyebrow text-brand">Grader feedback</p>
+                    <p className="text-sm leading-relaxed text-foreground">{detail.feedback}</p>
                 </div>
             )}
         </div>
@@ -203,92 +174,57 @@ function QuestionCard({ detail, index }: { detail: QuestionResultDetail; index: 
 
 export default function MyResultDetailPage() {
     const { sessionId } = useParams<{ sessionId: string }>();
-    const router = useRouter();
-    const { user } = useAuthStore();
-    const { currentResultDetail, detailLoading, error, fetchMyResultDetail } = useResultsStore();
+    const { currentResultDetail: result, detailLoading, error, fetchMyResultDetail } = useResultsStore();
 
     useEffect(() => {
         if (sessionId) fetchMyResultDetail(sessionId);
     }, [sessionId, fetchMyResultDetail]);
 
-    // Redirect non-students
-    if (user && user.role !== 'STUDENT') {
-        router.replace('/grading');
-        return null;
-    }
-
-    const result = currentResultDetail;
-
     return (
-        <div className="min-h-full bg-shell-bg px-4 py-10 text-foreground sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-3xl space-y-8">
-                {/* Back */}
-                <BackButton href="/my-grades" label="Back to my grades" className="mb-0" />
+        <ProtectedRoute allowedRoles={['STUDENT']}>
+            <PageShell width="standard">
+                <BackButton href="/my-grades" label="Back to my grades" />
 
-                {/* Error */}
                 {error && (
-                    <div className="rounded-2xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] px-5 py-4 text-sm text-[var(--color-danger-fg)]">
+                    <div className="rounded-xl border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] px-5 py-4 text-sm text-[var(--color-danger-fg)]">
                         {error}
                     </div>
                 )}
 
-                {/* Loading */}
                 {detailLoading && (
-                    <div className="flex items-center justify-center py-20 text-shell-muted-dim text-sm gap-3">
+                    <div className="flex items-center justify-center gap-3 py-20 text-sm text-shell-muted-dim">
                         <Spinner size="md" />
                         Loading your result…
                     </div>
                 )}
 
                 {result && !detailLoading && (
-                    <>
-                        {/* Result header card */}
-                        <div className="rounded-2xl border border-shell-border bg-shell-surface p-8">
-                            <p className="text-xs font-semibold uppercase tracking-wider text-shell-muted-dim">Exam Result</p>
-                            <h1 className="mt-2 text-4xl font-black tracking-tight text-foreground">
-                                {result.test_title}
-                            </h1>
+                    <div className="space-y-8">
+                        {/* Result header */}
+                        <div className="rounded-xl border border-shell-border bg-shell-surface p-8">
+                            <p className="text-eyebrow font-semibold uppercase tracking-eyebrow text-shell-muted-dim">Exam result</p>
+                            <h1 className="mt-2 text-display text-foreground">{result.test_title}</h1>
                             {result.submitted_at && (
-                                <p className="mt-2 text-sm text-shell-muted-dim">
+                                <p className="mt-2 text-meta text-shell-muted-dim">
                                     Submitted on {formatAbsolute(result.submitted_at)}
                                 </p>
                             )}
 
-                            {/* Score summary */}
-                            <div className="mt-6 grid grid-cols-3 gap-4">
-                                <div className="rounded-2xl border border-shell-border bg-shell-surface/60 p-4 text-center">
-                                    <p className="text-3xl font-black text-foreground">{result.percentage.toFixed(1)}%</p>
-                                    <p className="text-xs text-shell-muted-dim mt-1">Score</p>
-                                </div>
-                                <div className="rounded-2xl border border-shell-border bg-shell-surface/60 p-4 text-center">
-                                    <p className="text-3xl font-black text-foreground">{result.total_points}</p>
-                                    <p className="text-xs text-shell-muted-dim mt-1">Points (of {result.max_points})</p>
-                                </div>
-                                <div className="rounded-2xl border border-shell-border bg-shell-surface/60 p-4 text-center">
-                                    {result.letter_grade ? (
-                                        <>
-                                            <p className={`text-3xl font-black ${result.passed ? 'text-[var(--color-success-fg)]' : 'text-[var(--color-danger-fg)]'}`}>
-                                                {result.letter_grade}
-                                            </p>
-                                            <p className="text-xs text-shell-muted-dim mt-1">Grade</p>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Spinner size="md" className="mx-auto" />
-                                            <p className="text-xs text-shell-muted-dim mt-1">Pending</p>
-                                        </>
-                                    )}
-                                </div>
+                            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                <StatCard label="Score" value={`${result.percentage.toFixed(1)}%`} tone="info" />
+                                <StatCard label={`Points (of ${result.max_points})`} value={result.total_points} />
+                                <StatCard
+                                    label={result.letter_grade ? 'Grade' : 'Pending'}
+                                    value={result.letter_grade ?? '—'}
+                                    tone={result.passed === false ? 'warning' : result.passed ? 'success' : 'neutral'}
+                                />
                             </div>
 
-                            {/* Pass/fail badge */}
                             {result.passed !== null && (
                                 <div className="mt-4">
-                                    <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-bold ${
-                                        result.passed
-                                            ? 'bg-[var(--color-success-bg)] text-[var(--color-success-fg)] border border-[var(--color-success-border)]'
-                                            : 'bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] border border-[var(--color-danger-border)]'
-                                    }`}>
+                                    <span
+                                        className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-bold ${result.passed ? 'border border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-fg)]' : 'border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)]'}`}
+                                    >
                                         {result.passed ? <CheckIcon size={14} /> : <XIcon size={14} />}
                                         {result.passed ? 'Passed' : 'Did not pass'}
                                     </span>
@@ -296,18 +232,17 @@ export default function MyResultDetailPage() {
                             )}
                         </div>
 
-                        {/* Per-question breakdown */}
                         {result.question_results.length > 0 && (
                             <div className="space-y-4">
-                                <h2 className="text-2xl font-black text-foreground">Question Breakdown</h2>
+                                <h2 className="text-h2 text-foreground">Question breakdown</h2>
                                 {result.question_results.map((detail, idx) => (
                                     <QuestionCard key={detail.grade_id} detail={detail} index={idx} />
                                 ))}
                             </div>
                         )}
-                    </>
+                    </div>
                 )}
-            </div>
-        </div>
+            </PageShell>
+        </ProtectedRoute>
     );
 }

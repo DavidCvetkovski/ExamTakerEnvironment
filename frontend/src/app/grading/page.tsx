@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { useAuthStore } from '@/stores/useAuthStore';
 import { api } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, PageHeader, Spinner } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
@@ -129,15 +128,15 @@ function groupByCourse(rows: GradingIndexRow[], sort: SortKey): {
 
 export default function GradingLandingPage() {
     const router = useRouter();
-    const { user } = useAuthStore();
     const [rows, setRows] = useState<GradingIndexRow[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showEmpty, setShowEmpty] = useState(false);
     const [sortKey, setSortKey] = useState<SortKey>('most_pending');
+    // State is set only inside the async callbacks (never synchronously) so this
+    // is safe to call from the mount effect; the manual refresh flips the
+    // loading/error state itself in its event handler below.
     const fetchRows = useCallback(() => {
-        setIsLoading(true);
-        setError(null);
         api.get<GradingIndexRow[]>('/analytics/index')
             .then((r) => { setRows(r.data); })
             .catch((err) => { setError(err instanceof Error ? err.message : 'Failed to load grading index.'); })
@@ -145,19 +144,10 @@ export default function GradingLandingPage() {
     }, []);
 
     useEffect(() => {
-        if (user?.role === 'STUDENT') {
-            router.replace('/my-exams');
-            return;
-        }
-
-        let cancelled = false;
-        api.get<GradingIndexRow[]>('/analytics/index')
-            .then((r) => { if (!cancelled) setRows(r.data); })
-            .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load grading index.'); })
-            .finally(() => { if (!cancelled) setIsLoading(false); });
-
-        return () => { cancelled = true; };
-    }, [user, router]);
+        // ProtectedRoute already restricts this page to staff; no inline role
+        // redirect needed. Single fetch path via fetchRows (no duplicated call).
+        fetchRows();
+    }, [fetchRows]);
 
     const { withData, empty } = useMemo(() => groupByCourse(rows, sortKey), [rows, sortKey]);
 
@@ -174,7 +164,7 @@ export default function GradingLandingPage() {
                         {/* L-17: manual refresh so pending counts stay current as students submit. */}
                         <button
                             type="button"
-                            onClick={() => fetchRows()}
+                            onClick={() => { setIsLoading(true); setError(null); fetchRows(); }}
                             disabled={isLoading}
                             className="inline-flex items-center gap-1.5 text-meta text-shell-muted hover:text-foreground transition-colors disabled:opacity-40"
                             title="Refresh grading queue"

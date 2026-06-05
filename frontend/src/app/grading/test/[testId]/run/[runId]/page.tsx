@@ -22,12 +22,15 @@ import {
     TH,
     THead,
     TR,
+    SortArrow,
     cn,
     XIcon,
     useToast,
 } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
+import { useTableSort } from '@/hooks/useTableSort';
 import { formatAbsolute, formatRelativeTime } from '@/lib/relativeTime';
+import { formatStudentLabel } from '@/lib/studentLabel';
 
 function statusBadge(status: GradingStatus) {
     const map: Record<GradingStatus, { label: string; tone: 'neutral' | 'info' | 'warning' | 'success' }> = {
@@ -39,15 +42,6 @@ function statusBadge(status: GradingStatus) {
     };
     const cfg = map[status] ?? { label: status, tone: 'neutral' as const };
     return <Badge tone={cfg.tone} size="sm">{cfg.label}</Badge>;
-}
-
-function SortArrow({ active, dir }: { active: boolean; dir: 'asc' | 'desc' }) {
-    if (!active) return null;
-    return (
-        <span className="text-xs text-brand ml-1">
-            {dir === 'asc' ? '↑' : '↓'}
-        </span>
-    );
 }
 
 function ProgressBar({ done, total }: { done: number; total: number }) {
@@ -63,16 +57,6 @@ function ProgressBar({ done, total }: { done: number; total: number }) {
             <span className="text-meta text-shell-muted-dim tabular-nums w-14 text-right">{done}/{total}</span>
         </div>
     );
-}
-
-function formatStudentLabel(email: string | null): string {
-    if (!email) return 'Student Submission';
-    const localPart = email.split('@')[0] ?? email;
-    return localPart
-        .split(/[._-]+/)
-        .filter(Boolean)
-        .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
-        .join(' ');
 }
 
 export default function TestGradingDashboard() {
@@ -92,8 +76,9 @@ export default function TestGradingDashboard() {
     const { toast } = useToast();
 
     const [filterStatus, setFilterStatus] = useState<GradingStatus | 'ALL'>('ALL');
-    const [sortKey, setSortKey] = useState<'student' | 'status' | 'percentage' | 'submitted'>('student');
-    const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+    const { sortKey, sortDir, toggle: toggleSort } = useTableSort<
+        'student' | 'status' | 'percentage' | 'submitted'
+    >('student');
     const [publishDialogOpen, setPublishDialogOpen] = useState(false);
     const [cutScoreInput, setCutScoreInput] = useState('');
     const [cutScoreBusy, setCutScoreBusy] = useState(false);
@@ -151,15 +136,6 @@ export default function TestGradingDashboard() {
 
     const isAdmin = user?.role === 'ADMIN';
     const anyPublished = gradingOverview.some((s) => s.is_published);
-
-    const toggleSort = (key: typeof sortKey) => {
-        if (sortKey === key) {
-            setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-        } else {
-            setSortKey(key);
-            setSortDir('asc');
-        }
-    };
 
     const filtered = gradingOverview
         .filter((s) => filterStatus === 'ALL' || s.grading_status === filterStatus)
@@ -274,8 +250,10 @@ export default function TestGradingDashboard() {
                         variant={blindMode ? 'primary' : 'secondary'}
                         size="sm"
                         onClick={toggleBlindMode}
+                        aria-pressed={blindMode}
+                        title="Hide student identities while grading"
                     >
-                        {blindMode ? 'Blind ON' : 'Blind mode'}
+                        {blindMode ? 'Blind mode: on' : 'Blind mode: off'}
                     </Button>
 
                     {isAdmin && (

@@ -13,8 +13,15 @@ from app.schemas.preferences import ThemeName, AccessibilityPreferences
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, description="Minimum 8 characters")
-    role: UserRole = UserRole.STUDENT
     vunet_id: Optional[str] = None
+
+    # SECURITY (§1 least privilege): public self-registration MUST NOT let a
+    # client choose its own role — that would be a direct privilege escalation to
+    # ADMIN. `role` is deliberately absent here and forced to STUDENT in
+    # ``register_user``; privileged accounts are created only by the seed path or
+    # an admin-gated flow. ``extra="ignore"`` drops any stray ``role`` a client
+    # sends rather than honouring it.
+    model_config = ConfigDict(extra="ignore")
 
 
 class LoginRequest(BaseModel):

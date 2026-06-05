@@ -17,3 +17,9 @@ from .proctoring_incident import (
     ProctoringSeverity,
     ProctoringIncidentSource,
 )
+from .self_heal_incident import (
+    SelfHealIncident,
+    SelfHealIncidentSource,
+    SelfHealSeverity,
+    SelfHealStatus,
+)

@@ -13,6 +13,7 @@ from app.api.endpoints import (
     proctoring,
     qti,
     scheduled_sessions,
+    self_heal,
     sessions,
     sis,
     student_sessions,
@@ -39,3 +40,4 @@ api_router.include_router(lti.router)
 api_router.include_router(sis.router)
 api_router.include_router(qti.router)
 api_router.include_router(proctoring.router)
+api_router.include_router(self_heal.router)

@@ -72,6 +72,7 @@ export interface SessionResult {
     test_definition_id: string;
     test_title?: string | null;
     student_id: string;
+    student_email: string | null;
     total_points: number;
     max_points: number;
     percentage: number;

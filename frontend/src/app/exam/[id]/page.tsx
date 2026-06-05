@@ -122,6 +122,9 @@ export default function ExamPage() {
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (!currentSession) return;
+            // Never intercept browser/OS chords (Cmd/Ctrl/Alt + key) — otherwise
+            // `f` would swallow Cmd+F (find) and the arrows would fight shortcuts.
+            if (e.metaKey || e.ctrlKey || e.altKey) return;
             // Never hijack typing inside a free-text field or rich-text editor.
             // NOTE: radio/checkbox inputs are deliberately NOT excluded here.
             // Leaving them to the browser lets arrow keys cycle the option group,

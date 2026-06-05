@@ -523,6 +523,52 @@ async def test_grade_zero_points_is_valid(ac: AsyncClient, full_grading_setup):
     assert grade.feedback == "no points"
 
 
+@pytest.mark.anyio
+async def test_grade_without_feedback_is_valid(ac: AsyncClient, full_grading_setup):
+    """Grading an essay without providing feedback is valid and removes it from the ungraded counts and queue."""
+    s = full_grading_setup
+    token = await login(ac, ADMIN_EMAIL, PASS)
+
+    # 1. Check initial ungraded counts
+    sessions_resp = await ac.get("/api/grading/sessions", headers=auth(token))
+    assert sessions_resp.status_code == 200
+    session_data = next(sess for sess in sessions_resp.json() if sess["session_id"] == s["session"].id)
+    assert session_data["ungraded_response_count"] == 1
+
+    # 2. Check initial grading queue size
+    queue_resp = await ac.get(f"/api/grading/tests/{s['test_def'].id}/grading-queue", headers=auth(token))
+    assert queue_resp.status_code == 200
+    queue = queue_resp.json()
+    assert len(queue) == 1
+    assert queue[0]["grade_id"] == s["essay_grade_id"]
+
+    # Grade the essay with points but NO feedback
+    resp = await ac.patch(
+        f"/api/grading/grades/{s['essay_grade_id']}",
+        json={"points_awarded": 5.0, "feedback": None},
+        headers=auth(token),
+    )
+    assert resp.status_code in (200, 204)
+
+    # Verify the grade is updated, and feedback remains None/null
+    grade = await prisma.question_grades.find_unique(where={"id": s["essay_grade_id"]})
+    assert grade.points_awarded == 5.0
+    assert grade.feedback is None
+    assert grade.is_correct is not None  # Should be boolean (False since 5 < 10)
+
+    # Check that ungraded counts updated to 0
+    sessions_resp = await ac.get("/api/grading/sessions", headers=auth(token))
+    assert sessions_resp.status_code == 200
+    session_data = next(sess for sess in sessions_resp.json() if sess["session_id"] == s["session"].id)
+    assert session_data["ungraded_response_count"] == 0
+
+    # Check that grading queue is now empty
+    queue_resp = await ac.get(f"/api/grading/tests/{s['test_def'].id}/grading-queue", headers=auth(token))
+    assert queue_resp.status_code == 200
+    queue = queue_resp.json()
+    assert len(queue) == 0
+
+
 # ---------------------------------------------------------------------------
 # Publish / unpublish edges
 # ---------------------------------------------------------------------------

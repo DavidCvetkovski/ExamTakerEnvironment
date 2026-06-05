@@ -137,7 +137,7 @@ async def get_grading_runs(test_definition_id: str) -> List[Dict[str, Any]]:
         ungraded_count = await prisma.question_grades.count(
             where={
                 "is_auto_graded": False,
-                "feedback": None,
+                "is_correct": None,
                 "exam_sessions": {
                     "scheduled_session_id": run.id,
                     "status": "SUBMITTED",
@@ -212,7 +212,7 @@ async def get_all_grading_sessions(
     for sess in sessions:
         sr = await prisma.session_results.find_unique(where={"session_id": sess.id})
         ungraded_count = await prisma.question_grades.count(
-            where={"session_id": sess.id, "is_auto_graded": False, "feedback": None}
+            where={"session_id": sess.id, "is_auto_graded": False, "is_correct": None}
         )
         scheduled = sess.scheduled_exam_sessions
         rows.append({
@@ -261,7 +261,7 @@ async def get_grading_queue(
 
     where_filter: Dict[str, Any] = {
         "is_auto_graded": False,
-        "feedback": None,
+        "is_correct": None,
         "exam_sessions": exam_sessions_filter,
     }
     if question_lo_id:

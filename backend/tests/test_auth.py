@@ -30,6 +30,27 @@ async def test_register_new_user(ac: AsyncClient):
     assert data["user"]["role"] == "STUDENT"
 
 @pytest.mark.anyio
+async def test_register_cannot_self_assign_privileged_role(ac: AsyncClient):
+    """Security (§1): a client-supplied role on /register must be ignored.
+
+    Without the server forcing STUDENT, this body would mint an ADMIN account —
+    a direct privilege escalation. The `role` field is dropped (extra=ignore)
+    and the persisted role is always STUDENT.
+    """
+    resp = await ac.post("/api/auth/register", json={
+        "email": "attacker@vu.nl",
+        "password": "strongpassword123",
+        "role": "ADMIN",
+    })
+    assert resp.status_code == 201
+    assert resp.json()["user"]["role"] == "STUDENT"
+
+    # And the DB row itself is STUDENT, not just the response.
+    user = await prisma.users.find_unique(where={"email": "attacker@vu.nl"})
+    assert user.role == UserRole.STUDENT.value
+
+
+@pytest.mark.anyio
 async def test_register_duplicate_user_fails(ac: AsyncClient):
     # First registration
     await ac.post("/api/auth/register", json={

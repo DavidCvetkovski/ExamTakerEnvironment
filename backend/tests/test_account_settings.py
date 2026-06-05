@@ -174,11 +174,25 @@ async def test_logout_all_invalidates_other_sessions(ac: AsyncClient):
 
 @pytest.mark.anyio
 async def test_admin_cannot_self_deactivate(ac: AsyncClient):
-    reg = await _register(ac, email="admin@vu.nl", role="ADMIN")
+    # Mint the ADMIN directly — public /register can no longer self-assign a
+    # role (privilege-escalation guard), so privileged test users are seeded via
+    # the ORM and then authenticated normally.
+    from app.core.security import hash_password
+    from app.models.user import UserRole
+
+    await prisma.users.create(
+        data={
+            "email": "admin@vu.nl",
+            "hashed_password": hash_password("originalpw123"),
+            "role": UserRole.ADMIN.value,
+        }
+    )
+    login = await ac.post("/api/auth/login", json={"email": "admin@vu.nl", "password": "originalpw123"})
+    assert login.status_code == 200
     resp = await ac.post(
         "/api/users/me/deactivate",
         json={"password": "originalpw123"},
-        headers=_auth(reg["access_token"]),
+        headers=_auth(login.json()["access_token"]),
     )
     assert resp.status_code == 403
 

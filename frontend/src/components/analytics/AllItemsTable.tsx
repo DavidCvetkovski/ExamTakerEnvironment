@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import type { ItemAnalyticsResponse } from '@/lib/analytics.types';
-import { Button, InfoTooltip, useToast } from '@/components/ui';
+import { Button, InfoTooltip, SortArrow, useToast } from '@/components/ui';
 import {
     formatPercent,
     formatIndex,
@@ -30,11 +30,6 @@ interface AllItemsTableProps {
 // section panel, and drill-down showing the same "difficulty" number.
 function itemDifficulty(item: ItemAnalyticsResponse): number | null {
     return item.points_possible ? (item.mean_score ?? 0) / item.points_possible : null;
-}
-
-function SortArrow({ active, dir }: { active: boolean; dir: SortDir }) {
-    if (!active) return null;
-    return <span className="ml-1 text-xs text-brand">{dir === 'asc' ? '↑' : '↓'}</span>;
 }
 
 function DiscriminationTag({ value }: { value: number | null }) {

@@ -1,229 +1,41 @@
 'use client';
 
-import DOMPurify from 'dompurify';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { useGradingStore, QuestionGrade, ManualGradePayload } from '@/stores/useGradingStore';
-import { useAuthStore } from '@/stores/useAuthStore';
+
+import { useGradingStore, QuestionGrade } from '@/stores/useGradingStore';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { getExamChoiceContent, toExamContentHtml, toExamContentText } from '@/lib/examContent';
-import { BackButton, Button, Spinner, CheckIcon, XIcon, AlertIcon } from '@/components/ui';
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function sanitizeHtml(html: string | null | undefined): string {
-    return html
-        ? DOMPurify.sanitize(html, {
-            ALLOWED_TAGS: ['span', 'p', 'strong', 'em', 'code', 'pre', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'blockquote', 'br', 'hr'],
-            ALLOWED_ATTR: ['class'],
-        })
-        : '';
-}
+import { toExamContentHtml, toExamContentText } from '@/lib/examContent';
+import { sanitizeExamHtml } from '@/lib/sanitizeHtml';
+import { formatStudentLabel } from '@/lib/studentLabel';
+import { deriveGradeState, isAwaitingGrade } from '@/lib/gradeState';
+import { BackButton, Button, Spinner, StatCard, CheckIcon, XIcon, AlertIcon } from '@/components/ui';
+import AutoGradeResult from '@/components/grading/AutoGradeResult';
+import EssayGradingPanel from '@/components/grading/EssayGradingPanel';
 
 function getQuestionHeading(content: QuestionGrade['question_content'], index: number): string {
     const prompt = toExamContentText(content);
-    if (!prompt) {
-        return `Question ${index + 1}`;
-    }
-
-    return prompt.length > 96 ? `${prompt.slice(0, 93).trimEnd()}...` : prompt;
+    if (!prompt) return `Question ${index + 1}`;
+    return prompt.length > 96 ? `${prompt.slice(0, 93).trimEnd()}…` : prompt;
 }
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-function AutoGradeResult({ grade }: { grade: QuestionGrade }) {
-    const studentAnswer = grade.student_answer;
-    const options = getExamChoiceContent(grade.question_options);
-    const correctIndices = ((grade.correct_answer as Record<string, number[]> | null)?.correct_indices ?? []);
-
-    const getSelectedLabel = (answer: Record<string, unknown>): string => {
-        if ('selected_option_index' in answer) {
-            const idx = answer.selected_option_index as number;
-            return options[idx]?.text ?? `Option ${idx + 1}`;
-        }
-        if ('selected_option_indices' in answer) {
-            const indices = answer.selected_option_indices as number[];
-            return indices.map(i => options[i]?.text ?? `Option ${i + 1}`).join(', ') || '(none)';
-        }
-        return JSON.stringify(answer);
-    };
-
-    const studentIdx = studentAnswer?.selected_option_index as number | undefined;
-    const studentIdxs = studentAnswer?.selected_option_indices as number[] | undefined;
-    const selectedIndices = studentIdx !== undefined ? [studentIdx] : (studentIdxs ?? []);
-
-    return (
-        <div className="space-y-3">
-            {/* Student answer */}
-            <div className={`rounded-lg p-3 border ${grade.is_correct ? 'bg-[var(--color-success-bg)] border-[var(--color-success-border)]' : 'bg-[var(--color-danger-bg)] border-[var(--color-danger-border)]'}`}>
-                <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-semibold text-shell-muted">STUDENT ANSWER</span>
-                    {grade.is_correct !== null && (
-                        <span className={`inline-flex items-center gap-1 text-xs font-bold ${grade.is_correct ? 'text-[var(--color-success-fg)]' : 'text-[var(--color-danger-fg)]'}`}>
-                            {grade.is_correct ? <CheckIcon size={12} /> : <XIcon size={12} />}
-                            {grade.is_correct ? 'CORRECT' : 'INCORRECT'}
-                        </span>
-                    )}
-                </div>
-                <p className="text-foreground text-sm">{getSelectedLabel(studentAnswer)}</p>
-            </div>
-
-            {/* Correct answer */}
-            {grade.correct_answer && (
-                <div className="rounded-lg p-3 bg-shell-input/50 border border-shell-border-deep">
-                    <p className="text-xs font-semibold text-shell-muted mb-1">CORRECT ANSWER</p>
-                    {((grade.correct_answer as Record<string, number[]>).correct_indices ?? []).map((idx: number) => (
-                        <span key={idx} className="bg-[var(--color-success-bg)] text-[var(--color-success-fg)] text-xs px-2 py-0.5 rounded mr-1">
-                            {options[idx]?.text ?? `Option ${idx + 1}`}
-                        </span>
-                    ))}
-                </div>
-            )}
-
-            {options.length > 0 && (
-                <div className="rounded-lg p-3 bg-shell-input/50 border border-shell-border-deep">
-                    <p className="text-xs font-semibold text-shell-muted mb-2">AVAILABLE OPTIONS</p>
-                    <div className="space-y-2">
-                        {options.map((option, idx) => {
-                            const isSelected = selectedIndices.includes(idx);
-                            const isCorrect = correctIndices.includes(idx);
-                            return (
-                                <div
-                                    key={`${idx}-${option.text}`}
-                                    className={`rounded-md border px-3 py-2 text-sm ${
-                                        isSelected && isCorrect
-                                            ? 'border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-fg)]'
-                                            : isSelected
-                                                ? 'border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)]'
-                                                : isCorrect
-                                                    ? 'border-[var(--color-success-border)] bg-shell-surface text-[var(--color-success-fg)]'
-                                                    : 'border-shell-border-deep bg-shell-surface/60 text-shell-muted'
-                                    }`}
-                                >
-                                    <span className="font-semibold mr-2">{String.fromCharCode(65 + idx)}.</span>
-                                    <span
-                                        className="inline-block align-middle prose prose-p:my-0 prose-li:my-0 prose-pre:my-1 max-w-none"
-                                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(option.html) }}
-                                    />
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-            )}
-
-            {/* Score */}
-            <div className="text-sm text-shell-muted">
-                Score: <span className="text-foreground font-semibold">{grade.points_awarded}</span> / {grade.points_possible} pts
-            </div>
-        </div>
-    );
-}
-
-function EssayGradingPanel({
-    grade,
-    onSave,
-    saving,
-}: {
-    grade: QuestionGrade;
-    onSave: (payload: ManualGradePayload) => void;
-    saving: boolean;
-}) {
-    const [pointsInput, setPointsInput] = useState(String(grade.points_awarded));
-    const [feedback, setFeedback] = useState(grade.feedback ?? '');
-    const handleSave = useCallback(() => {
-        const pts = parseFloat(pointsInput);
-        if (isNaN(pts) || pts < 0 || pts > grade.points_possible) return;
-        onSave({ points_awarded: pts, feedback: feedback.trim() || undefined });
-    }, [pointsInput, feedback, grade.points_possible, onSave]);
-
-    const essayText = grade.student_answer?.essay_text as string ?? grade.student_answer?.text as string ?? '';
-
-    return (
-        <div className="space-y-4">
-            {/* Student essay */}
-            <div className="rounded-lg border border-shell-border-deep bg-shell-input/40">
-                <div className="px-4 py-2 border-b border-shell-border-deep">
-                    <span className="text-xs font-semibold text-shell-muted">STUDENT ESSAY</span>
-                </div>
-                <div className="px-4 py-3 max-h-48 overflow-y-auto">
-                    {essayText ? (
-                        <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">{essayText}</p>
-                    ) : (
-                        <p className="text-sm text-shell-muted-dim italic">No answer submitted</p>
-                    )}
-                </div>
-            </div>
-
-            {/* Grading controls */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
-                {/* Points */}
-                <div>
-                    <label className="block text-xs font-semibold text-shell-muted mb-1">
-                        Points (max {grade.points_possible})
-                    </label>
-                    <input
-                        type="number"
-                        min={0}
-                        max={grade.points_possible}
-                        step={0.5}
-                        value={pointsInput}
-                        onChange={e => setPointsInput(e.target.value)}
-                        className="w-full bg-shell-surface border border-shell-border-deep rounded-lg px-3 py-2 text-foreground text-sm focus:outline-none focus:border-brand"
-                    />
-                </div>
-
-                {/* Feedback */}
-                <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-shell-muted mb-1">Feedback (optional)</label>
-                    <textarea
-                        rows={3}
-                        value={feedback}
-                        onChange={e => setFeedback(e.target.value)}
-                        placeholder="Write feedback for the student…"
-                        className="w-full bg-shell-surface border border-shell-border-deep rounded-lg px-3 py-2 text-foreground text-sm focus:outline-none focus:border-brand resize-none"
-                    />
-                </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-                <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand hover:bg-brand/90 text-white text-xs font-semibold rounded-lg disabled:opacity-50 transition-colors"
-                >
-                    {saving ? 'Saving…' : <><CheckIcon size={12} /> Save Grade</>}
-                </button>
-                {/* M-12: "Graded" reflects that a human saved a grade (updated_at is
-                    stamped by submit_manual_grade, null on pending creation) — not the
-                    presence of feedback text, so a points-only essay still shows it. */}
-                {!grade.is_auto_graded && grade.updated_at !== null && (
-                    <span className="inline-flex items-center gap-1 text-xs text-[var(--color-success-fg)]"><CheckIcon size={12} /> Graded</span>
-                )}
-            </div>
-        </div>
-    );
-}
-
-// ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function SessionGradingPage() {
     const { sessionId } = useParams<{ sessionId: string }>();
     const router = useRouter();
     const searchParams = useSearchParams();
+
     const fromTest = searchParams.get('fromTest');
     const fromRun = searchParams.get('fromRun');
+    const sessionIdsStr = searchParams.get('sessionIds');
     const backHref = fromTest && fromRun ? `/grading/test/${fromTest}/run/${fromRun}` : '/grading';
     const backLabel = fromTest && fromRun ? 'Back to submissions' : 'Back to dashboard';
-    
-    const sessionIdsStr = searchParams.get('sessionIds');
+
     const sessionIds = useMemo(() => (sessionIdsStr ? sessionIdsStr.split(',') : []), [sessionIdsStr]);
     const currentIndex = useMemo(() => sessionIds.indexOf(sessionId), [sessionIds, sessionId]);
-
     const prevSessionId = currentIndex > 0 ? sessionIds[currentIndex - 1] : null;
-    const nextSessionId = currentIndex !== -1 && currentIndex < sessionIds.length - 1 ? sessionIds[currentIndex + 1] : null;
+    const nextSessionId =
+        currentIndex !== -1 && currentIndex < sessionIds.length - 1 ? sessionIds[currentIndex + 1] : null;
 
-    const { user } = useAuthStore();
     const {
         questionGrades, sessionResult, gradesLoading,
         submittingGradeId, blindMode, error,
@@ -234,163 +46,182 @@ export default function SessionGradingPage() {
         if (sessionId) fetchSessionGrades(sessionId);
     }, [sessionId, fetchSessionGrades]);
 
-    if (user?.role === 'STUDENT') {
-        router.replace('/my-exams');
-        return null;
-    }
+    // Preserve only the params that are actually present, so prev/next never
+    // builds `?fromTest=null&fromRun=null` URLs.
+    const navQuery = useMemo(() => {
+        const params = new URLSearchParams();
+        if (fromTest) params.set('fromTest', fromTest);
+        if (fromRun) params.set('fromRun', fromRun);
+        if (sessionIdsStr) params.set('sessionIds', sessionIdsStr);
+        const q = params.toString();
+        return q ? `?${q}` : '';
+    }, [fromTest, fromRun, sessionIdsStr]);
 
-    const pendingEssays = questionGrades.filter(g => !g.is_auto_graded && g.is_correct === null && !g.feedback);
+    const gotoSession = (id: string) => router.push(`/grading/${id}${navQuery}`);
+
+    const pendingEssays = questionGrades.filter(isAwaitingGrade);
+    const studentLabel = sessionResult?.student_email ? formatStudentLabel(sessionResult.student_email) : null;
+    const positionLabel =
+        currentIndex >= 0 && sessionIds.length > 1 ? `Submission ${currentIndex + 1} of ${sessionIds.length}` : null;
+    const showPager = Boolean(prevSessionId || nextSessionId || positionLabel);
 
     return (
         <ProtectedRoute allowedRoles={['CONSTRUCTOR', 'ADMIN']}>
             <div className="min-h-full bg-shell-bg text-foreground">
-            {/* ── Top bar ── */}
-            <div className="bg-shell-surface border-b border-shell-border px-6 py-4 sticky top-0 z-30">
-                <div className="max-w-5xl mx-auto flex items-center gap-4">
-                    <BackButton href={backHref} label={backLabel} className="mb-0" />
+                {/* Sticky header: back · who+what · a clean N-of-M pager. Score
+                    summary lives in the body, not crammed in here. */}
+                <div className="sticky top-0 z-30 border-b border-shell-border bg-shell-surface px-6 py-3">
+                    <div className="mx-auto flex max-w-5xl items-center gap-4">
+                        <BackButton href={backHref} label={backLabel} className="mb-0" />
 
-                    {(prevSessionId || nextSessionId) && (
-                        <div className="flex items-center gap-1.5 shrink-0">
-                            {prevSessionId && (
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim">
+                                {blindMode ? 'Blind review' : 'Grading review'}
+                            </p>
+                            <p className="mt-0.5 truncate text-sm font-medium text-foreground">
+                                {blindMode || !studentLabel ? (
+                                    sessionResult?.test_title ?? 'Submitted exam response'
+                                ) : (
+                                    <>
+                                        {studentLabel}
+                                        <span className="font-normal text-shell-muted-dim"> · {sessionResult?.test_title}</span>
+                                    </>
+                                )}
+                            </p>
+                        </div>
+
+                        {showPager && (
+                            <div className="flex shrink-0 items-center gap-2">
                                 <Button
                                     variant="secondary"
                                     size="sm"
-                                    onClick={() => router.push(`/grading/${prevSessionId}?fromTest=${fromTest}&fromRun=${fromRun}&sessionIds=${sessionIdsStr}`)}
-                                    title="Go to previous student submission"
+                                    disabled={!prevSessionId}
+                                    onClick={() => prevSessionId && gotoSession(prevSessionId)}
+                                    aria-label="Previous submission"
                                 >
-                                    ← Prev
+                                    ←
                                 </Button>
-                            )}
-                            {nextSessionId && (
+                                {positionLabel && (
+                                    <span className="whitespace-nowrap text-xs tabular-nums text-shell-muted">
+                                        {positionLabel}
+                                    </span>
+                                )}
                                 <Button
                                     variant="secondary"
                                     size="sm"
-                                    onClick={() => router.push(`/grading/${nextSessionId}?fromTest=${fromTest}&fromRun=${fromRun}&sessionIds=${sessionIdsStr}`)}
-                                    title="Go to next student submission"
+                                    disabled={!nextSessionId}
+                                    onClick={() => nextSessionId && gotoSession(nextSessionId)}
+                                    aria-label="Next submission"
                                 >
-                                    Next →
+                                    →
                                 </Button>
-                            )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
+                    {error && (
+                        <div className="flex justify-between rounded-lg border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] px-4 py-3 text-sm text-[var(--color-danger-fg)]">
+                            <span>{error}</span>
+                            <button onClick={clearError} aria-label="Dismiss" className="text-[var(--color-danger-fg)] hover:opacity-80">
+                                <XIcon size={14} />
+                            </button>
                         </div>
                     )}
 
-                    <div className="flex-1">
-                        <p className="text-xs font-semibold uppercase tracking-medium text-shell-muted-dim">
-                            {blindMode ? 'Blind Review Mode' : 'Grading Review'}
-                        </p>
-                        <p className="mt-1 text-sm text-shell-muted">
-                            {sessionResult?.test_title ?? 'Submitted exam response'}
-                        </p>
-                    </div>
-
-                    {/* Session result summary */}
+                    {/* Score summary — demoted out of the sticky header. */}
                     {sessionResult && (
-                        <div className="flex items-center gap-4 text-sm">
-                            <span className="text-shell-muted">
-                                {sessionResult.questions_graded} / {sessionResult.questions_total} graded
-                            </span>
-                            <span className="font-bold text-foreground">
-                                {sessionResult.total_points} / {sessionResult.max_points} pts
-                                <span className="ml-2 text-brand">({sessionResult.percentage.toFixed(1)}%)</span>
-                            </span>
-                            {sessionResult.letter_grade && (
-                                <span className={`px-2 py-0.5 rounded text-xs font-bold ${sessionResult.passed ? 'bg-[var(--color-success-bg)] text-[var(--color-success-fg)]' : 'bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)]'}`}>
-                                    {sessionResult.letter_grade}
-                                </span>
-                            )}
-                            {pendingEssays.length > 0 && (
-                                <span className="inline-flex items-center gap-1 text-xs text-[var(--color-warning-fg)]">
-                                    <AlertIcon size={12} />
-                                    {pendingEssays.length} essay{pendingEssays.length > 1 ? 's' : ''} pending
-                                </span>
-                            )}
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                            <StatCard
+                                label="Graded"
+                                value={`${sessionResult.questions_graded} / ${sessionResult.questions_total}`}
+                            />
+                            <StatCard
+                                label="Points"
+                                value={`${sessionResult.total_points} / ${sessionResult.max_points}`}
+                            />
+                            <StatCard label="Score" value={`${sessionResult.percentage.toFixed(1)}%`} tone="info" />
+                            <StatCard
+                                label="Grade"
+                                value={sessionResult.letter_grade ?? '—'}
+                                tone={sessionResult.passed === false ? 'warning' : 'success'}
+                            />
+                        </div>
+                    )}
+
+                    {pendingEssays.length > 0 && (
+                        <div className="flex items-center gap-2 rounded-lg border border-[var(--color-warning-border)] bg-[var(--color-warning-bg)] px-4 py-2 text-sm text-[var(--color-warning-fg)]">
+                            <AlertIcon size={14} />
+                            {pendingEssays.length} essay{pendingEssays.length > 1 ? 's' : ''} pending manual grading
+                        </div>
+                    )}
+
+                    {gradesLoading && (
+                        <div className="flex items-center justify-center py-20 text-shell-muted-dim">
+                            <Spinner size="lg" className="mr-3" />
+                            Loading grades…
+                        </div>
+                    )}
+
+                    {!gradesLoading && questionGrades.map((grade, idx) => {
+                        const resolved = deriveGradeState(grade) !== 'PENDING';
+                        const isEssay = !grade.is_auto_graded;
+                        return (
+                            <div
+                                key={grade.id}
+                                className={`space-y-5 rounded-xl border bg-shell-surface p-6 transition-colors ${resolved ? 'border-[var(--color-success-border)]' : 'border-[var(--color-warning-border)]'}`}
+                            >
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex items-center gap-3">
+                                        <span
+                                            className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${resolved ? 'bg-[var(--color-success-bg)] text-[var(--color-success-fg)]' : 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]'}`}
+                                        >
+                                            {resolved ? <CheckIcon size={14} /> : idx + 1}
+                                        </span>
+                                        <div>
+                                            <p className="text-sm font-semibold text-foreground">
+                                                {getQuestionHeading(grade.question_content, idx)}
+                                            </p>
+                                            <p className="text-xs text-shell-muted-dim">
+                                                Question {idx + 1} · {isEssay ? 'Essay — manual grading' : 'Auto-graded'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <p className="text-right font-bold text-foreground">
+                                        {grade.points_awarded}{' '}
+                                        <span className="font-normal text-shell-muted-dim">/ {grade.points_possible} pts</span>
+                                    </p>
+                                </div>
+
+                                {grade.question_content != null && (
+                                    <div
+                                        className="prose max-w-none rounded-lg border border-shell-border bg-shell-bg/60 px-4 py-3 text-base leading-relaxed"
+                                        dangerouslySetInnerHTML={{ __html: sanitizeExamHtml(toExamContentHtml(grade.question_content)) }}
+                                    />
+                                )}
+
+                                {isEssay ? (
+                                    <EssayGradingPanel
+                                        key={`${grade.id}-${grade.points_awarded}-${grade.feedback ?? ''}`}
+                                        grade={grade}
+                                        onSave={(payload) => submitManualGrade(grade.id, payload)}
+                                        saving={submittingGradeId === grade.id}
+                                    />
+                                ) : (
+                                    <AutoGradeResult grade={grade} />
+                                )}
+                            </div>
+                        );
+                    })}
+
+                    {!gradesLoading && questionGrades.length === 0 && (
+                        <div className="py-20 text-center text-shell-muted-dim">
+                            No grades found for this session. This session may not have been submitted yet.
                         </div>
                     )}
                 </div>
             </div>
-
-            <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
-                {/* Error banner */}
-                {error && (
-                    <div className="border border-[var(--color-danger-border)] bg-[var(--color-danger-bg)] text-[var(--color-danger-fg)] rounded-lg px-4 py-3 text-sm flex justify-between">
-                        <span>{error}</span>
-                        <button onClick={clearError} aria-label="Dismiss" className="text-[var(--color-danger-fg)] hover:opacity-80"><XIcon size={14} /></button>
-                    </div>
-                )}
-
-                {/* Loading */}
-                {gradesLoading && (
-                    <div className="flex items-center justify-center py-20 text-shell-muted-dim">
-                        <Spinner size="lg" className="mr-3" />
-                        Loading grades…
-                    </div>
-                )}
-
-                {/* Question cards */}
-                {!gradesLoading && questionGrades.map((grade, idx) => {
-                    const isEssay = !grade.is_auto_graded;
-                    const isGraded = isEssay
-                        ? (grade.feedback !== null || grade.points_awarded > 0)
-                        : true;
-
-                    return (
-                        <div
-                            key={grade.id}
-                            className={`bg-shell-surface border rounded-xl p-6 space-y-5 transition-colors ${
-                                isGraded
-                                    ? 'border-[var(--color-success-border)]'
-                                    : 'border-[var(--color-warning-border)]'
-                            }`}
-                        >
-                            {/* Card header */}
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="flex items-center gap-3">
-                                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${isGraded ? 'bg-[var(--color-success-bg)] text-[var(--color-success-fg)]' : 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]'}`}>
-                                        {isGraded ? <CheckIcon size={14} /> : idx + 1}
-                                    </span>
-                                    <div>
-                                        <p className="text-foreground font-semibold text-sm">{getQuestionHeading(grade.question_content, idx)}</p>
-                                        <p className="text-shell-muted-dim text-xs capitalize">
-                                            Question {idx + 1} · {isEssay ? 'Essay - manual grading required' : 'Auto-graded'}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="text-right">
-                                    <p className="text-foreground font-bold">
-                                        {grade.points_awarded} <span className="text-shell-muted-dim font-normal">/ {grade.points_possible} pts</span>
-                                    </p>
-                                </div>
-                            </div>
-                            {grade.question_content != null && (
-                                <div
-                                    className="prose max-w-none rounded-lg border border-shell-border bg-shell-bg/60 px-4 py-3 text-base leading-relaxed"
-                                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(toExamContentHtml(grade.question_content)) }}
-                                />
-                            )}
-
-                            {/* Grading body */}
-                            {isEssay ? (
-                                <EssayGradingPanel
-                                    key={`${grade.id}-${grade.points_awarded}-${grade.feedback ?? ''}`}
-                                    grade={grade}
-                                    onSave={(payload) => submitManualGrade(grade.id, payload)}
-                                    saving={submittingGradeId === grade.id}
-                                />
-                            ) : (
-                                <AutoGradeResult grade={grade} />
-                            )}
-                        </div>
-                    );
-                })}
-
-                {!gradesLoading && questionGrades.length === 0 && (
-                    <div className="text-center py-20 text-shell-muted-dim">
-                        No grades found for this session. This session may not have been submitted yet.
-                    </div>
-                )}
-            </div>
-        </div>
         </ProtectedRoute>
     );
 }

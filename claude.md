@@ -6,7 +6,7 @@
 
 ## 1. Security
 
-- **Never trust client input.** Validate all request bodies with Pydantic models on the backend. Sanitize HTML output with DOMPurify on the frontend.
+- **Never trust client input.** Validate all request bodies with Pydantic models on the backend. Sanitize author-supplied HTML through the single `sanitizeExamHtml` helper (`frontend/src/lib/sanitizeHtml.ts`) — never hand-roll a local `DOMPurify.sanitize` config (it drifts from the security-reviewed allow-list + image-source guard). Bound any client-supplied free-form payload before persisting it (size/key caps), e.g. self-heal `context`.
 - **Authorization on every endpoint.** Every route must verify: (a) the user is authenticated, (b) the user's role permits the action, and (c) the user owns or has legitimate access to the resource.
 - **Parameterized queries only.** Use SQLAlchemy or Prisma ORM methods. Never interpolate strings into SQL.
 - **Secrets management.** All credentials live in `.env`. Never hardcode tokens, passwords, or connection strings. `.env` is in `.gitignore`.
@@ -14,6 +14,8 @@
 - **JWT best practices.** Short-lived access tokens. Refresh tokens with rotation. Tokens must be validated on every protected request.
 - **Security review.** Perform a manual security review of the diff before every merge to `main` (e.g. the `/security-review` skill, or a deliberate read of the changed surface against §1). Resolve any high-severity findings before merge proceeds. _(The Aikido SAST gate was retired once the subscription lapsed — there is no automated scan; the review is a human responsibility now.)_
 - **Least privilege.** Students cannot access authoring endpoints. Constructors cannot approve items. Enforce at the middleware/dependency level.
+- **Role is never client-assignable on self-service paths.** Public `/auth/register` forces `STUDENT` — the role is absent from `RegisterRequest` and set server-side. Privileged accounts come only from the seed path or an admin-gated flow. (A `role` field on a public registration body is a direct privilege-escalation footgun.)
+- **Role check ≠ ownership check.** A `require_role` / `_require_instructor_or_admin` guard proves _what_ the caller is, not _which_ resources they may touch. Every instructor-scoped route that reads or mutates a specific test's data **must also** call `assert_test_access(test_definition_id, current_user)` (ADMIN sees all; CONSTRUCTOR only their own tests). Apply it on **reads and writes alike** — see §8.8.
 - **Frontend disables are advisory; backend `403` is authoritative.** Never rely on a disabled button to prevent mutation — assert the rule in the service layer.
 
 ## 2. Maintainability & Clean Code
@@ -165,6 +167,7 @@ When a surface has both editable and read-only modes:
 
 - **Tables always have an active sort.** No "unsorted" state. Default to the first sortable column ascending.
 - **`SortArrow` renders only `↑` or `↓`.** No `↕` glyph — if a column is sortable but inactive, the arrow is muted; clicking activates it.
+- **Use the shared `SortArrow` (`components/ui`) and `useTableSort` (`hooks/`).** Never re-implement the arrow component or the `sortKey`/`sortDir` toggle inline — `useTableSort(initialKey)` returns `{ sortKey, sortDir, toggle }` and enforces the active-sort rule in one place.
 - **Filter chips are persisted per surface** via Zustand `persist` when filter state spans navigation events.
 
 ### 7.9 Lifecycle vocabulary (canon)
@@ -257,6 +260,36 @@ Toggle via the global `ThemeToggle` in the header. New surfaces must look right 
 - Endpoint: `POST /learning-objects/{lo_id}/duplicate`.
 - Service: `items_service.duplicate_learning_object` — copies latest version's content, options, metadata (minus `review_feedback`).
 - Always available, even on locked questions (duplicating is read-only against the source).
+
+### 8.8 Grading authorization, shared table & grade-state utilities (Epoch 15)
+
+- **Object-level grading authorization.** Every instructor-scoped grading/analytics
+  route pairs its role guard with `assert_test_access(test_definition_id, current_user)`
+  (`services/run_filter.py`) — on the manual-grade write (`PATCH /grading/grades/{id}`),
+  the result read (`GET /grading/sessions/{id}/result`), and the scoring-config write
+  (`PATCH /grading/tests/{id}/scoring-config`), not just the list reads. When adding a
+  grading route, copy this pairing; a role check alone is a cross-tenant hole.
+- **Grade-state is derived once.** "Has this question been graded?" comes from
+  `lib/gradeState.deriveGradeState` / `isAwaitingGrade` (authoritative signal:
+  `updated_at`, the M-12 rule). Never re-derive it inline from `feedback`/`points`/`is_correct`
+  — that drift is how a 0-point essay once read as graded, ungraded, and pending at once.
+- **Student display name** comes from `lib/studentLabel.formatStudentLabel` (email
+  local-part → `Jane Doe`). Blind mode is enforced **client-side** (advisory, like the
+  dashboard) — the API may return `student_email`; the UI hides it when `blindMode` is on.
+- **Shared grading components** live in `components/grading/`: `AnswerChoiceList` (the
+  one MCQ option renderer, used by both grading review and student results),
+  `AutoGradeResult`, `EssayGradingPanel`. Don't re-inline answer rendering in a page.
+
+### 8.9 Self-heal incident store (Epoch 15)
+
+- **Runtime faults and user feedback are captured as structured, deduplicated data** in
+  `self_heal_incidents` (Prisma) via `services/self_heal_service` + `SelfHealCaptureMiddleware`
+  + `POST /feedback`. Capture is **best-effort** — it must never raise into the request
+  path or change the user-visible error. Incidents dedupe by `fingerprint`
+  (`source, title, normalized-path`); recurrences bump `occurrences`. PII-light: store
+  `user_role` only, never user id / query values / bodies. See
+  `directives/epoch_15_self_heal_blueprint.md`. A full bug/UX/structure audit of the
+  grading surfaces lives in `directives/epoch_15_grading_ux_audit.md`.
 
 ---
 

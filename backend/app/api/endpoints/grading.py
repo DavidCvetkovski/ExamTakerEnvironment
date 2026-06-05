@@ -124,7 +124,7 @@ async def get_session_result(
 
     result = await prisma.session_results.find_unique(
         where={"session_id": str(session_id)},
-        include={"test_definitions": True},
+        include={"test_definitions": True, "students": True},
     )
     if not result:
         raise HTTPException(status_code=404, detail="Result not yet available.")
@@ -139,6 +139,10 @@ async def get_session_result(
             raise HTTPException(
                 status_code=403, detail="Results are not yet published."
             )
+    elif is_instructor:
+        # A CONSTRUCTOR may only read results for tests they created (ADMIN sees
+        # all). Same per-test ownership model as the sibling /grades route.
+        await assert_test_access(str(result.test_definition_id), current_user)
 
     return {
         "id": result.id,
@@ -146,6 +150,10 @@ async def get_session_result(
         "test_definition_id": result.test_definition_id,
         "test_title": result.test_definitions.title if result.test_definitions else None,
         "student_id": result.student_id,
+        # Lets the grading view name who is being graded. Blind mode is enforced
+        # client-side (advisory, like the grading dashboard) — the grader can
+        # always reveal it, so sending it here is consistent with that model.
+        "student_email": result.students.email if result.students else None,
         "total_points": result.total_points,
         "max_points": result.max_points,
         "percentage": result.percentage,
@@ -173,6 +181,19 @@ async def update_manual_grade(
     Submit a manual grade for an essay question.
     After saving, recalculates the session result aggregate.
     """
+    from app.core.prisma_db import prisma
+
+    # Ownership: a CONSTRUCTOR may only grade attempts on tests they created
+    # (ADMIN grades all). Mirrors the read guard on GET /sessions/{id}/grades —
+    # the H-10 fix must hold on the write path too, not just reads.
+    grade = await prisma.question_grades.find_unique(where={"id": str(grade_id)})
+    if not grade:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Grade record not found.")
+    session = await prisma.exam_sessions.find_unique(where={"id": str(grade.session_id)})
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found.")
+    await assert_test_access(str(session.test_definition_id), current_user)
+
     return await results_service.submit_manual_grade(
         grade_id=str(grade_id),
         grader_id=str(current_user.id),
@@ -389,11 +410,10 @@ async def update_scoring_config(
     from app.core.prisma_db import prisma
     from prisma import Json
 
-    test_def = await prisma.test_definitions.find_unique(
-        where={"id": str(test_definition_id)}
-    )
-    if not test_def:
-        raise HTTPException(status_code=404, detail="Test definition not found.")
+    # Ownership: only the test's creator (or an ADMIN) may rewrite its scoring
+    # rules — changing them re-grades the whole cohort. assert_test_access both
+    # enforces this and returns the loaded test (no second fetch needed).
+    await assert_test_access(str(test_definition_id), current_user)
 
     config_dict = payload.model_dump(exclude_none=True)
     updated = await prisma.test_definitions.update(

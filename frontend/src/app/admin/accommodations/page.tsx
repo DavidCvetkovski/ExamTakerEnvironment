@@ -19,6 +19,7 @@ import {
     TH,
     THead,
     TR,
+    SortArrow,
     useToast,
 } from '@/components/ui';
 import {
@@ -30,12 +31,6 @@ import AccommodationEditDrawer from '@/components/admin/AccommodationEditDrawer'
 
 type SortKey = 'email' | 'vunet' | 'extra';
 type SortDir = 'asc' | 'desc';
-
-// Arrow only on the active column (§7.8). Inactive columns show nothing.
-function SortArrow({ active, dir }: { active: boolean; dir: SortDir }) {
-    if (!active) return null;
-    return <span className="text-xs ml-1 text-brand">{dir === 'asc' ? '↑' : '↓'}</span>;
-}
 
 export default function AccommodationsAdminPage() {
     const { students, total, isLoading, search, setSearch, fetchStudents, importCsv } =

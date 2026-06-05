@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 
 import { useGradingStore, QuestionGrade } from '@/stores/useGradingStore';
@@ -9,9 +9,19 @@ import { toExamContentHtml, toExamContentText } from '@/lib/examContent';
 import { sanitizeExamHtml } from '@/lib/sanitizeHtml';
 import { formatStudentLabel } from '@/lib/studentLabel';
 import { deriveGradeState, isAwaitingGrade } from '@/lib/gradeState';
-import { BackButton, Button, Spinner, StatCard, CheckIcon, XIcon, AlertIcon } from '@/components/ui';
+import { BackButton, Button, Spinner, StatCard, CheckIcon, XIcon, AlertIcon, KeyboardIcon } from '@/components/ui';
 import AutoGradeResult from '@/components/grading/AutoGradeResult';
 import EssayGradingPanel from '@/components/grading/EssayGradingPanel';
+import KeyboardShortcutsDialog, { type KeyboardShortcut } from '@/components/exam/KeyboardShortcutsDialog';
+
+/** Grading-surface shortcuts — rendered in the help dialog and wired below (#13). */
+const GRADING_SHORTCUTS: KeyboardShortcut[] = [
+    { keys: ['j', '→'], action: 'Next submission' },
+    { keys: ['k', '←'], action: 'Previous submission' },
+    { keys: ['⌘ Enter', 'Ctrl Enter'], action: 'Save the focused grade' },
+    { keys: ['?'], action: 'Show this help' },
+    { keys: ['Esc'], action: 'Close this dialog' },
+];
 
 function getQuestionHeading(content: QuestionGrade['question_content'], index: number): string {
     const prompt = toExamContentText(content);
@@ -59,6 +69,41 @@ export default function SessionGradingPage() {
 
     const gotoSession = (id: string) => router.push(`/grading/${id}${navQuery}`);
 
+    const [showShortcuts, setShowShortcuts] = useState(false);
+
+    // Keyboard navigation between submissions (documented in GRADING_SHORTCUTS).
+    // The per-panel ⌘/Ctrl+Enter save lives in EssayGradingPanel; here we only
+    // own cross-submission movement and the help dialog (#13).
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // Never intercept browser/OS chords or typing in a field — the save
+            // chord is handled inside the focused panel, not here.
+            if (e.metaKey || e.ctrlKey || e.altKey) return;
+            if (
+                e.target instanceof HTMLTextAreaElement ||
+                e.target instanceof HTMLInputElement ||
+                (e.target instanceof HTMLElement && e.target.isContentEditable)
+            ) {
+                return;
+            }
+            if (e.key === 'j' || e.key === 'ArrowRight') {
+                if (!nextSessionId) return;
+                e.preventDefault();
+                router.push(`/grading/${nextSessionId}${navQuery}`);
+            } else if (e.key === 'k' || e.key === 'ArrowLeft') {
+                if (!prevSessionId) return;
+                e.preventDefault();
+                router.push(`/grading/${prevSessionId}${navQuery}`);
+            } else if (e.key === '?') {
+                e.preventDefault();
+                setShowShortcuts(true);
+            }
+            // Vertical arrows are left to the browser so the page still scrolls.
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [prevSessionId, nextSessionId, navQuery, router]);
+
     const pendingEssays = questionGrades.filter(isAwaitingGrade);
     const studentLabel = sessionResult?.student_email ? formatStudentLabel(sessionResult.student_email) : null;
     const positionLabel =
@@ -90,33 +135,44 @@ export default function SessionGradingPage() {
                             </p>
                         </div>
 
-                        {showPager && (
-                            <div className="flex shrink-0 items-center gap-2">
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    disabled={!prevSessionId}
-                                    onClick={() => prevSessionId && gotoSession(prevSessionId)}
-                                    aria-label="Previous submission"
-                                >
-                                    ←
-                                </Button>
-                                {positionLabel && (
-                                    <span className="whitespace-nowrap text-xs tabular-nums text-shell-muted">
-                                        {positionLabel}
-                                    </span>
-                                )}
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    disabled={!nextSessionId}
-                                    onClick={() => nextSessionId && gotoSession(nextSessionId)}
-                                    aria-label="Next submission"
-                                >
-                                    →
-                                </Button>
-                            </div>
-                        )}
+                        <div className="flex shrink-0 items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setShowShortcuts(true)}
+                                aria-label="Keyboard shortcuts"
+                                title="Keyboard shortcuts"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-shell-border text-shell-muted transition-colors hover:bg-shell-input hover:text-foreground"
+                            >
+                                <KeyboardIcon size={16} />
+                            </button>
+                            {showPager && (
+                                <>
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        disabled={!prevSessionId}
+                                        onClick={() => prevSessionId && gotoSession(prevSessionId)}
+                                        aria-label="Previous submission"
+                                    >
+                                        ←
+                                    </Button>
+                                    {positionLabel && (
+                                        <span className="whitespace-nowrap text-xs tabular-nums text-shell-muted">
+                                            {positionLabel}
+                                        </span>
+                                    )}
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        disabled={!nextSessionId}
+                                        onClick={() => nextSessionId && gotoSession(nextSessionId)}
+                                        aria-label="Next submission"
+                                    >
+                                        →
+                                    </Button>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -221,6 +277,13 @@ export default function SessionGradingPage() {
                         </div>
                     )}
                 </div>
+
+                <KeyboardShortcutsDialog
+                    isOpen={showShortcuts}
+                    onClose={() => setShowShortcuts(false)}
+                    shortcuts={GRADING_SHORTCUTS}
+                    title="Grading shortcuts"
+                />
             </div>
         </ProtectedRoute>
     );

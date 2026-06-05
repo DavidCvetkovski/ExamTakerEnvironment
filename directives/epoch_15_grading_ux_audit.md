@@ -8,26 +8,38 @@
 ## Remediation status (2026-06-05)
 
 **Fixed & verified** (frontend `tsc`/`lint`/`next build` green; backend pytest green):
-#1 #2 #3 #4 #5 #6 #7 #8(partial) #9 #11 #15 #16 #17 #18(my-results) #19 #21 #23
-#24 #26 #29 #30 #32 #33 #34 #36 #37 #39 #40 #42 #43 #44 #45 — plus the new shared
-pieces: `components/ui/SortArrow`, `hooks/useTableSort`, `lib/studentLabel`,
-`lib/gradeState`, `components/grading/{AnswerChoiceList,AutoGradeResult,EssayGradingPanel}`.
+#1 #2 #3 #4 #5 #6 #7 #8(partial) #9 #11 #12 #13 #15 #16 #17 #18 #19 #21 #23
+#24 #26 #27 #28 #29 #30 #32 #33 #34 #35 #36 #37 #39 #40 #41 #42 #43 #44 #45 — plus
+the new shared pieces: `components/ui/SortArrow`, `hooks/useTableSort`,
+`lib/studentLabel`, `lib/gradeState`,
+`components/grading/{AnswerChoiceList,AutoGradeResult,EssayGradingPanel}`, and
+(Epoch 15 grading-audit-fixes branch) `schemas/pagination.Page[T]` +
+`services/pagination.paginate`, `services/student_results_service`,
+`lib/api.fetchAllPaginated`, `ui/icons.{RefreshIcon,KeyboardIcon,LockIcon}`,
+`services/courses_service` enrollment audit (`course_enrollment_audit`).
 CLAUDE.md updated (§1 role/ownership rules, §7.8 shared table utils, §8.8/§8.9).
 
-**Deferred — needs a decision or is too broad/risky for this sweep:**
-- **#25** full list pagination — changes response shape + every frontend consumer.
-  Needs a paginated-envelope convention first.
-- **#27** wire grading `response_model`s — risks coercion breakage against the
-  hand-built dicts; do per-route with contract tests.
-- **#28** split `results_service.py` into 4 services — large structural move.
-- **#41** course-roster ownership — needs a product call: are courses co-managed
-  by all constructors or single-owner? Don't guess (would break enrollment).
-- **#10** grading dashboard toolbar declutter; **#31** move landing fetch into the
-  store; **#38** remaining inline-SVG sweep (SortArrow + "Clear x" done; ~14 SVGs
-  left); **#12** redirect-hook extraction (render-time bugs #4/#15 fixed; the
-  remaining inline checks are in `useEffect`, harmless); **#35** logout token bump
-  (documented tradeoff). **#18** `my-exams` PageShell (low; my-results converted).
-- **#13** keyboard nav in grading; **#14** the one `as any` — nice-to-haves.
+Resolved since the initial sweep (this branch):
+- **#35** plain logout now revokes the refresh token server-side (`token_version` bump).
+- **#41** course-roster stays co-managed (product call: shared ownership); enroll/remove
+  are audited via the new `course_enrollment_audit` table, actor threaded through.
+- **#12** redundant `useEffect` role-redirects removed (ProtectedRoute already guards).
+- **#18** `my-exams` moved onto `PageShell`.
+- **#38** extracted the three *named* functional icons (Refresh/Keyboard/Lock);
+  the ~11 remaining inline SVGs are component-local presentational graphics
+  (save spinners, proctoring shield, submission illustration) — left intentionally.
+- **#27** `response_model` wired on the two single-resource grading reads, schemas
+  reconciled to supersets first + a contract test so no field is silently stripped.
+- **#28** student read path split into `student_results_service`.
+- **#25** unbounded list endpoints paginated behind the LTI-style `Page[T]` envelope;
+  frontend consumers keep list semantics via `fetchAllPaginated`.
+- **#14** moot — no real `as any`, just a comment containing the substring.
+- **#13** keyboard navigation and shortcuts (j/k/arrows, ⌘/Ctrl+Enter, help dialog) wired on the grading page and panel.
+
+**Still deferred / out of scope:**
+- **#10** grading dashboard toolbar declutter — product call: leave as-is (page is fine).
+- **#31** move landing fetch into the store — cosmetic structure, not pursued this sweep.
+- **#38** remaining presentational inline SVGs — intentionally left (see above).
 
 ## A. Grading session page — `frontend/src/app/grading/[sessionId]/page.tsx`
 

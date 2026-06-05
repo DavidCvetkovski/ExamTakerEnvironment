@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
 import { Button, CheckIcon } from '@/components/ui';
 import type { ManualGradePayload, QuestionGrade } from '@/stores/useGradingStore';
@@ -34,11 +34,24 @@ export default function EssayGradingPanel({
         onSave({ points_awarded: parseFloat(pointsInput), feedback: feedback.trim() || undefined });
     }, [validationError, pointsInput, feedback, onSave]);
 
+    // ⌘/Ctrl+Enter saves the panel whose field is focused — the unambiguous
+    // "save what I'm grading" gesture (Epoch 15 #13). Plain Enter is left alone
+    // so the points input and feedback textarea behave normally.
+    const handleKeyDown = useCallback(
+        (e: ReactKeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                e.preventDefault();
+                handleSave();
+            }
+        },
+        [handleSave],
+    );
+
     const essayText = (grade.student_answer?.essay_text as string) ?? (grade.student_answer?.text as string) ?? '';
     const isGraded = deriveGradeState(grade) === 'GRADED';
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4" onKeyDown={handleKeyDown}>
             {/* Student essay */}
             <div className="rounded-lg border border-shell-border-deep bg-shell-input/40">
                 <div className="border-b border-shell-border-deep px-4 py-2">

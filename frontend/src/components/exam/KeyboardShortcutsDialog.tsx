@@ -2,9 +2,14 @@
 
 import Modal from '@/components/ui/Modal';
 
+export interface KeyboardShortcut {
+    keys: string[];
+    action: string;
+}
+
 /** The exam keyboard shortcuts, surfaced both here and wired on the exam page.
  *  Single source — the help dialog and the handler read the same intent list. */
-export const EXAM_SHORTCUTS: Array<{ keys: string[]; action: string }> = [
+export const EXAM_SHORTCUTS: KeyboardShortcut[] = [
     { keys: ['→'], action: 'Next question' },
     { keys: ['←'], action: 'Previous question' },
     { keys: ['F'], action: 'Flag or unflag the current question' },
@@ -15,14 +20,23 @@ export const EXAM_SHORTCUTS: Array<{ keys: string[]; action: string }> = [
 interface KeyboardShortcutsDialogProps {
     isOpen: boolean;
     onClose: () => void;
+    /** Defaults to the exam shortcuts; the grading surface passes its own list. */
+    shortcuts?: KeyboardShortcut[];
+    title?: string;
 }
 
-/** Keyboard-shortcuts reference for the exam surface (Epoch 10, F2). */
-export default function KeyboardShortcutsDialog({ isOpen, onClose }: KeyboardShortcutsDialogProps) {
+/** Keyboard-shortcuts reference. Generic over the shortcut list so any surface
+ *  (exam, grading) can reuse it (Epoch 10 F2; generalized Epoch 15 #13). */
+export default function KeyboardShortcutsDialog({
+    isOpen,
+    onClose,
+    shortcuts = EXAM_SHORTCUTS,
+    title = 'Keyboard shortcuts',
+}: KeyboardShortcutsDialogProps) {
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Keyboard shortcuts" size="sm">
+        <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
             <dl className="space-y-3">
-                {EXAM_SHORTCUTS.map(({ keys, action }) => (
+                {shortcuts.map(({ keys, action }) => (
                     <div key={action} className="flex items-center justify-between gap-4">
                         <dt className="text-meta text-foreground">{action}</dt>
                         <dd className="flex items-center gap-1.5">

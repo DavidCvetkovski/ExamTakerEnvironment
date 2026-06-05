@@ -179,6 +179,22 @@ async def test_get_session_grades_instructor(ac: AsyncClient, full_grading_setup
 
 
 @pytest.mark.anyio
+async def test_get_session_result_carries_title_and_student_email(ac: AsyncClient, full_grading_setup):
+    """The result read must expose test_title + student_email for the grading
+    view. Guards against response_model silently filtering these joined fields."""
+    s = full_grading_setup
+    token = await login(ac, ADMIN_EMAIL, PASS)
+    resp = await ac.get(
+        f"/api/grading/sessions/{s['session'].id}/result",
+        headers=auth(token),
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["test_title"] == "Results Test"
+    assert body["student_email"] == STUDENT_EMAIL
+
+
+@pytest.mark.anyio
 async def test_get_session_grades_student_blocked(ac: AsyncClient, full_grading_setup):
     """Students cannot access instructor grade breakdown."""
     s = full_grading_setup

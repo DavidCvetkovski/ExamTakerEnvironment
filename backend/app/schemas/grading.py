@@ -7,18 +7,26 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class QuestionGradeResponse(BaseModel):
-    """Response shape for a single question grade record."""
+    """Response shape for a single question grade record.
+
+    Superset of the persisted grade plus the frozen question snapshot
+    (``question_type``/``content``/``options``) the grading UI renders — these
+    are joined in from the session's items, so they are optional here.
+    """
     id: UUID
     session_id: UUID
     learning_object_id: UUID
     item_version_id: UUID
+    question_type: Optional[str] = None
+    question_content: Optional[Any] = None
+    question_options: Optional[Any] = None
     points_awarded: float
     points_possible: float
     is_correct: Optional[bool]
     is_auto_graded: bool
     feedback: Optional[str]
     rubric_data: Optional[Dict[str, Any]]
-    student_answer: Dict[str, Any]
+    student_answer: Optional[Dict[str, Any]] = None
     correct_answer: Optional[Dict[str, Any]]
     created_at: datetime
     updated_at: Optional[datetime]
@@ -27,11 +35,17 @@ class QuestionGradeResponse(BaseModel):
 
 
 class SessionResultResponse(BaseModel):
-    """Aggregated grading result for an exam session."""
+    """Aggregated grading result for an exam session.
+
+    ``test_title`` and ``student_email`` are joined in for the grading view;
+    ``created_at`` is not part of the read payload, so it is optional.
+    """
     id: UUID
     session_id: UUID
     test_definition_id: UUID
+    test_title: Optional[str] = None
     student_id: UUID
+    student_email: Optional[str] = None
     total_points: float
     max_points: float
     percentage: float
@@ -42,8 +56,8 @@ class SessionResultResponse(BaseModel):
     passed: Optional[bool]
     is_published: bool
     published_at: Optional[datetime]
-    created_at: datetime
-    updated_at: Optional[datetime]
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 

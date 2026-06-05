@@ -15,10 +15,12 @@ from app.core.dependencies import get_current_user, require_role
 from app.models.user import UserRole
 from app.schemas.grading import (
     ManualGradeSubmit,
+    QuestionGradeResponse,
     ScoringConfigUpdate,
     SessionGradingSummary,
+    SessionResultResponse,
 )
-from app.services import grading_service, results_service
+from app.services import grading_service, results_service, student_results_service
 from app.services.run_filter import assert_run_belongs_to_test, assert_test_access
 
 router = APIRouter()
@@ -48,7 +50,11 @@ def _require_admin(current_user=Depends(get_current_user)):
 # Session-level grade inspection (instructor)
 # ─────────────────────────────────────────────
 
-@router.get("/sessions/{session_id}/grades", summary="Get all question grades for a session")
+@router.get(
+    "/sessions/{session_id}/grades",
+    summary="Get all question grades for a session",
+    response_model=List[QuestionGradeResponse],
+)
 async def get_session_grades(
     session_id: UUID,
     current_user=Depends(_require_instructor_or_admin),
@@ -110,7 +116,11 @@ async def get_session_grades(
     ]
 
 
-@router.get("/sessions/{session_id}/result", summary="Get the aggregated session result")
+@router.get(
+    "/sessions/{session_id}/result",
+    summary="Get the aggregated session result",
+    response_model=SessionResultResponse,
+)
 async def get_session_result(
     session_id: UUID,
     current_user=Depends(get_current_user),
@@ -375,7 +385,7 @@ async def get_my_results(
     """
     if current_user.role != UserRole.STUDENT.value:
         return []
-    return await results_service.get_student_published_results(
+    return await student_results_service.get_student_published_results(
         str(current_user.id),
         include_unpublished=include_unpublished,
     )
@@ -390,7 +400,7 @@ async def get_my_result_detail(
     Student-facing: detailed per-question result breakdown for a session.
     Only returns if the result is published and belongs to the requesting student.
     """
-    return await results_service.get_student_result_detail(
+    return await student_results_service.get_student_result_detail(
         session_id=str(session_id),
         student_id=str(current_user.id),
     )

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { api } from '../lib/api';
+import { api, fetchAllPaginated } from '../lib/api';
 import type { BlueprintStatus } from '../lib/blueprintPermissions';
 import { isBlueprintLocked } from '../lib/blueprintPermissions';
 
@@ -192,8 +192,8 @@ export const useBlueprintStore = create<BlueprintState>()(persist((set, get) => 
     fetchAvailableItems: async () => {
         set({ isLoading: true, error: null });
         try {
-            const response = await api.get<AvailableItem[]>('learning-objects');
-            set({ availableItems: response.data, isLoading: false });
+            const availableItems = await fetchAllPaginated<AvailableItem>('learning-objects');
+            set({ availableItems, isLoading: false });
         } catch (err: unknown) {
             set({ error: getApiErrorMessage(err, 'Failed to fetch items'), isLoading: false });
         }
@@ -202,8 +202,7 @@ export const useBlueprintStore = create<BlueprintState>()(persist((set, get) => 
     fetchBlueprints: async () => {
         set({ isLoading: true, error: null });
         try {
-            const response = await api.get<TestDefinition[]>('tests/');
-            const blueprints = response.data;
+            const blueprints = await fetchAllPaginated<TestDefinition>('tests/');
             set({ blueprints, isLoading: false });
             // Fetch usage for all blueprints in parallel
             const usageEntries = await Promise.all(

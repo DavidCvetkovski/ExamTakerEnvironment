@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 from uuid import UUID
 from typing import List
@@ -9,19 +9,23 @@ from app.models.user import User, UserRole
 from app.models.item_version import ItemStatus
 from app.schemas.item_version import ItemVersionCreate, ItemVersionResponse
 from app.schemas.learning_object import LearningObjectListResponse, LearningObjectUpdate
+from app.schemas.pagination import DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, Page
 from app.services import items_service as svc
+from app.services.pagination import paginate
 
 router = APIRouter()
 
 from app.core.prisma_db import get_prisma
 from prisma import Prisma
 
-@router.get("/learning-objects", response_model=List[LearningObjectListResponse])
+@router.get("/learning-objects", response_model=Page[LearningObjectListResponse])
 async def list_learning_objects(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
     current_user: User = Depends(get_current_user),
 ):
-    """Return a list of all Learning Objects with their latest version metadata."""
-    return await svc.list_learning_objects()
+    """Return a paginated list of Learning Objects with latest-version metadata."""
+    return paginate(await svc.list_learning_objects(), skip, limit)
 
 @router.post("/learning-objects", response_model=dict)
 async def create_learning_object(

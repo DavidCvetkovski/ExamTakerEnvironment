@@ -126,13 +126,14 @@ async def test_list_filter_by_course_unassigned_and_all(ac: AsyncClient, setup_b
 
     all_resp = await ac.get("/api/tests/", headers=auth(token))
     assert all_resp.status_code == 200
-    assert len(all_resp.json()) == 3
+    assert all_resp.json()["total"] == 3
+    assert len(all_resp.json()["items"]) == 3
 
     a_resp = await ac.get(f"/api/tests/?course_id={setup_bpcourse['course_a']}", headers=auth(token))
-    assert [b["title"] for b in a_resp.json()] == ["A"]
+    assert [b["title"] for b in a_resp.json()["items"]] == ["A"]
 
     un_resp = await ac.get("/api/tests/?course_id=unassigned", headers=auth(token))
-    assert [b["title"] for b in un_resp.json()] == ["U"]
+    assert [b["title"] for b in un_resp.json()["items"]] == ["U"]
 
 
 @pytest.mark.anyio

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { api } from '@/lib/api';
+import { fetchAllPaginated } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, PageHeader, RefreshIcon, Spinner } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -137,8 +137,8 @@ export default function GradingLandingPage() {
     // is safe to call from the mount effect; the manual refresh flips the
     // loading/error state itself in its event handler below.
     const fetchRows = useCallback(() => {
-        api.get<GradingIndexRow[]>('/analytics/index')
-            .then((r) => { setRows(r.data); })
+        fetchAllPaginated<GradingIndexRow>('/analytics/index')
+            .then((rows) => { setRows(rows); })
             .catch((err) => { setError(err instanceof Error ? err.message : 'Failed to load grading index.'); })
             .finally(() => { setIsLoading(false); });
     }, []);

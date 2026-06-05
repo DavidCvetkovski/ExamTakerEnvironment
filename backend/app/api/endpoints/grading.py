@@ -20,7 +20,9 @@ from app.schemas.grading import (
     SessionGradingSummary,
     SessionResultResponse,
 )
+from app.schemas.pagination import DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, Page
 from app.services import grading_service, results_service, student_results_service
+from app.services.pagination import paginate
 from app.services.run_filter import assert_run_belongs_to_test, assert_test_access
 
 router = APIRouter()
@@ -217,20 +219,27 @@ async def update_manual_grade(
 # Grading overview / queue (instructor dashboard)
 # ─────────────────────────────────────────────
 
-@router.get("/sessions", summary="All submitted sessions across owned blueprints")
+@router.get(
+    "/sessions",
+    summary="All submitted sessions across owned blueprints",
+    response_model=Page[Dict[str, Any]],
+)
 async def list_grading_sessions(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
     current_user=Depends(_require_instructor_or_admin),
-) -> List[Dict[str, Any]]:
+) -> Dict[str, Any]:
     """
     List all SUBMITTED exam sessions for blueprints the caller created (admin: all blueprints).
     Includes ungraded_response_count. Sorted: ungraded DESC, submitted_at DESC.
     """
     from app.models.user import UserRole as _Role
     is_admin = current_user.role == _Role.ADMIN.value
-    return await results_service.get_all_grading_sessions(
+    rows = await results_service.get_all_grading_sessions(
         user_id=str(current_user.id),
         is_admin=is_admin,
     )
+    return paginate(rows, skip, limit)
 
 
 @router.get("/tests/{test_definition_id}/runs", summary="Per-run grading aggregates")
@@ -250,12 +259,18 @@ async def get_grading_runs(
     return await results_service.get_grading_runs(str(test_definition_id))
 
 
-@router.get("/tests/{test_definition_id}/grading-overview", summary="Grading progress overview")
+@router.get(
+    "/tests/{test_definition_id}/grading-overview",
+    summary="Grading progress overview",
+    response_model=Page[Dict[str, Any]],
+)
 async def get_grading_overview(
     test_definition_id: UUID,
     run_id: Optional[str] = Query(default=None, description="Scoped to one scheduled run, 'practice', or 'combined' / omit for all."),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
     current_user=Depends(_require_instructor_or_admin),
-) -> List[Dict[str, Any]]:
+) -> Dict[str, Any]:
     """List all submitted sessions for a test with per-session grading progress.
 
     When ``run_id`` is set to a scheduled-session UUID or the ``"practice"``
@@ -263,18 +278,25 @@ async def get_grading_overview(
     is rejected with 404 by ``assert_run_belongs_to_test``.
     """
     await assert_run_belongs_to_test(run_id, str(test_definition_id))
-    return await results_service.get_grading_overview(
+    rows = await results_service.get_grading_overview(
         str(test_definition_id), run_id=run_id,
     )
+    return paginate(rows, skip, limit)
 
 
-@router.get("/tests/{test_definition_id}/grading-queue", summary="Get ungraded essay queue")
+@router.get(
+    "/tests/{test_definition_id}/grading-queue",
+    summary="Get ungraded essay queue",
+    response_model=Page[Dict[str, Any]],
+)
 async def get_grading_queue(
     test_definition_id: UUID,
     question_lo_id: Optional[str] = Query(default=None),
     run_id: Optional[str] = Query(default=None, description="Scoped to one scheduled run, 'practice', or 'combined' / omit for all."),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
     current_user=Depends(_require_instructor_or_admin),
-) -> List[Dict[str, Any]]:
+) -> Dict[str, Any]:
     """
     Get all ungraded essay question records for a test.
     If ?question_lo_id=<UUID> is provided, filters to one specific question
@@ -282,11 +304,12 @@ async def get_grading_queue(
     narrows to a specific scheduled run or the practice bucket.
     """
     await assert_run_belongs_to_test(run_id, str(test_definition_id))
-    return await results_service.get_grading_queue(
+    rows = await results_service.get_grading_queue(
         test_definition_id=str(test_definition_id),
         question_lo_id=question_lo_id,
         run_id=run_id,
     )
+    return paginate(rows, skip, limit)
 
 
 # ─────────────────────────────────────────────

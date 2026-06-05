@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from uuid import UUID
 import uuid as _uuid
@@ -10,6 +10,7 @@ from app.core.dependencies import get_current_user, require_role
 from app.core.prisma_db import prisma
 from app.models.blueprint_status import BlueprintStatus
 from app.models.user import User, UserRole
+from app.schemas.pagination import DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, Page
 from app.schemas.test_definition import TestDefinitionCreate, TestDefinitionResponse
 from app.services.blueprint_status_service import (
     can_delete_blueprint,
@@ -24,6 +25,7 @@ from app.services.blueprints_service import (
     get_test_definition as svc_get_test_definition,
     update_test_definition as svc_update_test_definition,
 )
+from app.services.pagination import paginate
 
 router = APIRouter()
 
@@ -66,9 +68,11 @@ async def create_test_definition(
     """Create a new Test Blueprint with blocks and rules."""
     return await svc_create_test_definition(payload=payload, current_user_id=current_user.id)
 
-@router.get("/", response_model=List[TestDefinitionResponse])
+@router.get("/", response_model=Page[TestDefinitionResponse])
 async def list_test_definitions(
     course_id: Optional[str] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
     current_user: User = Depends(get_current_user),
 ):
     """List test blueprints, optionally filtered by course (Epoch 8.9.1).
@@ -76,7 +80,7 @@ async def list_test_definitions(
     ``course_id`` accepts a course UUID, or the literal ``unassigned`` to
     return only blueprints with no course. Omit it to return all.
     """
-    return await svc_list_test_definitions(course_id=course_id)
+    return paginate(await svc_list_test_definitions(course_id=course_id), skip, limit)
 
 @router.get("/{test_id}/usage", response_model=BlueprintUsage)
 async def get_blueprint_usage(

@@ -448,7 +448,7 @@ async def test_grading_overview_visible_to_instructor(ac: AsyncClient, full_grad
         headers=auth(token)
     )
     assert resp.status_code == 200
-    data = resp.json()
+    data = resp.json()["items"]
     assert len(data) == 1
     assert data[0]["session_id"] == s["session"].id
     assert data[0]["grading_status"] == "PARTIALLY_GRADED"
@@ -548,13 +548,13 @@ async def test_grade_without_feedback_is_valid(ac: AsyncClient, full_grading_set
     # 1. Check initial ungraded counts
     sessions_resp = await ac.get("/api/grading/sessions", headers=auth(token))
     assert sessions_resp.status_code == 200
-    session_data = next(sess for sess in sessions_resp.json() if sess["session_id"] == s["session"].id)
+    session_data = next(sess for sess in sessions_resp.json()["items"] if sess["session_id"] == s["session"].id)
     assert session_data["ungraded_response_count"] == 1
 
     # 2. Check initial grading queue size
     queue_resp = await ac.get(f"/api/grading/tests/{s['test_def'].id}/grading-queue", headers=auth(token))
     assert queue_resp.status_code == 200
-    queue = queue_resp.json()
+    queue = queue_resp.json()["items"]
     assert len(queue) == 1
     assert queue[0]["grade_id"] == s["essay_grade_id"]
 
@@ -575,13 +575,13 @@ async def test_grade_without_feedback_is_valid(ac: AsyncClient, full_grading_set
     # Check that ungraded counts updated to 0
     sessions_resp = await ac.get("/api/grading/sessions", headers=auth(token))
     assert sessions_resp.status_code == 200
-    session_data = next(sess for sess in sessions_resp.json() if sess["session_id"] == s["session"].id)
+    session_data = next(sess for sess in sessions_resp.json()["items"] if sess["session_id"] == s["session"].id)
     assert session_data["ungraded_response_count"] == 0
 
     # Check that grading queue is now empty
     queue_resp = await ac.get(f"/api/grading/tests/{s['test_def'].id}/grading-queue", headers=auth(token))
     assert queue_resp.status_code == 200
-    queue = queue_resp.json()
+    queue = queue_resp.json()["items"]
     assert len(queue) == 0
 
 

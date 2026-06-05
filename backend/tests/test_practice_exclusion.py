@@ -117,7 +117,7 @@ async def test_grading_overview_combined_excludes_practice(ac, practice_mix_setu
         f"/api/grading/tests/{s['test_def'].id}/grading-overview", headers=headers,
     )
     assert resp.status_code == 200
-    rows = resp.json()
+    rows = resp.json()["items"]
     assert len(rows) == N_ASSIGNED, (
         f"Combined grading view leaked practice submissions: got {len(rows)}, "
         f"expected {N_ASSIGNED}. Either run_filter.is_combined no longer "

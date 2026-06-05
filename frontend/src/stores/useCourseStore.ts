@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-import { api } from '@/lib/api';
+import { api, fetchAllPaginated } from '@/lib/api';
 
 export interface Course {
     id: string;
@@ -146,8 +146,8 @@ export const useCourseStore = create<CourseState>((set, get) => ({
     fetchStudentCandidates: async () => {
         set({ isLoading: true, error: null });
         try {
-            const response = await api.get<StudentCandidate[]>('/courses/student-candidates');
-            set({ studentCandidates: response.data, isLoading: false });
+            const studentCandidates = await fetchAllPaginated<StudentCandidate>('/courses/student-candidates');
+            set({ studentCandidates, isLoading: false });
         } catch (err: unknown) {
             const message = (err as { response?: { data?: { detail?: string } } })
                 ?.response?.data?.detail || 'Failed to fetch students';

@@ -6,7 +6,7 @@
  * manual grade submission, publication, and CSV export.
  */
 import { create } from 'zustand';
-import { api } from '../lib/api';
+import { api, fetchAllPaginated } from '../lib/api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -194,12 +194,11 @@ export const useGradingStore = create<GradingState>((set, get) => ({
             selectedRunId: runId,
         });
         try {
-            const params = runId ? { run_id: runId } : undefined;
-            const res = await api.get<SessionGradingSummary[]>(
+            const overview = await fetchAllPaginated<SessionGradingSummary>(
                 `grading/tests/${testId}/grading-overview`,
-                { params },
+                runId ? { run_id: runId } : {},
             );
-            set({ gradingOverview: res.data, overviewLoading: false });
+            set({ gradingOverview: overview, overviewLoading: false });
         } catch (err) {
             set({ error: getApiErrorMessage(err, 'Failed to load grading overview'), overviewLoading: false });
         }
@@ -248,12 +247,11 @@ export const useGradingStore = create<GradingState>((set, get) => ({
             const testId = get().selectedTestId;
             const runId = get().selectedRunId;
             if (testId) {
-                const params = runId ? { run_id: runId } : undefined;
-                const overviewRes = await api.get<SessionGradingSummary[]>(
+                const overview = await fetchAllPaginated<SessionGradingSummary>(
                     `grading/tests/${testId}/grading-overview`,
-                    { params },
+                    runId ? { run_id: runId } : {},
                 );
-                set({ gradingOverview: overviewRes.data });
+                set({ gradingOverview: overview });
             }
         } catch (err) {
             set({ error: getApiErrorMessage(err, 'Failed to save grade') });
@@ -269,10 +267,10 @@ export const useGradingStore = create<GradingState>((set, get) => ({
             await api.post(`grading/tests/${testId}/publish-results`, { details_visible: detailsVisible });
             set({ publishStatus: 'published' });
             // Refresh overview
-            const overviewRes = await api.get<SessionGradingSummary[]>(
+            const overview = await fetchAllPaginated<SessionGradingSummary>(
                 `grading/tests/${testId}/grading-overview`
             );
-            set({ gradingOverview: overviewRes.data });
+            set({ gradingOverview: overview });
         } catch (err) {
             set({ publishStatus: 'error', error: getApiErrorMessage(err, 'Failed to publish results') });
         }
@@ -283,10 +281,10 @@ export const useGradingStore = create<GradingState>((set, get) => ({
         try {
             await api.post(`grading/tests/${testId}/unpublish-results`);
             set({ publishStatus: 'idle' });
-            const overviewRes = await api.get<SessionGradingSummary[]>(
+            const overview = await fetchAllPaginated<SessionGradingSummary>(
                 `grading/tests/${testId}/grading-overview`
             );
-            set({ gradingOverview: overviewRes.data });
+            set({ gradingOverview: overview });
         } catch (err) {
             set({ publishStatus: 'error', error: getApiErrorMessage(err, 'Failed to unpublish results') });
         }
@@ -294,10 +292,10 @@ export const useGradingStore = create<GradingState>((set, get) => ({
 
     setCutScore: async (testId: string, cutScore: number) => {
         await api.patch(`grading/tests/${testId}/cut-score`, { cut_score: cutScore });
-        const overviewRes = await api.get<SessionGradingSummary[]>(
+        const overview = await fetchAllPaginated<SessionGradingSummary>(
             `grading/tests/${testId}/grading-overview`
         );
-        set({ gradingOverview: overviewRes.data });
+        set({ gradingOverview: overview });
     },
 
     // ── CSV Export ─────────────────────────────────────────────────────────

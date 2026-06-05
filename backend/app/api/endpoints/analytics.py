@@ -21,7 +21,9 @@ from app.schemas.analytics import (
     TestAnalyticsBundleResponse,
     TestStatsResponse,
 )
+from app.schemas.pagination import DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, Page
 from app.services import psychometrics_service
+from app.services.pagination import paginate
 from app.services.run_filter import assert_run_belongs_to_test
 
 router = APIRouter()
@@ -85,10 +87,13 @@ def _parse_cut_scores(raw: Optional[str]) -> Optional[List[float]]:
 @router.get(
     "/index",
     summary="Per-blueprint analytics index (submission counts + course grouping)",
+    response_model=Page[Dict[str, Any]],
 )
 async def list_analytics_index(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
     current_user=Depends(_require_analytics_user),
-) -> List[Dict[str, Any]]:
+) -> Dict[str, Any]:
     """Per-blueprint summary feeding the analytics landing page.
 
     Lets the frontend group by ``primary_course_code`` and visually
@@ -96,9 +101,10 @@ async def list_analytics_index(
     other dashboard endpoints.
     """
     is_admin = current_user.role == UserRole.ADMIN.value
-    return await psychometrics_service.list_analytics_index(
+    rows = await psychometrics_service.list_analytics_index(
         user_id=str(current_user.id), is_admin=is_admin,
     )
+    return paginate(rows, skip, limit)
 
 
 @router.get(

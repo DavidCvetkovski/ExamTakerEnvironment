@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { api } from '@/lib/api';
+import { fetchAllPaginated } from '@/lib/api';
 import { Badge, Button, Card, EmptyState, PageHeader, Spinner } from '@/components/ui';
 import PageShell from '@/components/layout/PageShell';
 import { pluralizeCount } from '@/lib/pluralize';
@@ -153,8 +153,8 @@ export default function AnalyticsIndexPage() {
             setIsLoading(true);
             setError(null);
             try {
-                const response = await api.get<AnalyticsIndexRow[]>('/analytics/index');
-                if (!cancelled) setRows(response.data);
+                const rows = await fetchAllPaginated<AnalyticsIndexRow>('/analytics/index');
+                if (!cancelled) setRows(rows);
             } catch (err) {
                 if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load analytics index.');
             } finally {

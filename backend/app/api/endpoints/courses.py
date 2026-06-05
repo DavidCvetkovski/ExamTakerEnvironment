@@ -1,7 +1,7 @@
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.core.dependencies import require_role
 from app.models.user import User, UserRole
@@ -13,6 +13,7 @@ from app.schemas.course import (
     EnrollmentResponse,
     StudentCandidateResponse,
 )
+from app.schemas.pagination import DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, Page
 from app.services.courses_service import (
     add_course_enrollment,
     create_course,
@@ -21,6 +22,7 @@ from app.services.courses_service import (
     list_student_candidates,
     remove_course_enrollment,
 )
+from app.services.pagination import paginate
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
@@ -42,12 +44,14 @@ async def list_courses_endpoint(
     return await list_courses()
 
 
-@router.get("/student-candidates", response_model=List[StudentCandidateResponse])
+@router.get("/student-candidates", response_model=Page[StudentCandidateResponse])
 async def list_student_candidates_endpoint(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(DEFAULT_PAGE_LIMIT, ge=1, le=MAX_PAGE_LIMIT),
     current_user: User = Depends(require_role(UserRole.CONSTRUCTOR, UserRole.ADMIN)),
 ):
-    """List active students available for enrollment."""
-    return await list_student_candidates()
+    """List active students available for enrollment (paginated)."""
+    return paginate(await list_student_candidates(), skip, limit)
 
 
 @router.get("/{course_id}/enrollments", response_model=CourseRosterResponse)

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { api } from '../lib/api';
+import { api, fetchAllPaginated } from '../lib/api';
 
 export interface LearningObjectSummary {
     id: string;
@@ -42,8 +42,8 @@ export const useLibraryStore = create<LibraryState>((set) => ({
     fetchItems: async () => {
         set({ isLoading: true, error: null });
         try {
-            const response = await api.get<LearningObjectSummary[]>('learning-objects');
-            set({ items: response.data, isLoading: false });
+            const items = await fetchAllPaginated<LearningObjectSummary>('learning-objects');
+            set({ items, isLoading: false });
         } catch (err: unknown) {
             console.error('Failed to fetch library items:', err);
             set({ error: getApiErrorMessage(err, 'Failed to load items'), isLoading: false });

@@ -56,7 +56,9 @@ async def test_list_learning_objects_empty(ac: AsyncClient, setup_library_data):
     headers = auth(token)
     response = await ac.get("/api/learning-objects", headers=headers)
     assert response.status_code == 200
-    assert isinstance(response.json(), list)
+    body = response.json()
+    assert isinstance(body["items"], list)
+    assert body["total"] == len(body["items"])
 
 @pytest.mark.anyio
 async def test_create_and_list_learning_object(ac: AsyncClient, setup_library_data):
@@ -71,7 +73,7 @@ async def test_create_and_list_learning_object(ac: AsyncClient, setup_library_da
     # List LOs
     list_res = await ac.get("/api/learning-objects", headers=headers)
     assert list_res.status_code == 200
-    data = list_res.json()
+    data = list_res.json()["items"]
     assert len(data) > 0
     
     # Find the one we just created
@@ -105,7 +107,7 @@ async def test_list_includes_course_fields_when_assigned(ac: AsyncClient, setup_
 
     resp = await ac.get("/api/learning-objects", headers=headers)
     assert resp.status_code == 200
-    row = next(item for item in resp.json() if item["id"] == lo.id)
+    row = next(item for item in resp.json()["items"] if item["id"] == lo.id)
     assert row["course_id"] == course.id
     assert row["course_title"] == "Library Course"
     assert row["course_code"] == "CS-LIB"
@@ -126,7 +128,51 @@ async def test_list_course_fields_null_when_unassigned(ac: AsyncClient, setup_li
     await _attach_draft_version(lo.id, user.id)
     resp = await ac.get("/api/learning-objects", headers=headers)
     assert resp.status_code == 200
-    row = next(item for item in resp.json() if item["id"] == lo.id)
+    row = next(item for item in resp.json()["items"] if item["id"] == lo.id)
     assert row["course_id"] is None
     assert row["course_title"] is None
     assert row["course_code"] is None
+
+
+# ---------------------------------------------------------------------------
+# Epoch 15 #25 — pagination envelope (skip / limit / total)
+# ---------------------------------------------------------------------------
+
+@pytest.mark.anyio
+async def test_learning_objects_pagination_windows(ac: AsyncClient, setup_library_data):
+    """skip/limit page through the list without overlap, and total reports the
+    full count regardless of the window. The capped limit is enforced (422)."""
+    token = await login(ac, LIB_EMAIL, LIB_PASS)
+    headers = auth(token)
+    user = setup_library_data["user"]
+
+    bank = await prisma.item_banks.create(data={"name": "PG", "created_by": user.id})
+    for _ in range(3):
+        lo = await prisma.learning_objects.create(
+            data={"bank_id": bank.id, "created_by": user.id}
+        )
+        await _attach_draft_version(lo.id, user.id)
+
+    # Full set: envelope shape + total.
+    full = (await ac.get("/api/learning-objects", headers=headers)).json()
+    assert full["total"] == 3
+    assert full["skip"] == 0 and full["limit"] == 50
+    assert len(full["items"]) == 3
+
+    # First window of 2.
+    page1 = (await ac.get("/api/learning-objects?skip=0&limit=2", headers=headers)).json()
+    assert page1["total"] == 3
+    assert len(page1["items"]) == 2
+
+    # Second window holds the remainder, and the two windows are disjoint and
+    # reconstruct the full ordered list (pagination must not reorder).
+    page2 = (await ac.get("/api/learning-objects?skip=2&limit=2", headers=headers)).json()
+    assert page2["total"] == 3
+    assert len(page2["items"]) == 1
+    ids = [i["id"] for i in page1["items"]] + [i["id"] for i in page2["items"]]
+    assert ids == [i["id"] for i in full["items"]]
+    assert len(set(ids)) == 3
+
+    # Over-cap limit is rejected by query validation (le=200).
+    capped = await ac.get("/api/learning-objects?limit=500", headers=headers)
+    assert capped.status_code == 422

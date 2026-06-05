@@ -36,11 +36,6 @@ class BlueprintUsage(BaseModel):
     # Earliest upcoming scheduled session start (UTC). Used by the blueprint
     # card subline; None when no future session exists. (Stage 8 tail.)
     next_session_at: Optional[datetime] = None
-    # Legacy fields — kept for one release for backwards compat. See directives/todo.md TODO-007.
-    has_scheduled_sessions: bool
-    has_past_sessions: bool
-    is_locked: bool
-    is_permanently_locked: bool
 
 
 async def _assert_blueprint_mutable(test_id: str, allow_delete: bool = False) -> None:
@@ -90,20 +85,9 @@ async def get_blueprint_usage(
     """Return the blueprint's lifecycle status (and legacy boolean flags)."""
     bp_status = await derive_blueprint_status(str(test_id))
     next_at = await derive_next_session_at(str(test_id))
-    # Legacy fields preserved for one release — drop after Epoch 8.5 (see TODO-007).
-    has_scheduled = bp_status in (
-        BlueprintStatus.SCHEDULED,
-        BlueprintStatus.ONGOING,
-        BlueprintStatus.PASSED,
-    )
-    has_past = bp_status == BlueprintStatus.PASSED
     return BlueprintUsage(
         status=bp_status,
         next_session_at=next_at,
-        has_scheduled_sessions=has_scheduled,
-        has_past_sessions=has_past,
-        is_locked=bp_status in (BlueprintStatus.ONGOING, BlueprintStatus.PASSED),
-        is_permanently_locked=bp_status == BlueprintStatus.PASSED,
     )
 
 @router.get("/{test_id}", response_model=TestDefinitionResponse)

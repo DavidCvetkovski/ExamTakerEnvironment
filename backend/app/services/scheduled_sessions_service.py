@@ -8,12 +8,7 @@ from app.core.prisma_db import prisma
 from app.models.scheduled_exam_session import CourseSessionStatus
 from app.models.exam_session import SessionStatus
 
-
-def ensure_utc(value: datetime) -> datetime:
-    """Normalize datetimes so status comparisons stay timezone-safe."""
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+from app.core.time_utils import ensure_utc
 
 
 def calculate_end_time(starts_at: datetime, duration_minutes: int) -> datetime:

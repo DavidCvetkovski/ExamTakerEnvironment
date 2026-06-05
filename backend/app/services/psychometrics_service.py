@@ -14,8 +14,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from app.core.prisma_db import prisma
 from app.models.scheduled_exam_session import CourseSessionStatus
+from app.core.json_utils import parse_json as _parse_json
 from app.services.ctt_metrics import (
-    _parse_json,
     _parse_options,
     build_flags as _build_flags,
     compute_distractor_stats as _compute_distractor_stats,
@@ -31,7 +31,7 @@ from app.services.reliability import (
     std_dev as _std_dev,
 )
 from app.services.run_filter import build_session_results_run_filter
-from app.services.scheduled_sessions_service import ensure_utc
+from app.core.time_utils import ensure_utc
 
 
 # ─────────────────────────────────────────────

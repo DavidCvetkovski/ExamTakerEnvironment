@@ -12,11 +12,7 @@ from app.core.prisma_db import prisma
 from app.models.blueprint_status import BlueprintStatus
 from app.models.scheduled_exam_session import CourseSessionStatus
 
-
-def _ensure_utc(value: datetime) -> datetime:
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+from app.core.time_utils import ensure_utc
 
 
 def _effective_session_status(record: Any, now: datetime) -> str:
@@ -27,8 +23,8 @@ def _effective_session_status(record: Any, now: datetime) -> str:
     """
     if record.status == CourseSessionStatus.CANCELED.value:
         return CourseSessionStatus.CANCELED.value
-    starts_at = _ensure_utc(record.starts_at)
-    ends_at = _ensure_utc(record.ends_at)
+    starts_at = ensure_utc(record.starts_at)
+    ends_at = ensure_utc(record.ends_at)
     if now >= ends_at:
         return CourseSessionStatus.CLOSED.value
     if now >= starts_at:
@@ -103,10 +99,10 @@ async def derive_next_session_at(test_definition_id: str) -> datetime | None:
     for session in sessions:
         effective = _effective_session_status(session, now)
         if effective == CourseSessionStatus.SCHEDULED.value:
-            upcoming.append(_ensure_utc(session.starts_at))
+            upcoming.append(ensure_utc(session.starts_at))
         elif effective == CourseSessionStatus.ACTIVE.value:
             # If a session is live right now, "next session" is effectively now.
-            upcoming.append(_ensure_utc(session.starts_at))
+            upcoming.append(ensure_utc(session.starts_at))
     return min(upcoming) if upcoming else None
 
 

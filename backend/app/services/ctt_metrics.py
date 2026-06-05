@@ -10,6 +10,8 @@ import math
 from collections import defaultdict
 from typing import Any, Dict, List, Optional
 
+from app.core.json_utils import extract_choices, parse_json
+
 __all__ = [
     "point_biserial",
     "build_flags",
@@ -17,24 +19,9 @@ __all__ = [
 ]
 
 
-def _parse_json(value: Any) -> Any:
-    """Deserialise a value that may already be a dict/list or still a JSON string."""
-    if isinstance(value, str):
-        try:
-            return json.loads(value)
-        except (json.JSONDecodeError, ValueError):
-            return {}
-    return value or {}
-
-
 def _parse_options(raw: Any) -> List[Dict]:
     """Normalise item options to a flat list of option dicts."""
-    parsed = _parse_json(raw)
-    if isinstance(parsed, list):
-        return parsed
-    if isinstance(parsed, dict):
-        return parsed.get("choices") or parsed.get("options") or []
-    return []
+    return extract_choices(raw)
 
 
 def point_biserial(correct_flags: List[bool], scores: List[float]) -> Optional[float]:
@@ -104,7 +91,7 @@ def compute_distractor_stats(
     counts: Dict[int, int] = defaultdict(int)
 
     for grade in grades:
-        answer = _parse_json(grade.student_answer)
+        answer = parse_json(grade.student_answer)
         if question_type == "MULTIPLE_CHOICE":
             idx = answer.get("selected_option_index")
             if idx is not None:

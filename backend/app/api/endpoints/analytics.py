@@ -24,7 +24,7 @@ from app.schemas.analytics import (
 from app.schemas.pagination import DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, Page
 from app.services import psychometrics_service
 from app.services.pagination import paginate
-from app.services.run_filter import assert_run_belongs_to_test
+from app.services.run_filter import assert_run_belongs_to_test, assert_test_access as _require_test_access
 
 router = APIRouter()
 
@@ -39,20 +39,6 @@ def _require_analytics_user(current_user=Depends(get_current_user)):
             detail="Requires CONSTRUCTOR or ADMIN role.",
         )
     return current_user
-
-
-async def _require_test_access(test_definition_id: str, current_user) -> None:
-    test_definition = await prisma.test_definitions.find_unique(
-        where={"id": test_definition_id}
-    )
-    if not test_definition:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Test not found.")
-
-    if current_user.role != UserRole.ADMIN.value and test_definition.created_by != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have access to this test's analytics.",
-        )
 
 
 async def _require_learning_object_access(learning_object_id: str, current_user) -> None:

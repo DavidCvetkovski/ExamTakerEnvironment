@@ -7,6 +7,8 @@ and returns plain Python values, making them independently unit-testable.
 import json
 from typing import Any, Dict, List, Tuple
 
+from app.core.json_utils import extract_choices, parse_json
+
 __all__ = [
     "grade_mcq_single",
     "grade_multiple_response",
@@ -14,34 +16,12 @@ __all__ = [
 ]
 
 
-def _parse_json(value: Any) -> Any:
-    """Safely parse a value that may already be a dict/list or still a JSON string."""
-    if isinstance(value, str):
-        try:
-            return json.loads(value)
-        except (json.JSONDecodeError, ValueError):
-            return {}
-    return value or {}
-
-
 def _get_correct_options(options: Any) -> List[int]:
     """
     Return indices of all options whose is_correct flag is True.
     options is either a JSON string or a list of dicts with an ``is_correct`` key.
     """
-    parsed = _parse_json(options)
-
-    if isinstance(parsed, list):
-        choices = parsed
-    elif isinstance(parsed, dict):
-        if isinstance(parsed.get("choices"), list):
-            choices = parsed["choices"]
-        elif isinstance(parsed.get("options"), list):
-            choices = parsed["options"]
-        else:
-            choices = []
-    else:
-        choices = []
+    choices = extract_choices(options)
 
     return [
         index
@@ -59,19 +39,7 @@ def _normalize_student_answer(student_answer: Any, options: Any) -> Dict[str, An
         return {}
 
     normalized = dict(student_answer)
-    parsed = _parse_json(options)
-
-    if isinstance(parsed, list):
-        choices = parsed
-    elif isinstance(parsed, dict):
-        if isinstance(parsed.get("choices"), list):
-            choices = parsed["choices"]
-        elif isinstance(parsed.get("options"), list):
-            choices = parsed["options"]
-        else:
-            choices = []
-    else:
-        choices = []
+    choices = extract_choices(options)
 
     choice_id_to_index = {
         option.get("id"): index
@@ -104,7 +72,7 @@ def _default_grade_boundaries() -> List[Dict[str, Any]]:
 def _get_scoring_config(test_definition: Any) -> Dict[str, Any]:
     """Safely deserialise the scoring_config JSONB column."""
     raw = getattr(test_definition, "scoring_config", None)
-    cfg = _parse_json(raw) if raw else {}
+    cfg = parse_json(raw) if raw else {}
     defaults = {
         "pass_percentage": 55.0,
         "negative_marking": False,

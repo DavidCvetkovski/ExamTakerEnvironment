@@ -13,19 +13,10 @@ from fastapi import HTTPException, status
 from app.core.prisma_db import prisma
 from app.models.question_grade import GradingStatus
 from app.models.scheduled_exam_session import CourseSessionStatus
+from app.core.json_utils import parse_json
 from app.services.grading_service import compute_session_aggregate
 from app.services.run_filter import build_exam_session_run_filter
-from app.services.scheduled_sessions_service import ensure_utc
-
-
-def _parse_json(value: Any) -> Any:
-    """Safely parse a value that may already be a dict/list or JSON string."""
-    if isinstance(value, str):
-        try:
-            return json.loads(value)
-        except (json.JSONDecodeError, ValueError):
-            return {}
-    return value or {}
+from app.core.time_utils import ensure_utc
 
 
 def _sanitize_csv_cell(value: str) -> str:
@@ -277,7 +268,7 @@ async def get_grading_queue(
             "session_id": g.session_id,
             "learning_object_id": g.learning_object_id,
             "item_version_id": g.item_version_id,
-            "student_answer": _parse_json(g.student_answer),
+            "student_answer": parse_json(g.student_answer),
             "points_possible": g.points_possible,
             "points_awarded": g.points_awarded,
             "feedback": g.feedback,

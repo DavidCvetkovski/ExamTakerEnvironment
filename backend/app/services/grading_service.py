@@ -22,12 +22,12 @@ from prisma import Json
 from app.core.prisma_db import prisma
 from app.models.question_grade import GradingStatus
 from app.models.user import UserRole
+from app.core.json_utils import parse_json as _parse_json
 from app.services.scoring_strategies import (
     _default_grade_boundaries,
     _get_correct_options,
     _get_scoring_config,
     _normalize_student_answer,
-    _parse_json,
     apply_grade_boundaries,
     grade_mcq_single,
     grade_multiple_response,

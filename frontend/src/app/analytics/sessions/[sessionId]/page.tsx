@@ -8,44 +8,24 @@ import PageShell from '@/components/layout/PageShell';
 import { api } from '@/lib/api';
 import { formatAbsolute } from '@/lib/relativeTime';
 
-interface SessionResult {
-    id: string;
-    session_id: string;
-    test_definition_id: string;
-    test_title?: string | null;
-    student_id: string;
-    total_points: number;
-    max_points: number;
-    percentage: number;
-    grading_status: string;
-    questions_graded: number;
-    questions_total: number;
-    letter_grade: string | null;
-    is_published: boolean;
+import { QuestionGrade, SessionResult } from '@/stores/useGradingStore';
+import { deriveGradeState } from '@/lib/gradeState';
+
+interface SessionResultWithSubmittedAt extends SessionResult {
     submitted_at?: string | null;
 }
 
-interface QuestionGrade {
-    grade_id?: string;
-    id?: string;
-    learning_object_id: string;
-    question_type: string | null;
-    points_awarded: number;
-    points_possible: number;
-    is_correct: boolean | null;
-    is_auto_graded: boolean;
-    feedback: string | null;
-}
-
 function gradeTone(g: QuestionGrade): 'success' | 'danger' | 'neutral' | 'warning' {
+    const state = deriveGradeState(g);
+    if (state === 'PENDING') return 'warning';
     if (g.is_correct === true) return 'success';
     if (g.is_correct === false) return 'danger';
-    if (!g.is_auto_graded && g.feedback === null) return 'warning';
     return 'neutral';
 }
 
 function gradeLabel(g: QuestionGrade): string {
-    if (!g.is_auto_graded && g.feedback === null) return 'Pending';
+    const state = deriveGradeState(g);
+    if (state === 'PENDING') return 'Pending';
     if (g.is_correct === true) return 'Correct';
     if (g.is_correct === false) return 'Incorrect';
     return 'Partial';
@@ -53,7 +33,7 @@ function gradeLabel(g: QuestionGrade): string {
 
 export default function AnalyticsSessionDetailPage() {
     const { sessionId } = useParams<{ sessionId: string }>();
-    const [result, setResult] = useState<SessionResult | null>(null);
+    const [result, setResult] = useState<SessionResultWithSubmittedAt | null>(null);
     const [grades, setGrades] = useState<QuestionGrade[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -61,7 +41,7 @@ export default function AnalyticsSessionDetailPage() {
     useEffect(() => {
         if (!sessionId) return;
         Promise.all([
-            api.get<SessionResult>(`grading/sessions/${sessionId}/result`),
+            api.get<SessionResultWithSubmittedAt>(`grading/sessions/${sessionId}/result`),
             api.get<QuestionGrade[]>(`grading/sessions/${sessionId}/grades`),
         ])
             .then(([resultRes, gradesRes]) => {
@@ -117,7 +97,7 @@ export default function AnalyticsSessionDetailPage() {
                                     </THead>
                                     <TBody>
                                         {grades.map((g, idx) => (
-                                            <TR key={g.grade_id ?? g.id ?? idx}>
+                                            <TR key={g.id ?? idx}>
                                                 <TD>{idx + 1}</TD>
                                                 <TD>
                                                     <span className="text-meta text-shell-muted-dim">

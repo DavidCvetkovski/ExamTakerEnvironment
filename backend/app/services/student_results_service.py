@@ -17,14 +17,7 @@ from fastapi import HTTPException, status
 from app.core.prisma_db import prisma
 
 
-def _parse_json(value: Any) -> Any:
-    """Safely parse a value that may already be a dict/list or JSON string."""
-    if isinstance(value, str):
-        try:
-            return json.loads(value)
-        except (json.JSONDecodeError, ValueError):
-            return {}
-    return value or {}
+from app.core.json_utils import parse_json
 
 
 async def get_student_published_results(
@@ -107,7 +100,7 @@ async def get_student_result_detail(
     )
 
     # Build frozen item lookup for question content
-    items_raw = _parse_json(session.items) if session else []
+    items_raw = parse_json(session.items) if session else []
     items_by_lo: Dict[str, Any] = {
         str(item.get("learning_object_id")): item for item in items_raw
     }
@@ -122,9 +115,9 @@ async def get_student_result_detail(
             "item_version_id": str(grade.item_version_id or ""),
             "question_type": item.get("question_type"),
             "question_content": item.get("content"),
-            "question_options": _parse_json(item.get("options")),
-            "student_answer": _parse_json(grade.student_answer),
-            "correct_answer": _parse_json(grade.correct_answer),
+            "question_options": parse_json(item.get("options")),
+            "student_answer": parse_json(grade.student_answer),
+            "correct_answer": parse_json(grade.correct_answer),
             "points_awarded": grade.points_awarded,
             "points_possible": grade.points_possible,
             "is_correct": grade.is_correct,

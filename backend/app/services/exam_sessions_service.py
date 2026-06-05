@@ -64,12 +64,7 @@ async def invalidate_all_test_definition_pools() -> None:
     if redis is not None:
         await cache_delete_pattern(redis, "test_definition:*:snapshot:v1")
 
-
-def ensure_utc(value: datetime) -> datetime:
-    """Normalize datetimes so backend comparisons stay timezone-safe."""
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+from app.core.time_utils import ensure_utc
 
 
 def get_return_path(session_mode: str) -> str:

@@ -15,7 +15,6 @@ Lifecycle:
     6. Graceful shutdown on SIGINT / SIGTERM.
 """
 import asyncio
-import json
 import logging
 import os
 import signal

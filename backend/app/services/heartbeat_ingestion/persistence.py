@@ -5,8 +5,7 @@ This module is the *write side* to the database: it takes a list of decoded
 enforcement via the ``(session_id, client_event_id)`` unique constraint.
 """
 import logging
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 from prisma import Json
 from prisma.errors import UniqueViolationError

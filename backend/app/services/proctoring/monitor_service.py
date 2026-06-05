@@ -9,7 +9,6 @@ from uuid import UUID
 import logging
 
 from app.core.prisma_db import prisma
-from app.models.exam_session import SessionStatus
 from app.services.proctoring import presence_service
 
 logger = logging.getLogger(__name__)

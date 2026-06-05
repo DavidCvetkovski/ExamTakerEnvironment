@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from uuid import UUID
 import uuid as _uuid
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import Optional
 
 from prisma import Json
 from app.core.dependencies import get_current_user, require_role

@@ -4,7 +4,6 @@ Pure scoring functions for MCQ and multiple-response questions.
 Zero database dependencies — every function here takes plain Python values
 and returns plain Python values, making them independently unit-testable.
 """
-import json
 from typing import Any, Dict, List, Tuple
 
 from app.core.json_utils import extract_choices, parse_json

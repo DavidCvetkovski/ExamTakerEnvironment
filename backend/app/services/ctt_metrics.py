@@ -5,7 +5,6 @@ Computes item-level statistics: point-biserial discrimination (D-value),
 quality flags (P/D thresholds), and distractor-selection analysis.
 All functions are database-free and independently unit-testable.
 """
-import json
 import math
 from collections import defaultdict
 from typing import Any, Dict, List, Optional

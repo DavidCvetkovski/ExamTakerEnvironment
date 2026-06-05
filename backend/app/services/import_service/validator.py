@@ -1,6 +1,4 @@
 from .schemas import (
-    BloomsLevel,
-    Difficulty,
     ParseError,
     ParseErrorSeverity,
     ParsedBlueprint,

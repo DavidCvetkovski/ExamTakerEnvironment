@@ -1,10 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Cookie
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
 from typing import Optional
 from jose import JWTError
 
-from app.core.database import get_db
 from app.core.dependencies import get_current_user
 from app.core.security import decode_token
 from app.models.user import User
@@ -26,8 +24,6 @@ from app.services import users_service as svc
 router = APIRouter(prefix="/auth", tags=["auth"])
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
-from app.core.prisma_db import get_prisma, prisma
-from prisma import Prisma
 
 @router.post(
     "/register",

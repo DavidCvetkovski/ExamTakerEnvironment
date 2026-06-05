@@ -19,6 +19,7 @@ from app.models.exam_session import ExamSessionMode, SessionStatus
 from app.models.item_version import ItemStatus
 from app.models.scheduled_exam_session import CourseSessionStatus
 from app.models.user import UserRole
+from app.core.time_utils import ensure_utc
 from app.services.scheduled_sessions_service import (
     ensure_scheduled_session_current,
 )
@@ -63,9 +64,6 @@ async def invalidate_all_test_definition_pools() -> None:
     redis = _try_get_redis()
     if redis is not None:
         await cache_delete_pattern(redis, "test_definition:*:snapshot:v1")
-
-from app.core.time_utils import ensure_utc
-
 
 def get_return_path(session_mode: str) -> str:
     """Map an exam session mode to the route the client should return to."""

@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import io
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 # matplotlib must be set to non-interactive backend before pyplot import
 import matplotlib

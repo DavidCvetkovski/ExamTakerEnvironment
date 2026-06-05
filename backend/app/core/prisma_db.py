@@ -1,5 +1,4 @@
 from prisma import Prisma
-import asyncio
 
 # Singleton instance
 prisma = Prisma()

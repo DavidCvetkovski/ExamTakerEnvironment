@@ -5,18 +5,15 @@ from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
 from jose import JWTError
 
+from app.core.prisma_db import prisma
 from app.core.config import settings
-from app.core.database import get_db
 from app.core.security import decode_token
 from app.models.user import User, UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
-
-from app.core.prisma_db import get_prisma, prisma
 
 
 def assert_token_version(payload: dict, user) -> None:

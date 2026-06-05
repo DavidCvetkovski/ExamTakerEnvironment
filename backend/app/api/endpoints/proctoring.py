@@ -12,7 +12,6 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 
 from app.core.dependencies import require_role
-from app.core.prisma_db import prisma
 from app.models.user import User, UserRole
 from app.schemas.proctoring import (
     IncidentFeedResponse,

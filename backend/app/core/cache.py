@@ -11,7 +11,7 @@ Rules from the Epoch 13 directive:
 """
 import json
 import logging
-from typing import Any, Callable, Coroutine, Optional, TypeVar
+from typing import Any, Optional, TypeVar
 
 from redis.asyncio import Redis
 

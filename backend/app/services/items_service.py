@@ -313,7 +313,7 @@ async def transition_item_status(
         if isinstance(metadata, str):
             try:
                 metadata = json.loads(metadata)
-            except:
+            except json.JSONDecodeError:
                 metadata = {}
         if not metadata:
             metadata = {}

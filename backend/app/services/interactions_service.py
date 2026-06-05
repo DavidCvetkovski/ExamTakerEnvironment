@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from prisma import Json
 
 from app.core.prisma_db import prisma
 from app.core.redis import get_redis
@@ -150,7 +149,7 @@ async def get_latest_answers(
             "flags": { lo_id: bool }
         }
     """
-    session = await _get_session_with_ownership_check(session_id, current_user)
+    await _get_session_with_ownership_check(session_id, current_user)
 
     # Fetch all ANSWER_CHANGE events for this session, ordered by created_at desc
     answer_events = await prisma.interaction_events.find_many(

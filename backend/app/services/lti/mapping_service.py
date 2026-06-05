@@ -78,9 +78,6 @@ def _synthetic_email(issuer: str, subject: str) -> str:
 async def _provision_user(claims: LtiLaunchClaims, platform) -> object:
     """Create a fresh OpenVision account for a never-seen LTI subject."""
     role = map_lti_role(claims.roles, existing_role=None)
-    name = claims.name or " ".join(
-        p for p in (claims.given_name, claims.family_name) if p
-    ) or None
 
     email = claims.email
     if not email or await prisma.users.find_unique(where={"email": email}):

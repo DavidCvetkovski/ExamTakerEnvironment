@@ -3,7 +3,6 @@ Grading API endpoints.
 Handles auto-grading outcomes, manual essay grading, result publication, and CSV export.
 All endpoints enforce RBAC at the route level.
 """
-import io
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
@@ -11,17 +10,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from app.core.dependencies import get_current_user, require_role
+from app.core.dependencies import get_current_user
 from app.models.user import UserRole
 from app.schemas.grading import (
     ManualGradeSubmit,
     QuestionGradeResponse,
     ScoringConfigUpdate,
-    SessionGradingSummary,
     SessionResultResponse,
 )
 from app.schemas.pagination import DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, Page
-from app.services import grading_service, results_service, student_results_service
+from app.services import results_service, student_results_service
 from app.services.pagination import paginate
 from app.services.run_filter import assert_run_belongs_to_test, assert_test_access
 
@@ -449,7 +447,7 @@ async def update_scoring_config(
     await assert_test_access(str(test_definition_id), current_user)
 
     config_dict = payload.model_dump(exclude_none=True)
-    updated = await prisma.test_definitions.update(
+    await prisma.test_definitions.update(
         where={"id": str(test_definition_id)},
         data={"scoring_config": Json(config_dict)},
     )

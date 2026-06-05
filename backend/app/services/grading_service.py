@@ -10,18 +10,15 @@ This module is called after a student submits their exam and handles:
 Pure scoring logic lives in scoring_strategies.py; this module contains
 only the DB orchestration layer.
 """
-import csv
-import io
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 from uuid import UUID
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 from prisma import Json
 
 from app.core.prisma_db import prisma
 from app.models.question_grade import GradingStatus
-from app.models.user import UserRole
 from app.core.json_utils import parse_json as _parse_json
 from app.services.scoring_strategies import (
     _default_grade_boundaries,

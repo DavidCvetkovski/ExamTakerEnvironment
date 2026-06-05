@@ -9,7 +9,6 @@ student read path. Keeping them apart makes the authorization boundary obvious
 — every function here scopes strictly to ``student_id`` and refuses to leak
 unpublished work.
 """
-import json
 from typing import Any, Dict, List
 
 from fastapi import HTTPException, status

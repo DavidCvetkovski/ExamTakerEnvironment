@@ -4,7 +4,6 @@ from uuid import UUID
 from fastapi import FastAPI, status
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
-from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from app.api.api import api_router
@@ -19,7 +18,7 @@ from app.middleware import (
     SecurityHeadersMiddleware,
     SelfHealCaptureMiddleware,
 )
-from app.models import User, UserRole
+from app.models import UserRole
 
 # Initialise structured logging before anything else
 configure_logging(

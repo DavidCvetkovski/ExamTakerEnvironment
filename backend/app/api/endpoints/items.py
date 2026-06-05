@@ -1,9 +1,8 @@
-from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel, ConfigDict
 from uuid import UUID
-from typing import List
+from typing import List, Optional
 
-from app.core.database import get_db
 from app.core.dependencies import get_current_user, require_role
 from app.models.user import User, UserRole
 from app.models.item_version import ItemStatus
@@ -15,8 +14,6 @@ from app.services.pagination import paginate
 
 router = APIRouter()
 
-from app.core.prisma_db import get_prisma
-from prisma import Prisma
 
 @router.get("/learning-objects", response_model=Page[LearningObjectListResponse])
 async def list_learning_objects(
@@ -68,8 +65,6 @@ async def create_new_revision(
     """Core Immutability Controller: overwrite Draft or create new version."""
     return await svc.create_new_revision(lo_id=lo_id, payload=payload, current_user_id=current_user.id)
 
-from pydantic import BaseModel, ConfigDict
-from typing import Optional
 
 class StatusTransitionRequest(BaseModel):
     new_status: ItemStatus

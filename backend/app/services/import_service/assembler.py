@@ -168,8 +168,8 @@ class Assembler:
                         fix_hint="Allowed values: MCQ, MCQ_MULTI, ESSAY.",
                     ))
             elif key == "LEVEL":
-                level_map = {l.value.upper(): l for l in BloomsLevel}
-                if val.title() in {l.value for l in BloomsLevel}:
+                level_map = {level.value.upper(): level for level in BloomsLevel}
+                if val.title() in {level.value for level in BloomsLevel}:
                     self._current_q["bloom_level"] = BloomsLevel(val.title())
                 elif val.upper() in level_map:
                     self._current_q["bloom_level"] = level_map[val.upper()]

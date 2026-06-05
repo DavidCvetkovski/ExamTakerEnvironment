@@ -1,6 +1,5 @@
 """Centralized application settings loaded and validated from environment variables."""
 
-import os
 from functools import lru_cache
 from typing import List, Optional
 

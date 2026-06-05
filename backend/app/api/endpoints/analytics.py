@@ -19,7 +19,6 @@ from app.schemas.analytics import (
     ItemHistoryResponse,
     ItemVersionStats,
     TestAnalyticsBundleResponse,
-    TestStatsResponse,
 )
 from app.schemas.pagination import DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, Page
 from app.services import psychometrics_service

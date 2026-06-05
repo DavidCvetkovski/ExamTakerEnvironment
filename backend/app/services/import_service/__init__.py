@@ -4,6 +4,18 @@ from .validator import Validator
 from .schemas import ParseResult, ParsedBlueprint, ParseError, PersistResult
 from .persister import persist_import
 
+__all__ = [
+    "Assembler",
+    "tokenize",
+    "Validator",
+    "ParseResult",
+    "ParsedBlueprint",
+    "ParseError",
+    "PersistResult",
+    "persist_import",
+    "parse_text",
+]
+
 
 def parse_text(raw_text: str) -> ParseResult:
     """Parse raw import text. Returns ParseResult with blueprint and any errors/warnings.
@@ -17,8 +29,6 @@ def parse_text(raw_text: str) -> ParseResult:
 
     # Also check for Word-style pasted content with no #Q markers
     hints: list[ParseError] = []
-    raw_lower = raw_text.lower()
-    has_q_markers = any(t.value.startswith("#Q") or t.raw.strip().startswith("#Q") for t in tokens if hasattr(t, "raw"))
     if not any(t.raw.strip().startswith("#Q") for t in tokens):
         import re
         if re.search(r"^\s*(\d+[\.\)]\s|Q\d+[\.\)]\s)", raw_text, re.MULTILINE):

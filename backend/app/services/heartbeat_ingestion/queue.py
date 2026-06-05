@@ -5,7 +5,7 @@ This module is the *write side* of the pipeline: the API calls
 It publishes one Redis Stream entry per event and returns the total
 accepted count together with an estimate of current queue lag.
 """
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from redis.asyncio import Redis

@@ -56,7 +56,7 @@ export default function GlobalHeader() {
     return (
         <>
             {ConfirmDialog}
-            <header className="sticky top-0 z-40 bg-shell-surface border-b border-shell-border backdrop-blur-sm">
+            <header className="sticky top-0 z-30 bg-shell-surface border-b border-shell-border backdrop-blur-sm">
                 <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-14">
                         <div className="flex items-center gap-8 min-w-0">

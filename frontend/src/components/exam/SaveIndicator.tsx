@@ -46,14 +46,14 @@ export default function SaveIndicator() {
 
     if (saveStatus === 'idle') return null;
 
-    const config: Record<SaveStatus, { text: string; color: string; icon: React.ReactNode }> = {
-        idle: { text: '', color: '', icon: null },
+    const config: Record<Exclude<SaveStatus, 'idle'>, { text: string; color: string; icon: React.ReactNode }> = {
         saving: { text: 'Saving…', color: 'text-shell-muted', icon: <Spinner size="xs" tone="current" /> },
         saved: { text: 'Saved', color: 'text-[var(--color-success-fg)]', icon: <CheckIcon /> },
         error: { text: 'Save failed — retrying…', color: 'text-[var(--color-danger-fg)]', icon: <XIcon /> },
     };
 
-    const { text, color, icon } = config[saveStatus];
+    // saveStatus is guaranteed non-idle here (early return above).
+    const { text, color, icon } = config[saveStatus as Exclude<SaveStatus, 'idle'>];
 
     return (
         <div

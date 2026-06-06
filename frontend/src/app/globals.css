@@ -12,6 +12,7 @@
   --color-shell-muted-dim: #8b919c;
   --color-brand: #60a5fa;
   --color-danger: #f87171;
+  --color-overlay: oklch(0 0 0 / 0.55);
   --color-shell-panel-a: #0d1321;
   --color-shell-panel-b: #08101b;
   --color-shell-panel-c: #0c1628;

@@ -4,7 +4,7 @@ import { useEffect, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useToastStore, ToastItem, ToastTone } from './useToast';
 import { useHydrated } from '@/hooks/useHydrated';
-import { CheckIcon, XIcon } from './icons';
+import { CheckIcon, XIcon, InfoIcon, WarningIcon } from './icons';
 
 const TONE_STYLES: Record<ToastTone, string> = {
     success: 'border-[var(--color-success-border)] bg-[var(--color-success-bg)] text-[var(--color-success-fg)]',
@@ -15,8 +15,8 @@ const TONE_STYLES: Record<ToastTone, string> = {
 
 const TONE_ICON: Record<ToastTone, ReactNode> = {
     success: <CheckIcon size={12} />,
-    info: 'i',
-    warning: '!',
+    info: <InfoIcon size={12} />,
+    warning: <WarningIcon size={12} />,
     danger: <XIcon size={12} />,
 };
 
@@ -32,8 +32,7 @@ function Toast({ toast }: { toast: ToastItem }) {
         <div
             role="alert"
             aria-live="polite"
-            className={`flex items-start gap-3 rounded-xl border px-4 py-3 shadow-elevated backdrop-blur-sm transition-all duration-300 ${TONE_STYLES[toast.tone]}`}
-            style={{ minWidth: 280, maxWidth: 360 }}
+            className={`flex items-start gap-3 rounded-xl border px-4 py-3 shadow-elevated backdrop-blur-sm transition-all duration-300 min-w-[280px] max-w-[360px] ${TONE_STYLES[toast.tone]}`}
         >
             <span className="flex-shrink-0 mt-0.5 w-5 h-5 rounded-full border border-current flex items-center justify-center text-xs font-bold">
                 {TONE_ICON[toast.tone]}

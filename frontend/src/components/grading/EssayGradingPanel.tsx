@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 
-import { Button, CheckIcon } from '@/components/ui';
+import { Button, CheckIcon, cn } from '@/components/ui';
 import type { ManualGradePayload, QuestionGrade } from '@/stores/useGradingStore';
 import { deriveGradeState } from '@/lib/gradeState';
 
@@ -20,6 +20,12 @@ export default function EssayGradingPanel({
 }) {
     const [pointsInput, setPointsInput] = useState(String(grade.points_awarded));
     const [feedback, setFeedback] = useState(grade.feedback ?? '');
+
+    // Sync local state when the parent navigates to a different grade record.
+    useEffect(() => {
+        setPointsInput(String(grade.points_awarded));
+        setFeedback(grade.feedback ?? '');
+    }, [grade.id, grade.points_awarded, grade.feedback]);
 
     const validationError = useMemo(() => {
         const pts = parseFloat(pointsInput);
@@ -80,7 +86,12 @@ export default function EssayGradingPanel({
                         value={pointsInput}
                         onChange={(e) => setPointsInput(e.target.value)}
                         aria-invalid={validationError !== null}
-                        className={`w-full rounded-lg border bg-shell-surface px-3 py-2 text-sm text-foreground focus:outline-none ${validationError ? 'border-[var(--color-danger-border)] focus:border-[var(--color-danger-border)]' : 'border-shell-border-deep focus:border-brand'}`}
+                        className={cn(
+                            'w-full rounded-lg border bg-shell-surface px-3 py-2 text-sm text-foreground focus:outline-none',
+                            validationError
+                                ? 'border-[var(--color-danger-border)] focus:border-[var(--color-danger-border)]'
+                                : 'border-shell-border-deep focus:border-brand',
+                        )}
                     />
                     {validationError && (
                         <p className="mt-1 text-xs text-[var(--color-danger-fg)]">{validationError}</p>

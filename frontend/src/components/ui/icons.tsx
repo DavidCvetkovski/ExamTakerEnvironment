@@ -53,6 +53,26 @@ export function KeyboardIcon({ size = 16, className }: IconProps) {
     );
 }
 
+export function InfoIcon({ size = 14, className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={2} className={className} aria-hidden>
+            <circle cx="8" cy="8" r="6.5" />
+            <path strokeLinecap="round" d="M8 7v4.5" />
+            <path strokeLinecap="round" d="M8 5h.01" />
+        </svg>
+    );
+}
+
+export function WarningIcon({ size = 14, className }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.6} className={className} aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 1.8L15 14H1L8 1.8z" />
+            <path strokeLinecap="round" d="M8 6.5v3.2" />
+            <path strokeLinecap="round" d="M8 11.8h.01" />
+        </svg>
+    );
+}
+
 export function LockIcon({ size = 13, className }: IconProps) {
     return (
         <svg width={size} height={size} viewBox="0 0 16 16" fill="currentColor" className={className} aria-hidden>

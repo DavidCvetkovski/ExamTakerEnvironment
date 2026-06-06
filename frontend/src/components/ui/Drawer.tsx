@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect, useRef } from 'react';
+
 import { cn } from './cn';
 
 interface DrawerProps {
@@ -28,17 +29,22 @@ export default function Drawer({
     widthClassName = 'w-96 max-w-[100vw]',
 }: DrawerProps) {
     const panelRef = useRef<HTMLDivElement | null>(null);
+    const previousFocus = useRef<HTMLElement | null>(null);
 
     useEffect(() => {
         if (!isOpen) return;
+        previousFocus.current = document.activeElement as HTMLElement | null;
         document.body.style.overflow = 'hidden';
         const onKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
         };
         document.addEventListener('keydown', onKey);
+        const t = window.setTimeout(() => panelRef.current?.focus(), 0);
         return () => {
             document.body.style.overflow = '';
             document.removeEventListener('keydown', onKey);
+            window.clearTimeout(t);
+            previousFocus.current?.focus?.();
         };
     }, [isOpen, onClose]);
 
@@ -46,12 +52,13 @@ export default function Drawer({
 
     return (
         <div
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-40 bg-[var(--color-overlay)] backdrop-blur-sm"
             onClick={onClose}
             role="presentation"
         >
             <div
                 ref={panelRef}
+                tabIndex={-1}
                 role="dialog"
                 aria-modal="true"
                 aria-label={typeof title === 'string' ? title : undefined}

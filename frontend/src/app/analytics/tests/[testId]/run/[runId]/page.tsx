@@ -8,7 +8,7 @@ import AllItemsTable from '@/components/analytics/AllItemsTable';
 import CutScoreSlider from '@/components/analytics/CutScoreSlider';
 import SectionAnalyticsPanel, { type SectionAnalytics } from '@/components/analytics/SectionAnalyticsPanel';
 import HistogramChart from '@/components/analytics/HistogramChart';
-import StatCard from '@/components/analytics/StatCard';
+import { StatCard } from '@/components/ui';
 import { bundleKey, useAnalyticsStore } from '@/stores/useAnalyticsStore';
 import { useBlueprintStore } from '@/stores/useBlueprintStore';
 import { formatRelativeTime } from '@/lib/relativeTime';
@@ -239,49 +239,49 @@ export default function TestAnalyticsDashboardPage() {
                                 <StatCard
                                     label="Mean"
                                     value={`${formatMetric(bundle.test.mean)}%`}
-                                    accent="blue"
+                                    tone="info"
                                     info="Average score across all published sessions, in percent."
                                 />
                                 <StatCard
                                     label="Median"
                                     value={`${formatMetric(bundle.test.median)}%`}
-                                    accent="emerald"
+                                    tone="success"
                                     info="The middle score: half of students scored higher, half scored lower. Less sensitive to outliers than the mean."
                                 />
                                 <StatCard
                                     label="Std Dev"
                                     value={formatMetric(bundle.test.std_dev, 2)}
-                                    accent="amber"
+                                    tone="warning"
                                     info="Spread of scores around the mean. A large value means scores are very different from each other; a small value means most students scored similarly."
                                 />
                                 <StatCard
                                     label="Pass Rate"
                                     value={`${formatMetric(bundle.test.pass_rate)}%`}
-                                    accent="rose"
+                                    tone="danger"
                                     info="Percentage of students who scored at or above the test's pass threshold."
                                 />
                                 <StatCard
                                     label="Cronbach's Alpha"
                                     value={formatMetric(bundle.test.cronbach_alpha, 2)}
-                                    accent="blue"
+                                    tone="info"
                                     info="Internal consistency: how reliably the items measure the same thing. Above 0.7 is acceptable; above 0.8 is good. Below 0.6 means the items don't agree with each other."
                                 />
                                 <StatCard
                                     label="SEM"
                                     value={formatMetric(bundle.test.sem, 2)}
-                                    accent="amber"
+                                    tone="warning"
                                     info="Standard Error of Measurement. The expected fluctuation in a student's score if they took an equivalent version of this test. Smaller is better."
                                 />
                                 <StatCard
                                     label="Min / Max"
                                     value={`${formatMetric(bundle.test.min_score)} / ${formatMetric(bundle.test.max_score)}%`}
-                                    accent="slate"
+                                    tone="neutral"
                                     info="Lowest and highest scores observed in the published sessions."
                                 />
                                 <StatCard
                                     label="Flagged Items"
                                     value={String(flaggedItems.length)}
-                                    accent="rose"
+                                    tone="danger"
                                     info="Items the system has flagged as too easy, too hard, or weakly discriminating, based on the most recent analytics snapshot."
                                 />
                             </div>

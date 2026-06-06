@@ -2,7 +2,7 @@
 
 import { useExamStore, ExamItem } from '@/stores/useExamStore';
 import { toExamContentHtml } from '@/lib/examContent';
-import { sanitizeExamHtml as sanitizeHtml } from '@/lib/sanitizeHtml';
+import { sanitizeExamHtml } from '@/lib/sanitizeHtml';
 import MCQQuestion from './MCQQuestion';
 import MultipleResponseQuestion from './MultipleResponseQuestion';
 import EssayQuestion from './EssayQuestion';
@@ -28,7 +28,7 @@ export default function QuestionRenderer({ item, questionIndex, totalQuestions }
     const contentHtml = toExamContentHtml(item.content);
 
     return (
-        <section className="bg-shell-input border border-shell-border-deep rounded-2xl overflow-hidden shadow-sm">
+        <section className="bg-shell-input border border-shell-border-deep rounded-2xl overflow-hidden shadow-card">
             {/* Question Header */}
             <div className="bg-shell-input-alt/50 px-6 py-3 border-b border-shell-border-deep flex justify-between items-center">
                 <div className="flex items-center gap-3">
@@ -37,6 +37,7 @@ export default function QuestionRenderer({ item, questionIndex, totalQuestions }
                     </span>
                 </div>
                 <button
+                    type="button"
                     onClick={handleToggleFlag}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${isFlagged
                             ? 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)] border border-[var(--color-warning-border)]'
@@ -54,8 +55,8 @@ export default function QuestionRenderer({ item, questionIndex, totalQuestions }
             {/* Question Content */}
             <div className="p-8 space-y-6">
                 <div
-                    className="prose prose-invert max-w-none text-xl leading-relaxed"
-                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(contentHtml) }}
+                    className="prose max-w-none text-xl leading-relaxed text-foreground"
+                    dangerouslySetInnerHTML={{ __html: sanitizeExamHtml(contentHtml) }}
                 />
 
                 {/* Answer Input */}
@@ -64,7 +65,7 @@ export default function QuestionRenderer({ item, questionIndex, totalQuestions }
                         <MCQQuestion item={item} questionIndex={questionIndex} />
                     )}
                     {item.question_type === 'MULTIPLE_RESPONSE' && (
-                        <MultipleResponseQuestion item={item} questionIndex={questionIndex} />
+                        <MultipleResponseQuestion item={item} />
                     )}
                     {item.question_type === 'ESSAY' && (
                         <EssayQuestion item={item} questionIndex={questionIndex} />

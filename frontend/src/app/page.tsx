@@ -42,7 +42,7 @@ function MarketingPage({ mounted }: { mounted: boolean }) {
 
                 <Link
                     href="/login"
-                    className="inline-flex items-center justify-center bg-brand hover:bg-brand/90 text-white font-semibold px-8 py-3.5 rounded-xl text-base transition-colors focus-ring"
+                    className="inline-flex items-center justify-center bg-brand hover:brightness-110 text-white font-semibold px-8 py-3.5 rounded-xl text-base transition-[filter] focus-ring"
                 >
                     Sign in
                 </Link>

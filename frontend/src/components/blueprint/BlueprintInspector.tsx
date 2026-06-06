@@ -52,11 +52,6 @@ export default function BlueprintInspector({ blueprint, status, availableItems }
     const [versionLoading, setVersionLoading] = useState(false);
     const [versionError, setVersionError] = useState<string | null>(null);
 
-    // Data-fetch effect: load the latest version of the selected item. The
-    // synchronous loading/reset setState calls are inherent to a fetch-with-
-    // loading-state, which the set-state-in-effect rule cannot model — scoped
-    // disable rather than a contrived workaround.
-    /* eslint-disable react-hooks/set-state-in-effect */
     useEffect(() => {
         if (!selectedItemId) {
             setSelectedVersion(null);
@@ -79,7 +74,6 @@ export default function BlueprintInspector({ blueprint, status, availableItems }
             .finally(() => { if (!cancelled) setVersionLoading(false); });
         return () => { cancelled = true; };
     }, [selectedItemId]);
-    /* eslint-enable react-hooks/set-state-in-effect */
 
     return (
         <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 space-y-10">

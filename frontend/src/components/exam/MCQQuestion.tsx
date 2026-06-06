@@ -40,7 +40,7 @@ export default function MCQQuestion({ item, questionIndex }: MCQQuestionProps) {
                 const isSelected = currentAnswer?.selected_option_index === idx;
                 return (
                     <label
-                        key={idx}
+                        key={choice.id ?? idx}
                         className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all duration-150 ${isSelected
                                 ? 'border-brand bg-brand/10 ring-1 ring-brand/50'
                                 : 'border-shell-border-deep bg-shell-surface/50 hover:bg-shell-input-alt/30 hover:border-shell-border-deep'

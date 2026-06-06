@@ -41,21 +41,6 @@ export default function AutoGradeResult({ grade }: { grade: QuestionGrade }) {
                 <p className="text-sm text-foreground">{selectedLabel}</p>
             </div>
 
-            {/* Correct answer */}
-            {correctIndices.length > 0 && (
-                <div className="rounded-lg border border-shell-border-deep bg-shell-input/50 p-3">
-                    <p className="mb-1 text-xs font-semibold text-shell-muted">CORRECT ANSWER</p>
-                    {correctIndices.map((idx) => (
-                        <span
-                            key={idx}
-                            className="mr-1 rounded bg-[var(--color-success-bg)] px-2 py-0.5 text-xs text-[var(--color-success-fg)]"
-                        >
-                            {options[idx]?.text ?? `Option ${idx + 1}`}
-                        </span>
-                    ))}
-                </div>
-            )}
-
             {options.length > 0 && (
                 <div className="rounded-lg border border-shell-border-deep bg-shell-input/50 p-3">
                     <p className="mb-2 text-xs font-semibold text-shell-muted">AVAILABLE OPTIONS</p>

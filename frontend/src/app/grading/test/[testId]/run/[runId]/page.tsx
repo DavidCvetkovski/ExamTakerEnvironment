@@ -48,7 +48,7 @@ function ProgressBar({ done, total }: { done: number; total: number }) {
     const pct = total > 0 ? Math.round((done / total) * 100) : 0;
     return (
         <div className="flex items-center gap-2.5">
-            <div className="flex-1 h-1 bg-shell-input-alt rounded-full overflow-hidden">
+            <div className="flex-1 h-1.5 bg-shell-input-alt rounded-full overflow-hidden">
                 <div
                     className="h-full bg-brand rounded-full transition-all duration-[var(--duration-slow)]"
                     style={{ width: `${pct}%` }}
@@ -207,6 +207,7 @@ export default function TestGradingDashboard() {
                     <div className="inline-flex items-center gap-0.5 bg-shell-surface border border-shell-border rounded-md p-0.5">
                         {filters.map((f) => (
                             <button
+                                type="button"
                                 key={f.key}
                                 onClick={() => setFilterStatus(f.key)}
                                 className={cn(
@@ -354,18 +355,8 @@ export default function TestGradingDashboard() {
                                                     Submission {String(index + 1).padStart(2, '0')}
                                                 </span>
                                             ) : (
-                                                <div>
-                                                    <div className="text-foreground font-medium">
-                                                        {formatStudentLabel(session.student_email)}
-                                                    </div>
-                                                    {session.submitted_at && (
-                                                        <div
-                                                            className="text-shell-muted-dim text-meta mt-0.5"
-                                                            title={formatAbsolute(session.submitted_at)}
-                                                        >
-                                                            {formatRelativeTime(session.submitted_at)}
-                                                        </div>
-                                                    )}
+                                                <div className="text-foreground font-medium">
+                                                    {formatStudentLabel(session.student_email)}
                                                 </div>
                                             )}
                                         </TD>

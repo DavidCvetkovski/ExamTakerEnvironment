@@ -135,7 +135,7 @@ function Toggle({
             <span
                 className={[
                     'inline-block h-4 w-4 transform rounded-full transition-all duration-200 transition-transform',
-                    checked ? 'bg-white translate-x-6' : 'bg-shell-muted-dim translate-x-1',
+                    checked ? 'bg-shell-surface translate-x-6' : 'bg-shell-muted-dim translate-x-1',
                 ].join(' ')}
             />
         </button>

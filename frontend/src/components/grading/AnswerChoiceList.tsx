@@ -35,7 +35,7 @@ export default function AnswerChoiceList({
                                 ? 'border-[var(--color-success-border)] bg-shell-surface text-[var(--color-success-fg)]'
                                 : 'border-shell-border-deep bg-shell-surface/60 text-shell-muted';
                 return (
-                    <div key={`${idx}-${option.text ?? ''}`} className={`rounded-lg border px-3 py-2 text-sm ${tone}`}>
+                    <div key={idx} className={`rounded-lg border px-3 py-2 text-sm ${tone}`}>
                         <span className="mr-2 font-semibold">{String.fromCharCode(65 + idx)}.</span>
                         <span
                             className="prose prose-sm inline-block max-w-none align-middle prose-p:my-0 prose-li:my-0 prose-pre:my-1"

@@ -27,7 +27,9 @@ function ConfirmDialogModal({ options, onClose }: ConfirmDialogModalProps) {
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose(false);
-            if (e.key === 'Enter') onClose(true);
+            // Only confirm on Enter when focus is on a button — prevents accidental
+            // confirmation if a future text field fires Enter.
+            if (e.key === 'Enter' && e.target instanceof HTMLButtonElement) onClose(true);
         };
         window.addEventListener('keydown', handler);
         return () => window.removeEventListener('keydown', handler);
@@ -42,7 +44,7 @@ function ConfirmDialogModal({ options, onClose }: ConfirmDialogModalProps) {
             aria-modal="true"
             aria-labelledby="confirm-title"
         >
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => onClose(false)} />
+            <div className="absolute inset-0 bg-[var(--color-overlay)] backdrop-blur-sm" onClick={() => onClose(false)} />
             <div className="relative z-10 w-full max-w-md rounded-2xl border border-shell-border bg-shell-surface shadow-elevated p-6 space-y-4">
                 <h2 id="confirm-title" className="text-h3 font-semibold text-foreground">{title}</h2>
                 <p className="text-body text-shell-muted leading-relaxed">{message}</p>

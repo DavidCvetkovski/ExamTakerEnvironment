@@ -22,6 +22,9 @@ from app.schemas.pagination import DEFAULT_PAGE_LIMIT, MAX_PAGE_LIMIT, Page
 from app.services import results_service, student_results_service
 from app.services.pagination import paginate
 from app.services.run_filter import assert_run_belongs_to_test, assert_test_access
+from app.core.prisma_db import prisma
+from app.core.json_utils import parse_json
+from prisma import Json
 
 router = APIRouter()
 
@@ -63,7 +66,6 @@ async def get_session_grades(
     Fetch all question_grade records for a submitted session.
     Returns per-question scores, answers, auto-graded flags, and feedback.
     """
-    from app.core.prisma_db import prisma
     session = await prisma.exam_sessions.find_unique(where={"id": str(session_id)})
     # Ownership: a CONSTRUCTOR may only read grades for tests they created (ADMIN
     # sees all). Without this, role alone leaked student answers + feedback across
@@ -76,13 +78,7 @@ async def get_session_grades(
         order={"created_at": "asc"},
     )
 
-    items_raw = session.items if session else []
-    if isinstance(items_raw, str):
-        import json
-        try:
-            items_raw = json.loads(items_raw)
-        except json.JSONDecodeError:
-            items_raw = []
+    items_raw = parse_json(session.items)
     if not isinstance(items_raw, list):
         items_raw = []
 
@@ -130,8 +126,6 @@ async def get_session_result(
     - ADMIN / CONSTRUCTOR: always visible.
     - STUDENT: only visible if result is published.
     """
-    from app.core.prisma_db import prisma
-
     result = await prisma.session_results.find_unique(
         where={"session_id": str(session_id)},
         include={"test_definitions": True, "students": True},
@@ -191,8 +185,6 @@ async def update_manual_grade(
     Submit a manual grade for an essay question.
     After saving, recalculates the session result aggregate.
     """
-    from app.core.prisma_db import prisma
-
     # Ownership: a CONSTRUCTOR may only grade attempts on tests they created
     # (ADMIN grades all). Mirrors the read guard on GET /sessions/{id}/grades —
     # the H-10 fix must hold on the write path too, not just reads.
@@ -203,6 +195,12 @@ async def update_manual_grade(
     if not session:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found.")
     await assert_test_access(str(session.test_definition_id), current_user)
+
+    if grade.points_possible is not None and payload.points_awarded > grade.points_possible:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"points_awarded ({payload.points_awarded}) exceeds points_possible ({grade.points_possible}).",
+        )
 
     return await results_service.submit_manual_grade(
         grade_id=str(grade_id),
@@ -231,8 +229,7 @@ async def list_grading_sessions(
     List all SUBMITTED exam sessions for blueprints the caller created (admin: all blueprints).
     Includes ungraded_response_count. Sorted: ungraded DESC, submitted_at DESC.
     """
-    from app.models.user import UserRole as _Role
-    is_admin = current_user.role == _Role.ADMIN.value
+    is_admin = current_user.role == UserRole.ADMIN.value
     rows = await results_service.get_all_grading_sessions(
         user_id=str(current_user.id),
         is_admin=is_admin,
@@ -438,9 +435,6 @@ async def update_scoring_config(
     current_user=Depends(_require_instructor_or_admin),
 ) -> Dict[str, Any]:
     """Update the grading configuration stored on the test definition."""
-    from app.core.prisma_db import prisma
-    from prisma import Json
-
     # Ownership: only the test's creator (or an ADMIN) may rewrite its scoring
     # rules — changing them re-grades the whole cohort. assert_test_access both
     # enforces this and returns the loaded test (no second fetch needed).

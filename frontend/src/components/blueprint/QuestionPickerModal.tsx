@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { MouseEvent, useEffect, useState } from 'react';
 import { useBlueprintStore, AvailableItem } from '@/stores/useBlueprintStore';
 import { Button, Badge } from '@/components/ui';
 import { api } from '@/lib/api';
@@ -152,7 +152,7 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds, title, selectL
     });
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-overlay)] backdrop-blur-sm p-5">
             <div className="flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-shell-border bg-shell-surface shadow-elevated"
                 style={{ maxHeight: '85vh' }}>
                 {/* Header */}
@@ -292,7 +292,7 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds, title, selectL
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                onClick={(e: React.MouseEvent) => { e.stopPropagation(); void handleInspectItem(item); }}
+                                                onClick={(e: MouseEvent) => { e.stopPropagation(); void handleInspectItem(item); }}
                                             >
                                                 Preview
                                             </Button>
@@ -300,7 +300,7 @@ function OpenQuestionPickerModal({ onClose, onSelect, excludeIds, title, selectL
                                                 variant="primary"
                                                 size="sm"
                                                 disabled={excluded}
-                                                onClick={(e: React.MouseEvent) => {
+                                                onClick={(e: MouseEvent) => {
                                                     e.stopPropagation();
                                                     if (!excluded) onSelect(item);
                                                 }}

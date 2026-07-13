@@ -29,19 +29,3 @@ Then open:
 | Student | `student@vu.nl` | `studentpass123` |
 
 Passwords come from the `SEED_*_PASSWORD` values in `.env`.
-
-### Useful flags
-
-```bash
-./dev-up.sh            # start without resetting data
-./dev-up.sh --no-front # backend + DB only
-```
-
-## Tests
-
-```bash
-cd backend && DATABASE_URL=<your-db-url> pytest   # backend
-cd frontend && npx playwright test                # E2E
-```
-
-See `claude.md` for engineering conventions and `docs/` for operations guides.
